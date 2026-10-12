@@ -76,10 +76,16 @@
   /* 프로필 */
   .plink{color:inherit;text-decoration:none}
   .plink:hover{text-decoration:underline}
-  .pfPicker{display:flex;flex-wrap:wrap;gap:6px;max-height:156px;overflow-y:auto;padding:2px;margin-bottom:16px}
-  .pchip{display:inline-flex;align-items:center;gap:6px;background:var(--head);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 3px;font-size:14px}
-  .pchip small{color:var(--muted);font-size:11px}
-  .pchip.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .pcGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .pcard{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px 10px 14px;text-align:center;cursor:pointer;transition:border-color .15s,transform .15s}
+  .pcard:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .avatar.md{width:56px;height:56px;font-size:16px}
+  .pcName{font-weight:700;font-size:16px}
+  .pcMeta{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;font-size:13px;min-height:20px}
+  .pcMeta .badge{margin-left:0}
+  .pcMeta b{color:var(--hl);margin-right:2px}
+  .pcStat{font-size:12px;color:var(--muted)}
+  .pfBack{margin-bottom:12px}
   .pfCard{border:1px solid var(--line);border-radius:16px;padding:18px}
   .pfTop{display:flex;gap:16px;align-items:center}
   .pfTop .avatar.big{margin:0;flex:none}
@@ -108,7 +114,7 @@
   .tabs button{background:none;color:var(--muted);border-radius:0;padding:10px 14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
   .tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
   section[data-pane]{display:none}
-  body.tab-team section[data-pane="team"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-profile section[data-pane="profile"]{display:block}
+  body.tab-team section[data-pane="team"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-roster section[data-pane="roster"]{display:block}
   body.shared .tabs{display:none}
   /* 경기 기록 탭 */
   .histHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -200,10 +206,10 @@
   <div id="mvpBanner" class="app"></div>
 
   <nav class="tabs app">
-    <button data-tab="team" class="on">팀 구성</button>
+    <button data-tab="roster" class="on">선수 명단</button>
+    <button data-tab="team">팀 구성</button>
     <button data-tab="stats">개인 기록</button>
     <button data-tab="history">경기 기록</button>
-    <button data-tab="profile">프로필</button>
   </nav>
 
   <section class="card notice" id="configNotice" style="display:none">
@@ -270,7 +276,7 @@
 
   <section class="card app admin-only" data-pane="team">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h2 style="margin:0">선수 명단 <span class="muted" id="count"></span></h2>
+      <h2 style="margin:0">출석 · 등급 관리 <span class="muted" id="count"></span></h2>
       <div class="row admin-only">
         <button class="ghost" id="allOn">전체 참석</button>
         <button class="ghost" id="allOff">전체 해제</button>
@@ -328,13 +334,15 @@
     <div id="dayEditor"></div>
   </section>
 
-  <section class="card app" data-pane="profile">
-    <div class="histHead">
-      <h2>선수 프로필</h2>
-      <input type="text" id="pfSearch" class="search" placeholder="🔍 이름 검색" style="max-width:220px">
+  <section class="card app" data-pane="roster">
+    <div id="pfListView">
+      <div class="histHead">
+        <h2>선수 명단 <span class="muted" id="rosterCount" style="font-size:14px;font-weight:500"></span></h2>
+        <input type="text" id="pfSearch" class="search" placeholder="🔍 이름 검색" style="max-width:220px">
+      </div>
+      <div id="pfPicker" class="pcGrid"><p class="muted">불러오는 중…</p></div>
     </div>
-    <div id="pfPicker" class="pfPicker"></div>
-    <div id="pfBox"><p class="muted">불러오는 중…</p></div>
+    <div id="pfBox"></div>
   </section>
 
   <section class="card app admin-only" data-pane="team">
@@ -994,15 +1002,18 @@ $('backupBtn').onclick = async ()=>{
 
 
 /* ---------- 탭 ---------- */
-const TABS = ['team','stats','history','profile'];
+const TABS = ['roster','team','stats','history'];
 function setTab(t){
-  if(!TABS.includes(t)) t = 'team';
+  if(!TABS.includes(t)) t = 'roster';
   TABS.forEach(x=>document.body.classList.toggle('tab-'+x, x===t));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
-  store.set('futsal-tab-v1', t);
+  store.set('futsal-tab-v2', t);
 }
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick = ()=>{ setTab(b.dataset.tab); window.scrollTo({top:0}); });
-setTab(store.get('futsal-tab-v1') || 'team');
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick = ()=>{
+  if(b.dataset.tab === 'roster' && document.body.classList.contains('tab-roster') && profileId){ profileId = null; renderProfile(); }
+  setTab(b.dataset.tab); window.scrollTo({top:0});
+});
+setTab(store.get('futsal-tab-v2') || 'roster');
 
 /* ---------- 지난 경기 기록 (날짜별 조회) ---------- */
 let histDayId = null;
@@ -1151,7 +1162,7 @@ const isBirthday = birth => !!birth && birth.slice(5) === todayStr().slice(5);
 const fmtBirth = birth => { const [y,m,d] = birth.split('-'); return `${y}.${m}.${d}`; };
 function openProfile(id){
   profileId = id;
-  setTab('profile');
+  setTab('roster');
   renderProfile();
   window.scrollTo({top: 0});
 }
@@ -1164,16 +1175,25 @@ const nameLink = (id, name) => id ? `<a href="#" class="plink" data-pid-link="${
 
 function renderProfilePicker(){
   const qText = $('pfSearch').value.trim();
+  const agg = Object.fromEntries(aggregate('all').map(r=>[r.id, r]));
   const list = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>!qText || p.name.includes(qText));
-  $('pfPicker').innerHTML = list.map(p=>`<button class="pchip ${p.id===profileId?'on':''}" data-pick="${p.id}">${avatar(p.name,'sm')}<span>${esc(p.name)}</span>${p.number!=null?`<small>#${p.number}</small>`:''}${isBirthday(p.birth)?'🎂':''}</button>`).join('')
-    || '<p class="muted">선수가 없어요.</p>';
-  $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); });
+  $('rosterCount').textContent = `${players.length}명`;
+  $('pfPicker').innerHTML = list.map(p=>{
+    const st = agg[p.id] || {att:0, g:0, a:0};
+    return `<button class="pcard" data-pick="${p.id}">
+      ${avatar(p.name,'md')}
+      <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
+      <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}${p.gk ? '<span class="badge">GK</span>' : ''}</span>
+      <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
+    </button>`;
+  }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
+  $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); window.scrollTo({top:0}); });
 }
 function renderProfile(){
-  renderProfilePicker();
   const box = $('pfBox');
   const p = players.find(x=>x.id===profileId);
-  if(!p){ box.innerHTML = '<p class="muted">위에서 선수를 고르면 프로필이 보여요.</p>'; return; }
+  $('pfListView').style.display = p ? 'none' : '';
+  if(!p){ profileId = null; box.innerHTML = ''; renderProfilePicker(); return; }
 
   const all = aggregate('all').map(r=>({...r, pts: r.g + r.a}));
   const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,pts:0,rate:-1};
@@ -1206,6 +1226,7 @@ function renderProfile(){
   ].filter(Boolean);
 
   box.innerHTML = `
+    <button class="ghost small pfBack">← 선수 명단</button>
     <div class="pfCard">
       <div class="pfTop">
         ${avatar(p.name,'big')}
@@ -1246,6 +1267,7 @@ function renderProfile(){
       ${mvpDays.length ? `<div class="pfMvp">${mvpDays.map(d=>`<span class="tag m">${fmtDay(d.played_on)}</span>`).join('')}</div>` : '<p class="muted">아직 MVP 수상 기록이 없어요.</p>'}
     </div>`;
 
+  box.querySelector('.pfBack').onclick = ()=>{ profileId = null; renderProfile(); };
   box.querySelectorAll('.pfGame').forEach(a=>a.onclick = e=>{
     e.preventDefault(); histDayId = +a.dataset.day; renderHistory(); setTab('history'); window.scrollTo({top:0});
   });
