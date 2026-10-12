@@ -41,6 +41,9 @@
   .b-미드{background:var(--mf2);color:var(--mf)}
   .b-수비{background:var(--df2);color:var(--df)}
   .summary{margin-top:10px;font-size:14px}
+  .b-교체{background:var(--line);color:var(--muted)}
+  input.num{width:56px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
+  .off{font-size:12px;color:var(--muted);margin-left:4px}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
@@ -135,7 +138,17 @@
       <button id="make">팀 구성하기</button>
       <button class="ghost" id="again">다시 섞기</button>
     </div>
-    <p class="muted">총점이 비슷하게, 포지션과 키퍼 가능 인원은 팀마다 고르게 나눠요.</p>
+    <div class="row" style="margin-top:10px">
+      <select id="formMode"><option value="auto">포지션: 골고루 섞기</option><option value="set">포지션: 팀당 인원 직접 정하기</option></select>
+      <span class="row" id="formBox" style="gap:10px">
+        <label class="chk">공격 <input type="number" class="num" id="fFW" min="0" max="7" value="2"></label>
+        <label class="chk">미드 <input type="number" class="num" id="fMF" min="0" max="7" value="2"></label>
+        <label class="chk">수비 <input type="number" class="num" id="fDF" min="0" max="7" value="2"></label>
+        <span class="muted" id="formSum"></span>
+      </span>
+    </div>
+    <div class="row" id="formPresets" style="margin-top:8px;gap:6px"></div>
+    <p class="muted">총점이 비슷하게 나누고, 포지션을 직접 정하면 각 팀이 그 인원에 맞게 채워지도록 짜요. 키퍼 가능 인원도 고르게 나눠요.</p>
     <p class="muted" id="need"></p>
     <div id="result" style="margin-top:14px"></div>
     <div class="row" id="shareRow" style="margin-top:10px;display:none">
@@ -160,8 +173,8 @@
 <script>
 /* ===================== 설정 ===================== */
 // Supabase > Project Settings > API 에서 복사해서 붙여넣으세요.
-const SUPABASE_URL = 'https://gudwubeutvkhjrsardtc.supabase.co';   // 예: 'https://abcdefgh.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_DD4LX04ysEDt7T0ELcdo8Q_Cl1hSPPE';   // anon(public) 키 또는 publishable 키
+const SUPABASE_URL = 'https://gudwubeutvkhjrsardtc.supabase.co';
+const SUPABASE_KEY = '';   // anon(public) 키 또는 publishable 키
 // 로그인 안 한 사람도 참석 체크를 할 수 있게 할지 (false면 관리자만)
 const ALLOW_PUBLIC_ATTENDANCE = true;
 /* ================================================ */
@@ -307,10 +320,76 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.rando
 const sum = t => t.reduce((s,p)=>s+score(p),0);
 const spread = teams => { const s=teams.map(sum); return Math.max(...s)-Math.min(...s); };
 function variance(arr){ const m=arr.reduce((a,b)=>a+b,0)/arr.length; return arr.reduce((a,b)=>a+(b-m)**2,0); }
-// 비용: 총점 차이(가장 중요) + 포지션 쏠림 + 키퍼 가능 인원 쏠림 + 인원수 차이
+/* ---------- 포지션 인원(포메이션) ---------- */
+let FORMATION = null; // {공격:2, 미드:1, 수비:3} 또는 null(골고루)
+const formTotal = f => f.공격 + f.미드 + f.수비;
+function getFormation(){
+  if($('formMode').value !== 'set') return null;
+  const v = id => Math.max(0, Math.min(9, parseInt($(id).value,10) || 0));
+  return {공격:v('fFW'), 미드:v('fMF'), 수비:v('fDF')};
+}
+// 한 팀에서 '자기 포지션'으로 채울 수 있는 최대 자리 수 (3종류라 8가지 경우만 보면 정확히 계산됨)
+function maxFilled(team, f){
+  let best = Infinity;
+  for(let m=0;m<8;m++){
+    const Y = POSITIONS.filter((_,i)=>m & (1<<i));
+    const cap = Y.reduce((s,t)=>s+f[t],0);
+    const outside = team.filter(p=>!p.pos.every(x=>Y.includes(x))).length;
+    if(cap + outside < best) best = cap + outside;
+  }
+  return best;
+}
+// 팀 안에서 각 선수가 맡을 자리 정하기 (자기 포지션 우선, 남으면 빈 자리 → 그래도 남으면 교체)
+function assignRoles(team, f){
+  const slots = [];
+  POSITIONS.forEach(t=>{ for(let i=0;i<f[t];i++) slots.push(t); });
+  const owner = new Array(slots.length).fill(-1);
+  const tryAssign = (pi, seen)=>{
+    for(let k=0;k<slots.length;k++){
+      if(seen[k] || !team[pi].pos.includes(slots[k])) continue;
+      seen[k] = true;
+      if(owner[k] < 0 || tryAssign(owner[k], seen)){ owner[k] = pi; return true; }
+    }
+    return false;
+  };
+  const order = shuffle([...team.keys()]).sort((a,b)=>team[a].pos.length - team[b].pos.length);
+  order.forEach(pi=>tryAssign(pi, new Array(slots.length).fill(false)));
+  const role = new Array(team.length).fill(null);
+  owner.forEach((pi,k)=>{ if(pi >= 0) role[pi] = slots[k]; });
+  const free = slots.filter((_,k)=>owner[k] < 0);
+  shuffle([...team.keys()].filter(i=>role[i]===null)).forEach(i=>{ role[i] = free.length ? free.shift() : '교체'; });
+  return team.map((p,i)=>({...p, role: role[i]}));
+}
+function updateFormUI(){
+  const set = $('formMode').value === 'set';
+  $('formBox').style.display = set ? '' : 'none';
+  $('formPresets').style.display = set ? 'flex' : 'none';
+  if(!set) return;
+  const f = getFormation(), size = +$('teamSize').value, tot = formTotal(f);
+  $('formSum').textContent = tot === size ? `합계 ${tot}명 ✅`
+    : tot < size ? `합계 ${tot}명 (팀당 ${size}명 중 ${size-tot}명은 교체)`
+    : `합계 ${tot}명 (팀당 ${size}명보다 많아서 ${tot-size}자리가 빌 수 있어요)`;
+  const presets = size >= 7 ? [[2,2,3],[3,2,2],[2,3,2],[3,1,3],[2,1,4]] : [[2,2,2],[2,1,3],[3,1,2],[1,2,3],[3,2,1]];
+  $('formPresets').innerHTML = presets.map(([a,b,c])=>`<button class="ghost small" data-f="${a},${b},${c}">공${a} · 미${b} · 수${c}</button>`).join('');
+  $('formPresets').querySelectorAll('button').forEach(btn=>btn.onclick = ()=>{
+    const [a,b,c] = btn.dataset.f.split(',');
+    $('fFW').value = a; $('fMF').value = b; $('fDF').value = c;
+    saveForm(); updateFormUI();
+  });
+}
+function saveForm(){ store.set('futsal-formation-v1', JSON.stringify({mode:$('formMode').value, f:[$('fFW').value, $('fMF').value, $('fDF').value]})); }
+try{ const fs = JSON.parse(store.get('futsal-formation-v1')); if(fs){ $('formMode').value = fs.mode; [$('fFW').value, $('fMF').value, $('fDF').value] = fs.f; } }catch(e){}
+['formMode','fFW','fMF','fDF'].forEach(id=>['input','change'].forEach(ev=>$(id).addEventListener(ev, ()=>{ saveForm(); updateFormUI(); })));
+$('teamSize').addEventListener('change', updateFormUI);
+updateFormUI();
+
+// 비용: 총점 차이(가장 중요) + 포지션(자리 못 채움 또는 쏠림) + 키퍼 가능 인원 쏠림 + 인원수 차이
 function cost(teams){
   const s = variance(teams.map(sum)) * 10;
-  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.reduce((v,p)=>v + (p.pos.includes(x) ? 1/p.pos.length : 0), 0))), 0) * 3;
+  const spreadPos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.reduce((v,p)=>v + (p.pos.includes(x) ? 1/p.pos.length : 0), 0))), 0);
+  const pos = FORMATION
+    ? teams.reduce((acc,t)=>acc + (Math.min(formTotal(FORMATION), t.length) - maxFilled(t, FORMATION)), 0) * 8 + spreadPos * 0.5
+    : spreadPos * 3;
   const gk = variance(teams.map(t=>t.filter(p=>p.gk).length)) * 4;
   const size = variance(teams.map(t=>t.length)) * 100;
   return s + pos + gk + size;
@@ -361,17 +440,24 @@ function updateNeed(){
   updateNeed();
 }));
 try{ const s = JSON.parse(store.get('futsal-setting-v1')); if(s){ $('teamCount').value=s.n; $('teamSize').value=s.size; } }catch(e){}
+updateFormUI();
 
 const TEAM_NAMES = ['A팀','B팀','C팀'];
-const ORDER = {공격:0, 미드:1, 수비:2};
+const ORDER = {공격:0, 미드:1, 수비:2, 교체:3};
+const ROLES = ['공격','미드','수비','교체'];
 // withScores=false면 등급·활동량·점수를 아예 만들지 않음
 function teamsHtml(teams, withScores){
   return `<div class="teams">${teams.map((t,i)=>{
-    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
-    const members = t.slice().sort((a,b)=>ORDER[a.pos[0]]-ORDER[b.pos[0]] || a.pos.length-b.pos.length || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
+    const hasRoles = t.some(p=>p.role);
+    const offCount = t.filter(p=>p.role && p.role!=='교체' && !p.pos.includes(p.role)).length;
+    const posLine = (hasRoles
+      ? ROLES.map(r=>[r, t.filter(p=>p.role===r).length]).filter(([r,c])=>c || r!=='교체').map(([r,c])=>`${r} ${c}`).join(' · ') + (offCount ? ` · 포지션 외 ${offCount}명` : '')
+      : POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ')) + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
+    const key = p => hasRoles ? ORDER[p.role] : ORDER[p.pos[0]];
+    const members = t.slice().sort((a,b)=>key(a)-key(b) || a.pos.length-b.pos.length || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span>${fmt(sum(t))}점</span>` : ''}</h3>
       <div class="pos">${posLine}</div>
-      <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
+      <ul>${members.map(p=>`<li>${p.role ? `<span class="badge b-${p.role}" style="margin:0 4px 0 0">${p.role}</span>${esc(p.name)}${p.role!=='교체' && !p.pos.includes(p.role) ? `<span class="off">(원래 ${p.pos.join('·')})</span>` : ''}` : `${esc(p.name)} ${posBadges(p)}`}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
   }).join('')}</div>`;
 }
 function showTeams(teams){
@@ -383,15 +469,18 @@ function make(){
   const n = +$('teamCount').value;
   const on = players.filter(p=>p.on);
   if(on.length < n*2){ $('result').innerHTML = `<p class="muted">참석 인원이 너무 적어요. (${on.length}명)</p>`; $('shareRow').style.display='none'; return; }
+  FORMATION = getFormation();
+  if(FORMATION && formTotal(FORMATION) === 0){ alert('포지션 인원을 1명 이상 정해주세요'); return; }
   lastTeams = balance(on, n);
+  if(FORMATION) lastTeams = lastTeams.map(t=>assignRoles(t, FORMATION));
   showTeams(lastTeams);
 }
 $('make').onclick = make;
 $('again').onclick = make;
 
 /* ---------- 공개 / 공유 (이름·포지션·키퍼만) ---------- */
-const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
-const fromPublic = data => data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos:normPos(pos), gk:!!gk})));
+const publicData = teams => teams.map(t=>t.map(p=>p.role ? [p.name, p.pos.join(','), p.gk?1:0, p.role] : [p.name, p.pos.join(','), p.gk?1:0]));
+const fromPublic = data => data.map(t=>t.map(([name,pos,gk,role])=>({name:String(name), pos:normPos(pos), gk:!!gk, role: ROLES.includes(role) ? role : undefined})));
 function renderPublished(row){
   try{
     const when = new Date(row.created_at).toLocaleString('ko-KR', {month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
