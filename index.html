@@ -40,6 +40,7 @@
   .b-미드{background:var(--mf2);color:var(--mf)}
   .b-수비{background:var(--df2);color:var(--df)}
   .summary{margin-top:10px;font-size:14px}
+  .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   /* 일반 모드에서는 관리자 전용 요소를 숨김 */
   body:not(.admin) .admin-only{display:none !important}
@@ -75,13 +76,15 @@
       <select id="act">
         <option value="좋음">활동량 좋음</option><option value="보통" selected>활동량 보통</option><option value="나쁨">활동량 나쁨</option>
       </select>
-      <select id="pos">
-        <option value="공격">공격</option><option value="미드" selected>미드</option><option value="수비">수비</option>
-      </select>
+      <span class="row" style="gap:10px">
+        <label class="chk"><input type="checkbox" class="posNew" value="공격"> 공격</label>
+        <label class="chk"><input type="checkbox" class="posNew" value="미드" checked> 미드</label>
+        <label class="chk"><input type="checkbox" class="posNew" value="수비"> 수비</label>
+      </span>
       <label class="chk"><input type="checkbox" id="gk"> 키퍼 가능</label>
       <button id="add">추가</button>
     </div>
-    <p class="muted">등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0 &nbsp;→ 총점 = 등급 + 활동량</p>
+    <p class="muted">포지션은 여러 개 고를 수 있어요. &nbsp;|&nbsp; 등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0 &nbsp;→ 총점 = 등급 + 활동량</p>
   </section>
 
   <section class="card app">
@@ -146,8 +149,14 @@ let lastTeams = null;
 
 function load(){ try{ return JSON.parse(store.get(KEY)) || []; }catch(e){ return []; } }
 function save(){ store.set(KEY, JSON.stringify(players)); }
-// 예전 명단(포지션·활동량 없음)은 '미드'·'보통'으로 채워서 그대로 사용
-function normalize(list){ return list.map(p=>({...p, pos: POSITIONS.includes(p.pos) ? p.pos : '미드', act: (p.act in ACTS) ? p.act : '보통'})); }
+// 예전 명단(포지션 1개/없음·활동량 없음)은 배열·'보통'으로 채워서 그대로 사용
+function normPos(v){
+  const arr = (Array.isArray(v) ? v : String(v||'').split(',')).filter(x=>POSITIONS.includes(x));
+  const uniq = POSITIONS.filter(x=>arr.includes(x)); // 공격-미드-수비 순서로 정리
+  return uniq.length ? uniq : ['미드'];
+}
+function normalize(list){ return list.map(p=>({...p, pos: normPos(p.pos), act: (p.act in ACTS) ? p.act : '보통'})); }
+const posBadges = p => p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('');
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ---------- 관리자 모드 ---------- */
@@ -202,13 +211,17 @@ function render(){
       <td><select data-k="grade">${[5,4,3,2,1].map(g=>`<option value="${g}" ${g==p.grade?'selected':''}>${GRADES[g]}</option>`).join('')}</select></td>
       <td><select data-k="act">${Object.keys(ACTS).map(x=>`<option ${x===p.act?'selected':''}>${x}</option>`).join('')}</select></td>
       <td><b>${fmt(score(p))}</b></td>` : ''}
-      <td>${admin ? `<select data-k="pos">${POSITIONS.map(x=>`<option ${x===p.pos?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="badge b-${p.pos}" style="margin:0">${p.pos}</span>`}</td>
+      <td class="posCell">${admin ? POSITIONS.map(x=>`<label><input type="checkbox" data-pos="${x}" ${p.pos.includes(x)?'checked':''}>${x}</label>`).join('') : posBadges(p)}</td>
       <td>${admin ? `<input type="checkbox" ${p.gk?'checked':''} data-k="gk">` : (p.gk?'GK':'')}</td>
       ${admin ? `<td><button class="del">삭제</button></td>` : ''}`;
     tr.querySelector('[data-k=on]').onchange = e=>{p.on=e.target.checked;save();count();};
     if(admin){
       tr.querySelector('[data-k=gk]').onchange = e=>{p.gk=e.target.checked;save();};
-      tr.querySelector('[data-k=pos]').onchange = e=>{p.pos=e.target.value;save();};
+      tr.querySelectorAll('[data-pos]').forEach(cb=>cb.onchange = ()=>{
+        const picked = [...tr.querySelectorAll('[data-pos]:checked')].map(c=>c.dataset.pos);
+        if(!picked.length){ cb.checked = true; alert('포지션은 최소 1개는 골라야 해요'); return; }
+        p.pos = normPos(picked); save(); count();
+      });
       tr.querySelector('[data-k=act]').onchange = e=>{p.act=e.target.value;save();render();};
       tr.querySelector('[data-k=grade]').onchange = e=>{p.grade=+e.target.value;save();render();};
       tr.querySelector('.del').onclick = ()=>{ if(confirm(p.name+' 삭제할까요?')){players=players.filter(x=>x!==p);save();render();} };
@@ -219,7 +232,7 @@ function render(){
 }
 function count(){
   const on = players.filter(p=>p.on);
-  const byPos = POSITIONS.map(x=>`${x} ${on.filter(p=>p.pos===x).length}`).join(' · ');
+  const byPos = POSITIONS.map(x=>`${x} ${on.filter(p=>p.pos.includes(x)).length}`).join(' · ');
   $('count').textContent = `(전체 ${players.length}명 · 참석 ${on.length}명 — ${byPos})`;
   updateNeed();
 }
@@ -227,7 +240,9 @@ function count(){
 $('add').onclick = ()=>{
   const name = $('name').value.trim(); if(!name) return;
   if(players.some(p=>p.name===name)){ alert('이미 있는 이름이에요'); return; }
-  players.push({name, grade:+$('grade').value, act:$('act').value, pos:$('pos').value, gk:$('gk').checked, on:true});
+  const picked = [...document.querySelectorAll('.posNew:checked')].map(c=>c.value);
+  if(!picked.length){ alert('포지션을 1개 이상 골라주세요'); return; }
+  players.push({name, grade:+$('grade').value, act:$('act').value, pos:normPos(picked), gk:$('gk').checked, on:true});
   $('name').value=''; $('gk').checked=false; save(); render(); $('name').focus();
 };
 $('name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('add').click(); });
@@ -243,7 +258,7 @@ function variance(arr){ const m=arr.reduce((a,b)=>a+b,0)/arr.length; return arr.
 // 비용: 총점 차이(가장 중요) + 포지션 쏠림 + 키퍼 가능 인원 쏠림 + 인원수 차이
 function cost(teams){
   const s = variance(teams.map(sum)) * 10;
-  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.filter(p=>p.pos===x).length)), 0) * 3;
+  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.reduce((s,p)=>s + (p.pos.includes(x) ? 1/p.pos.length : 0), 0))), 0) * 3;
   const gk = variance(teams.map(t=>t.filter(p=>p.gk).length)) * 4;
   const size = variance(teams.map(t=>t.length)) * 100;
   return s + pos + gk + size;
@@ -304,11 +319,11 @@ const ORDER = {공격:0, 미드:1, 수비:2};
 // 팀 카드 HTML. withScores=false면 등급·활동량·점수를 아예 만들지 않음
 function teamsHtml(teams, withScores){
   return `<div class="teams">${teams.map((t,i)=>{
-    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos===x).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
-    const members = t.slice().sort((a,b)=>ORDER[a.pos]-ORDER[b.pos] || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
+    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
+    const members = t.slice().sort((a,b)=>ORDER[a.pos[0]]-ORDER[b.pos[0]] || a.pos.length-b.pos.length || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span>${fmt(sum(t))}점</span>` : ''}</h3>
       <div class="pos">${posLine}</div>
-      <ul>${members.map(p=>`<li>${esc(p.name)} <span class="badge b-${p.pos}">${p.pos}</span>${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
+      <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
   }).join('')}</div>`;
 }
 function showTeams(teams){
@@ -333,7 +348,7 @@ function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj
 function decode(str){ str = str.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(str)))); }
 $('shareBtn').onclick = ()=>{
   if(!lastTeams) return;
-  const data = lastTeams.map(t=>t.map(p=>[p.name, p.pos, p.gk?1:0]));
+  const data = lastTeams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
   const url = location.href.split('#')[0] + '#r=' + encode(data);
   if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>alert('공유 링크를 복사했어요. 단톡방에 붙여넣으면 돼요.'), ()=>prompt('아래 링크를 복사하세요', url));
   else prompt('아래 링크를 복사하세요', url);
@@ -343,7 +358,7 @@ function showShared(){
   if(!m){ document.body.classList.remove('shared'); return false; }
   try{
     const data = decode(m[1]);
-    const teams = data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos: POSITIONS.includes(pos)?pos:'미드', gk:!!gk})));
+    const teams = data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos: normPos(pos), gk:!!gk})));
     $('sharedResult').innerHTML = teamsHtml(teams, false);
   }catch(e){ $('sharedResult').innerHTML = '<p class="muted">링크가 올바르지 않아요.</p>'; }
   document.body.classList.add('shared');
