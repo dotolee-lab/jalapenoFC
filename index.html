@@ -170,6 +170,8 @@ const SUPABASE_URL = 'https://gudwubeutvkhjrsardtc.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DD4LX04ysEDt7T0ELcdo8Q_Cl1hSPPE';
 // 로그인 안 한 사람도 참석 체크를 할 수 있게 할지 (false면 관리자만)
 const ALLOW_PUBLIC_ATTENDANCE = true;
+// 로그인 안 한 사람도 '공개된 팀 구성'의 전술을 바꿀 수 있게 할지 (false면 관리자만)
+const ALLOW_PUBLIC_TACTIC = true;
 /* ================================================ */
 
 const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
@@ -414,6 +416,14 @@ function tacticSelect(i, current){
     <option value="__custom">직접 입력…</option></select>`;
 }
 
+// 선택 칸의 값을 전술로 바꿈. 직접 입력이면 물어봄. 취소·잘못된 값이면 null
+function pickTactic(sel, current){
+  if(sel.value !== '__custom') return sel.value;
+  const v = (prompt('전술을 숫자로 입력하세요 (수비-미드-공격 순, 예: 2-1-3 또는 2-1-2-1)', current || '') || '').trim().replace(/\s+/g,'-');
+  if(v && validTactic(v)) return v;
+  if(v) alert('형식이 올바르지 않아요. 예: 2-1-3');
+  return null;
+}
 // withScores=false면 등급·활동량·점수를 아예 만들지 않음. editable=true면 전술 선택 칸 표시
 function teamsHtml(teams, withScores, tactics = [], editable = false){
   return `<div class="teams">${teams.map((t,i)=>{
@@ -437,11 +447,8 @@ function showTeams(teams){
     `<p class="summary">팀 점수 차이: 최대 <b>${fmt(spread(teams))}점</b> · 평균 ${fmt(+(teams.map(sum).reduce((a,b)=>a+b,0)/teams.length).toFixed(1))}점</p>`;
   $('result').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = ()=>{
     const i = +sel.dataset.team;
-    if(sel.value === '__custom'){
-      const v = (prompt('전술을 숫자로 입력하세요 (수비-미드-공격 순, 예: 2-1-3 또는 2-1-2-1)', lastTactics[i] || '') || '').trim().replace(/\s+/g,'-');
-      if(v && validTactic(v)) lastTactics[i] = v;
-      else if(v) alert('형식이 올바르지 않아요. 예: 2-1-3');
-    } else lastTactics[i] = sel.value;
+    const v = pickTactic(sel, lastTactics[i]);
+    if(v !== null) lastTactics[i] = v;
     showTeams(lastTeams);
   });
   $('shareRow').style.display = 'flex';
@@ -463,11 +470,24 @@ const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk
 const fromPublic = data => data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos:normPos(pos), gk:!!gk})));
 // 예전 형식(팀 배열만)과 새 형식({teams, tactics}) 둘 다 읽음
 const unpack = obj => Array.isArray(obj) ? {teams: obj, tactics: []} : {teams: obj.teams || obj.t || [], tactics: obj.tactics || obj.f || []};
+let publishedRow = null;
 function renderPublished(row){
   try{
+    publishedRow = row;
     const when = new Date(row.created_at).toLocaleString('ko-KR', {month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
     const {teams, tactics} = unpack(row.teams);
-    $('published').innerHTML = `<p class="muted" style="margin-top:0">${when} 공개</p>` + teamsHtml(fromPublic(teams), false, tactics);
+    const editable = !!sb && (ALLOW_PUBLIC_TACTIC || isAdmin());
+    $('published').innerHTML = `<p class="muted" style="margin-top:0">${when} 공개${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+    $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
+      const i = +sel.dataset.team;
+      const v = pickTactic(sel, tactics[i]);
+      if(v === null){ renderPublished(publishedRow); return; }
+      sel.disabled = true;
+      if(await q(sb.rpc('set_tactic', {p_team:i, p_tactic:v}), '전술을 저장하지 못했어요')){
+        const next = tactics.slice(); while(next.length < teams.length) next.push(''); next[i] = v;
+        renderPublished({...publishedRow, teams: {teams, tactics: next}});
+      }
+    });
   }catch(e){}
 }
 $('publishBtn').onclick = async ()=>{
