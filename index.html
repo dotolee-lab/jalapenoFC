@@ -1209,6 +1209,11 @@ $('backupBtn').onclick = async ()=>{
 
 
 /* ---------- 탭 ---------- */
+// 내용이 바뀔 때 탭 줄이 화면 위로 사라져 있으면 탭 줄 위치까지만 올림 (페이지 맨 위로는 안 감)
+function keepTabsInView(){
+  const nav = document.querySelector('.tabs');
+  if(nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({block:'start'});
+}
 const TABS = ['roster','stats','history','admin'];
 function setTab(t){
   if(!TABS.includes(t) || (t === 'admin' && !isAdmin())) t = 'roster';
@@ -1218,7 +1223,7 @@ function setTab(t){
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick = ()=>{
   if(b.dataset.tab === 'roster' && document.body.classList.contains('tab-roster') && profileId){ profileId = null; renderProfile(); }
-  setTab(b.dataset.tab); window.scrollTo({top:0});
+  setTab(b.dataset.tab);   // 스크롤 위치는 그대로 둠
 });
 setTab(store.get('futsal-tab-v2') || 'roster');
 
@@ -1430,7 +1435,7 @@ function openProfile(id){
   profileId = id;
   setTab('roster');
   renderProfile();
-  window.scrollTo({top: 0});
+  keepTabsInView();
 }
 // 이름을 누르면 프로필로 (표·카드·경기 기록 어디서나)
 document.addEventListener('click', e=>{
@@ -1454,7 +1459,7 @@ function renderProfilePicker(){
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
-  $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); window.scrollTo({top:0}); });
+  $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); keepTabsInView(); });
 }
 function renderProfile(){
   const box = $('pfBox');
@@ -1546,7 +1551,7 @@ function renderProfile(){
 
   box.querySelector('.pfBack').onclick = ()=>{ profileId = null; renderProfile(); };
   box.querySelectorAll('.pfGame').forEach(a=>a.onclick = e=>{
-    e.preventDefault(); histDayId = +a.dataset.day; renderHistory(); setTab('history'); window.scrollTo({top:0});
+    e.preventDefault(); histDayId = +a.dataset.day; renderHistory(); setTab('history'); keepTabsInView();
   });
   const save = $('pfSave');
   const photoBtn = $('pfPhotoBtn');
