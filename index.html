@@ -389,11 +389,6 @@
     <div id="statsBox"><p class="muted">불러오는 중…</p></div>
   </section>
 
-  <section class="card app" data-pane="stats">
-    <h2>🎖️ 경기별 MVP</h2>
-    <div id="hofList"><p class="muted">불러오는 중…</p></div>
-  </section>
-
   <section class="card app admin-only" data-pane="admin">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">출석 · 등급 관리 <span class="muted" id="count"></span></h2>
@@ -928,7 +923,6 @@ async function loadRecords(){
   renderStats();
   renderHistory();
   renderMvpBanner();
-  renderHofList();
   renderYearAwards();
   renderProfile();
   renderSchedule();
@@ -1412,20 +1406,6 @@ function renderYearAwards(){
 }
 $('awardYear').addEventListener('change', ()=>{ awardYear = $('awardYear').value; renderYearAwards(); });
 
-function renderHofList(){
-  const awards = mvpAwards();
-  if(!awards.length){ $('hofList').innerHTML = '<p class="muted">아직 MVP 기록이 없어요. 경기 기록에서 MVP를 체크하면 여기에 쌓여요.</p>'; return; }
-  const count = {};
-  awards.forEach(a=>a.winners.forEach(w=>{ count[w.name] = (count[w.name]||0) + 1; }));
-  const best = Math.max(...Object.values(count));
-  const kings = Object.keys(count).filter(n=>count[n]===best).sort((a,b)=>a.localeCompare(b,'ko'));
-  $('hofList').innerHTML = `
-    <p class="muted" style="margin-top:0">MVP 최다 수상 · <b style="color:var(--text)">${kings.map(esc).join(', ')}</b> ${best}회</p>
-    <div class="hofGrid">${awards.map((a,i)=>`<div class="hofItem ${i===0?'latest':''}">
-      <div class="muted">${fmtDay(a.day.played_on)}</div>
-      ${a.winners.map(w=>`<div class="hofRow">${avatar(w.name,'sm')}<b>${nameLink(w.player_id, w.name)}</b><span class="muted">${w.goals?`⚽${w.goals}`:''}${w.assists?` 어시${w.assists}`:''}</span></div>`).join('')}
-    </div>`).join('')}</div>`;
-}
 
 
 /* ---------- 개인 프로필 ---------- */
@@ -1450,7 +1430,7 @@ function feetHtml(p, size){
   return `<span class="feet ${size||''}" title="왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}">${footIcon(p.footL,'L',main('L'))}${footIcon(p.footR,'R',main('R'))}</span>`;
 }
 function renderAllAfterPhoto(){
-  renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderHofList(); renderYearAwards();
+  renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderYearAwards();
 }
 const footOpts = v => `<option value="" ${v==null?'selected':''}>-</option>` + [0,1,2,3,4,5].map(n=>`<option value="${n}" ${v===n?'selected':''}>${n}</option>`).join('');
 function ageOf(birth){
