@@ -9,6 +9,7 @@
         --fw:#d9534f;--fw2:#fbe9e8;--mf:#2f7fd1;--mf2:#e6f0fb;--df:#c98a12;--df2:#fbf2df;--pitch:#e3f1e7;--pitchLine:#a9cdb5}
   @media (prefers-color-scheme: dark){:root{--bg:#121614;--card:#1b211e;--text:#e8eeea;--muted:#9aa5a0;--line:#2c3430;--accent:#3dbb82;--accent2:#1f2e27;--danger:#e57366;
         --fw:#f08a85;--fw2:#3a2423;--mf:#7fb3ec;--mf2:#1f2d3d;--df:#e3b45a;--df2:#352c1a;--pitch:#16271d;--pitchLine:#33553f}}
+  :root{color-scheme:light dark}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
   main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
@@ -17,7 +18,7 @@
   h2{font-size:16px;margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  input[type=text],input[type=email],input[type=password],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
+  input[type=text],input[type=email],input[type=password],input[type=date],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
   input[type=text],input[type=email],input[type=password]{flex:1;min-width:120px}
   button{padding:9px 14px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
   button:disabled{opacity:.5;cursor:default}
@@ -47,6 +48,14 @@
   .b-미드{background:var(--mf2);color:var(--mf)}
   .b-수비{background:var(--df2);color:var(--df)}
   .summary{margin-top:10px;font-size:14px}
+  input.num{width:58px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px}
+  table.stats th{cursor:pointer;user-select:none}
+  table.stats th.sorted{color:var(--accent)}
+  table.stats td:first-child, table.stats th:first-child{position:sticky;left:0;background:var(--card)}
+  .leaders{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;font-size:13px}
+  .leader{background:var(--accent2);border-radius:8px;padding:3px 8px}
+  h3.sub{font-size:14px;margin:16px 0 8px}
+  .game{display:flex;align-items:center;gap:6px;font-size:14px;padding:4px 0;border-bottom:1px solid var(--line)}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
@@ -118,13 +127,20 @@
 
   <section class="card app">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">개인 기록</h2>
+      <select id="statPeriod"><option value="all">전체 기간</option><option value="year">올해</option><option value="month">이번 달</option></select>
+    </div>
+    <div id="statsBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
+  <section class="card app admin-only">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">선수 명단 <span class="muted" id="count"></span></h2>
       <div class="row admin-only">
         <button class="ghost" id="allOn">전체 참석</button>
         <button class="ghost" id="allOff">전체 해제</button>
       </div>
     </div>
-    <p class="muted guest-only" id="guestHint"></p>
     <div class="tablewrap">
     <table>
       <thead><tr><th>참석</th><th>이름</th><th class="admin-only">등급</th><th class="admin-only">활동량</th><th class="admin-only">총점</th><th>포지션</th><th>키퍼</th><th class="admin-only"></th></tr></thead>
@@ -152,13 +168,28 @@
   </section>
 
   <section class="card app admin-only">
+    <h2>경기 기록 입력</h2>
+    <div class="row">
+      <select id="daySel"></select>
+      <button class="ghost" id="delDay">이 날짜 삭제</button>
+      <span class="row" style="gap:6px;margin-left:auto">
+        <input type="date" id="newDay">
+        <button class="ghost" id="addDay">경기일 추가</button>
+      </span>
+    </div>
+    <p class="muted">팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MVP를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
+    <div id="dayEditor"></div>
+  </section>
+
+  <section class="card app admin-only">
     <h2>관리</h2>
     <div class="row">
       <button class="ghost" id="exp">명단 내보내기</button>
       <button class="ghost" id="imp">명단 불러오기</button>
       <button class="ghost" id="migrate" style="display:none">이 브라우저의 예전 명단 올리기</button>
+      <button id="backupBtn">전체 백업 파일 받기</button>
     </div>
-    <p class="muted">명단은 온라인 DB에 저장돼서 누가 열어도 같은 명단이 보여요. 내보내기는 백업용이에요.</p>
+    <p class="muted">무료 플랜은 자동 백업이 없어요. 한 달에 한 번 정도 "전체 백업 파일 받기"로 명단·등급·기록 전체를 내려받아 보관하세요. (등급이 들어 있으니 공개된 곳에는 올리지 마세요)</p>
   </section>
 </main>
 
@@ -215,6 +246,7 @@ async function loadAll(){
     grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
   }));
   render();
+  loadRecords();
   const t = await sb.from('team_results').select('teams,created_at').eq('id',1).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
 }
@@ -224,7 +256,6 @@ function applyMode(){
   document.body.classList.toggle('admin', isAdmin());
   $('modeLabel').textContent = isAdmin() ? '관리자' : '일반';
   $('migrate').style.display = (isAdmin() && store.get('futsal-players-v1')) ? '' : 'none';
-  $('guestHint').textContent = ALLOW_PUBLIC_ATTENDANCE ? '오늘 올 수 있으면 내 이름 옆 참석을 체크해 주세요.' : '';
 }
 $('loginBtn').onclick = ()=>{ document.body.classList.toggle('login-open'); $('email').focus(); };
 $('doLogin').onclick = async ()=>{
@@ -278,7 +309,7 @@ function render(){
       tr.querySelector('[data-k=grade]').onchange = async e=>{ p.grade=+e.target.value; render(); await saveRating(); };
       tr.querySelector('[data-k=act]').onchange = async e=>{ p.act=e.target.value; render(); await saveRating(); };
       tr.querySelector('.del').onclick = async ()=>{
-        if(!confirm(p.name+' 삭제할까요?')) return;
+        if(!confirm(p.name+' 삭제할까요?\n이 선수의 출석·골·어시 기록도 함께 지워져요.')) return;
         if(await q(sb.from('players').delete().eq('id',p.id))){ players = players.filter(x=>x!==p); render(); }
       };
     }
@@ -493,7 +524,7 @@ function renderPublished(row){
 $('publishBtn').onclick = async ()=>{
   if(!lastTeams) return;
   const row = {id:1, teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
-  if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); alert('공개했어요. 이제 누구나 페이지에서 볼 수 있어요.'); }
+  if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); await recordAttendance(lastTeams); alert('공개했어요. 오늘 출석도 자동으로 기록했어요.'); }
 };
 function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function decode(str){ str = str.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(str)))); }
@@ -541,6 +572,225 @@ $('migrate').onclick = async ()=>{
     if(!confirm(`이 브라우저에 저장된 예전 명단 ${list.length}명을 온라인 DB로 올릴까요?`)) return;
     await importList(list);
   }catch(e){ alert('예전 명단을 읽지 못했어요'); }
+};
+
+
+/* ---------- 개인 기록 ---------- */
+let days = [], games = [], stats = [], selectedDayId = null;
+let statSort = {key:'att', dir:-1};
+const TEAM_LETTERS = ['A','B','C'];
+const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (이 기기 시간대 기준)
+
+async function loadRecords(){
+  if(!sb) return;
+  const [d, g, s] = await Promise.all([
+    sb.from('match_days').select('id,played_on').order('played_on', {ascending:false}),
+    sb.from('match_games').select('id,day_id,home,away,home_score,away_score').order('id'),
+    sb.from('player_stats').select('day_id,player_id,team,goals,assists,mvp'),
+  ]);
+  const err = d.error || g.error || s.error;
+  if(err){
+    $('statsBox').innerHTML = `<p class="muted">기록을 불러오지 못했어요: ${esc(err.message)}<br>Supabase에서 setup-records.sql을 실행했는지 확인해 주세요.</p>`;
+    return;
+  }
+  days = d.data; games = g.data; stats = s.data;
+  if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
+  renderStats();
+  if(isAdmin()) renderRecordEditor();
+}
+
+// 선수 한 명의 그날 승/무/패: 그날 소속 팀이 치른 경기 결과로 계산
+function dayResults(dayId, team){
+  const r = {w:0, d:0, l:0};
+  if(!team) return r;
+  games.forEach(gm=>{
+    if(gm.day_id !== dayId || (gm.home !== team && gm.away !== team)) return;
+    const my = gm.home === team ? gm.home_score : gm.away_score;
+    const op = gm.home === team ? gm.away_score : gm.home_score;
+    if(my > op) r.w++; else if(my < op) r.l++; else r.d++;
+  });
+  return r;
+}
+function aggregate(period){
+  const dayDate = Object.fromEntries(days.map(x=>[x.id, x.played_on]));
+  const today = todayStr();
+  const inPeriod = id => {
+    const date = dayDate[id]; if(!date) return false;
+    if(period === 'year') return date.slice(0,4) === today.slice(0,4);
+    if(period === 'month') return date.slice(0,7) === today.slice(0,7);
+    return true;
+  };
+  const agg = new Map(players.map(p=>[p.id, {name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0}]));
+  stats.forEach(r=>{
+    const x = agg.get(r.player_id);
+    if(!x || !inPeriod(r.day_id)) return;
+    x.att++; x.g += r.goals; x.a += r.assists; if(r.mvp) x.mvp++;
+    const res = dayResults(r.day_id, r.team); x.w += res.w; x.d += res.d; x.l += res.l;
+  });
+  return [...agg.values()].map(x=>({...x, gp: x.w + x.d + x.l, rate: (x.w + x.d + x.l) ? x.w / (x.w + x.d + x.l) : -1}));
+}
+const STAT_COLS = [
+  ['name','이름'], ['att','출석'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['g','골'], ['a','어시'], ['mvp','MVP'],
+];
+function renderStats(){
+  const period = $('statPeriod').value;
+  const rows = aggregate(period);
+  const {key, dir} = statSort;
+  rows.sort((a,b)=> key === 'name' ? dir * a.name.localeCompare(b.name,'ko')
+                                   : (dir * (a[key] - b[key])) || a.name.localeCompare(b.name,'ko'));
+  // 리더 표시
+  const leader = (k, unit) => {
+    const best = Math.max(0, ...rows.map(r=>r[k]));
+    if(!best) return null;
+    const names = rows.filter(r=>r[k]===best).map(r=>esc(r.name));
+    return `${names.slice(0,3).join(', ')}${names.length>3?' 외':''} <b>${best}${unit}</b>`;
+  };
+  const leaders = [['출석왕','att','회'], ['득점왕','g','골'], ['도움왕','a','개'], ['MVP 최다','mvp','회']]
+    .map(([label,k,u])=>{ const v = leader(k,u); return v ? `<span class="leader"><span class="muted">${label}</span> ${v}</span>` : ''; }).join('');
+  const dayCount = days.filter(x=> period==='all' || (period==='year' ? x.played_on.slice(0,4)===todayStr().slice(0,4) : x.played_on.slice(0,7)===todayStr().slice(0,7))).length;
+  $('statsBox').innerHTML = `
+    <p class="muted" style="margin-top:0">경기일 ${dayCount}일 기준 · 제목을 누르면 정렬돼요</p>
+    ${leaders ? `<div class="leaders">${leaders}</div>` : ''}
+    <div class="tablewrap"><table class="stats">
+      <thead><tr>${STAT_COLS.map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}${k===key ? (dir<0?' ▼':' ▲') : ''}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${esc(r.name)}</td><td>${r.att}</td><td>${r.gp}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+        <td>${r.rate < 0 ? '-' : Math.round(r.rate*100)+'%'}</td><td>${r.g}</td><td>${r.a}</td><td>${r.mvp || ''}</td></tr>`).join('') || `<tr><td colspan="10" class="muted">아직 기록이 없어요.</td></tr>`}
+      </tbody></table></div>`;
+  $('statsBox').querySelectorAll('th[data-k]').forEach(th=>th.onclick = ()=>{
+    const k = th.dataset.k;
+    statSort = statSort.key === k ? {key:k, dir:-statSort.dir} : {key:k, dir: k==='name' ? 1 : -1};
+    renderStats();
+  });
+}
+$('statPeriod').addEventListener('change', renderStats);
+
+/* ----- 관리자: 경기 기록 입력 ----- */
+function renderRecordEditor(){
+  const sel = $('daySel');
+  sel.innerHTML = days.length ? days.map(x=>`<option value="${x.id}" ${x.id===selectedDayId?'selected':''}>${x.played_on}</option>`).join('') : '<option value="">경기일 없음</option>';
+  $('delDay').disabled = !selectedDayId;
+  const box = $('dayEditor');
+  if(!selectedDayId){ box.innerHTML = '<p class="muted">팀 구성을 공개하면 오늘 날짜가 자동으로 만들어져요. 지난 경기는 날짜를 골라 추가하세요.</p>'; return; }
+
+  const rows = stats.filter(r=>r.day_id===selectedDayId)
+    .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name ?? '(삭제된 선수)'}))
+    .sort((a,b)=>(a.team||'Z').localeCompare(b.team||'Z') || a.name.localeCompare(b.name,'ko'));
+  const usedTeams = [...new Set(rows.map(r=>r.team).filter(Boolean))].sort();
+  const teamOpts = (usedTeams.length >= 2 ? usedTeams : TEAM_LETTERS);
+  const dayGames = games.filter(gm=>gm.day_id===selectedDayId);
+  const teamSummary = teamOpts.map(t=>{ const r = dayResults(selectedDayId, t); return `<span class="leader"><b>${t}팀</b> ${r.w}승 ${r.d}무 ${r.l}패</span>`; }).join('');
+  const notIn = players.filter(p=>!rows.some(r=>r.player_id===p.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+
+  box.innerHTML = `
+    <h3 class="sub">경기 결과</h3>
+    <div class="games">${dayGames.map(gm=>`<div class="game"><b>${gm.home}팀</b> ${gm.home_score} : ${gm.away_score} <b>${gm.away}팀</b>
+      <button class="del" data-game="${gm.id}">삭제</button></div>`).join('') || '<p class="muted">아직 입력한 경기가 없어요.</p>'}</div>
+    <div class="row" style="margin-top:8px">
+      <select id="gHome">${teamOpts.map((t,i)=>`<option ${i===0?'selected':''}>${t}</option>`).join('')}</select>
+      <input type="number" class="num" id="gHomeScore" min="0" value="0">
+      <span>:</span>
+      <input type="number" class="num" id="gAwayScore" min="0" value="0">
+      <select id="gAway">${teamOpts.map((t,i)=>`<option ${i===1?'selected':''}>${t}</option>`).join('')}</select>
+      <button class="ghost" id="addGame">경기 추가</button>
+    </div>
+    ${dayGames.length ? `<div class="leaders" style="margin-top:8px">${teamSummary}</div>` : ''}
+
+    <h3 class="sub">선수 기록 <span class="muted">(출석 ${rows.length}명)</span></h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th><th>MVP</th><th></th></tr></thead>
+      <tbody>${rows.map(r=>`<tr data-pid="${r.player_id}">
+        <td>${esc(r.name)}</td>
+        <td><select data-f="team"><option value="">-</option>${TEAM_LETTERS.map(t=>`<option ${t===r.team?'selected':''}>${t}</option>`).join('')}</select></td>
+        <td><input type="number" class="num" min="0" data-f="goals" value="${r.goals}"></td>
+        <td><input type="number" class="num" min="0" data-f="assists" value="${r.assists}"></td>
+        <td><input type="checkbox" data-f="mvp" ${r.mvp?'checked':''}></td>
+        <td><button class="del" data-remove="${r.player_id}">빼기</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">출석한 선수가 없어요.</td></tr>'}
+      </tbody></table></div>
+    <div class="row" style="margin-top:10px">
+      <select id="addPlayerSel"><option value="">선수 추가…</option>${notIn.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+      <button class="ghost" id="addPlayerBtn">출석 추가</button>
+      <button id="saveStats" style="margin-left:auto">기록 저장</button>
+    </div>`;
+
+  box.querySelectorAll('[data-game]').forEach(b=>b.onclick = async ()=>{
+    if(!confirm('이 경기 결과를 삭제할까요?')) return;
+    if(await q(sb.from('match_games').delete().eq('id', +b.dataset.game))) await loadRecords();
+  });
+  $('addGame').onclick = async ()=>{
+    const home = $('gHome').value, away = $('gAway').value;
+    if(home === away){ alert('서로 다른 팀을 골라주세요'); return; }
+    const hs = Math.max(0, parseInt($('gHomeScore').value,10) || 0), as = Math.max(0, parseInt($('gAwayScore').value,10) || 0);
+    if(await q(sb.from('match_games').insert({day_id:selectedDayId, home, away, home_score:hs, away_score:as}), '경기를 추가하지 못했어요')) await loadRecords();
+  };
+  box.querySelectorAll('[data-remove]').forEach(b=>b.onclick = async ()=>{
+    if(!confirm('이 선수를 이 날 출석에서 뺄까요? 이 날 골·어시 기록도 같이 지워져요.')) return;
+    if(await q(sb.from('player_stats').delete().eq('day_id', selectedDayId).eq('player_id', +b.dataset.remove))) await loadRecords();
+  });
+  $('addPlayerBtn').onclick = async ()=>{
+    const pid = +$('addPlayerSel').value; if(!pid) return;
+    if(await q(sb.from('player_stats').insert({day_id:selectedDayId, player_id:pid}), '출석을 추가하지 못했어요')) await loadRecords();
+  };
+  $('saveStats').onclick = async ()=>{
+    const rowsOut = [...box.querySelectorAll('tr[data-pid]')].map(tr=>({
+      day_id: selectedDayId, player_id: +tr.dataset.pid,
+      team: tr.querySelector('[data-f=team]').value || null,
+      goals: Math.max(0, parseInt(tr.querySelector('[data-f=goals]').value,10) || 0),
+      assists: Math.max(0, parseInt(tr.querySelector('[data-f=assists]').value,10) || 0),
+      mvp: tr.querySelector('[data-f=mvp]').checked,
+    }));
+    if(!rowsOut.length) return;
+    $('saveStats').disabled = true;
+    const ok = await q(sb.from('player_stats').upsert(rowsOut, {onConflict:'day_id,player_id'}), '기록을 저장하지 못했어요');
+    $('saveStats').disabled = false;
+    if(ok){ await loadRecords(); alert('저장했어요'); }
+  };
+}
+$('daySel').addEventListener('change', ()=>{ selectedDayId = +$('daySel').value || null; renderRecordEditor(); });
+$('addDay').onclick = async ()=>{
+  const date = $('newDay').value; if(!date){ alert('날짜를 골라주세요'); return; }
+  const r = await q(sb.from('match_days').upsert({played_on: date}, {onConflict:'played_on'}).select('id').single(), '경기일을 추가하지 못했어요');
+  if(r){ selectedDayId = r.id; await loadRecords(); }
+};
+$('delDay').onclick = async ()=>{
+  const day = days.find(x=>x.id===selectedDayId); if(!day) return;
+  if(!confirm(`${day.played_on} 경기일을 삭제할까요?\n이 날의 출석·경기 결과·골·어시 기록이 모두 지워져요.`)) return;
+  if(await q(sb.from('match_days').delete().eq('id', day.id))){ selectedDayId = null; await loadRecords(); }
+};
+
+// 팀 구성을 공개하면 오늘 출석과 소속 팀을 자동 기록 (이미 입력한 골·어시는 그대로 유지)
+async function recordAttendance(teams){
+  const today = todayStr();
+  let day = days.find(x=>x.played_on === today);
+  if(!day){
+    day = await q(sb.from('match_days').upsert({played_on: today}, {onConflict:'played_on'}).select('id,played_on').single(), '경기일을 만들지 못했어요');
+    if(!day) return;
+  }
+  const rows = teams.flatMap((t,i)=>t.filter(p=>p.id != null).map(p=>({day_id: day.id, player_id: p.id, team: TEAM_LETTERS[i]})));
+  if(!await q(sb.from('player_stats').upsert(rows, {onConflict:'day_id,player_id'}), '출석을 기록하지 못했어요')) return;
+  // 다시 공개하면서 빠진 선수 중 기록이 없는 사람은 출석에서 정리
+  const ids = new Set(rows.map(r=>r.player_id));
+  const stale = stats.filter(r=>r.day_id === day.id && !ids.has(r.player_id) && !r.goals && !r.assists && !r.mvp).map(r=>r.player_id);
+  if(stale.length) await q(sb.from('player_stats').delete().eq('day_id', day.id).in('player_id', stale));
+  selectedDayId = day.id;
+  await loadRecords();
+}
+
+/* ----- 전체 백업 파일 ----- */
+$('backupBtn').onclick = async ()=>{
+  const r = await sb.from('player_ratings').select('player_id,grade,act');
+  const tr = await sb.from('team_results').select('*');
+  const data = {
+    exported_at: new Date().toISOString(),
+    players: players.map(({id,name,pos,gk,on})=>({id,name,pos,gk,attending:on})),
+    player_ratings: r.data || [], team_results: tr.data || [],
+    match_days: days, match_games: games, player_stats: stats,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `jalapenoFC-backup-${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 };
 
 /* ---------- 시작 ---------- */
