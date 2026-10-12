@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>풋살 팀 밸런서</title>
+<style>
+  :root{--bg:#f5f7f6;--card:#fff;--text:#1d2420;--muted:#6b756f;--line:#e2e7e4;--accent:#1f8a5b;--accent2:#e8f5ee;--danger:#c0392b}
+  @media (prefers-color-scheme: dark){:root{--bg:#121614;--card:#1b211e;--text:#e8eeea;--muted:#9aa5a0;--line:#2c3430;--accent:#3dbb82;--accent2:#1f2e27;--danger:#e57366}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
+  main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:4px 0 16px}
+  h2{font-size:16px;margin:0 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
+  input[type=text]{flex:1;min-width:120px}
+  button{padding:9px 14px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
+  button.ghost{background:var(--accent2);color:var(--accent)}
+  button.del{background:none;color:var(--danger);padding:4px 8px}
+  label.chk{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--muted);font-weight:500}
+  td select{padding:4px 6px;font-size:14px}
+  .muted{color:var(--muted);font-size:13px}
+  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .team{border:1px solid var(--line);border-radius:10px;padding:12px}
+  .team h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between}
+  .team ul{margin:0;padding-left:18px;font-size:14px}
+  .badge{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;background:var(--accent2);color:var(--accent);margin-left:4px}
+  .summary{margin-top:10px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1>⚽ 풋살 팀 밸런서</h1>
+
+  <section class="card">
+    <h2>선수 등록</h2>
+    <div class="row">
+      <input type="text" id="name" placeholder="이름">
+      <select id="grade">
+        <option value="5">S</option><option value="4">A</option><option value="3" selected>B</option><option value="2">C</option><option value="1">D</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="gk"> 키퍼 가능</label>
+      <button id="add">추가</button>
+    </div>
+    <p class="muted">등급 점수: S=5 · A=4 · B=3 · C=2 · D=1</p>
+  </section>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">선수 명단 <span class="muted" id="count"></span></h2>
+      <div class="row">
+        <button class="ghost" id="allOn">전체 참석</button>
+        <button class="ghost" id="allOff">전체 해제</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>참석</th><th>이름</th><th>등급</th><th>키퍼</th><th></th></tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>팀 나누기</h2>
+    <div class="row">
+      <select id="teamCount"><option value="2">2팀</option><option value="3" selected>3팀</option></select>
+      <button id="make">팀 구성하기</button>
+      <button class="ghost" id="again">다시 섞기</button>
+    </div>
+    <div id="result" style="margin-top:14px"></div>
+  </section>
+
+  <section class="card">
+    <h2>백업</h2>
+    <div class="row">
+      <button class="ghost" id="exp">명단 내보내기</button>
+      <button class="ghost" id="imp">명단 불러오기</button>
+    </div>
+    <p class="muted">명단은 이 브라우저에 저장돼요. 다른 기기로 옮길 때는 내보내기로 복사한 텍스트를 불러오기에 붙여넣으세요.</p>
+  </section>
+</main>
+
+<script>
+const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
+const KEY = 'futsal-players-v1';
+let players = load();
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(players)); }catch(e){} }
+const $ = id => document.getElementById(id);
+
+function render(){
+  const tb = $('list'); tb.innerHTML = '';
+  players.sort((a,b)=>b.grade-a.grade || a.name.localeCompare(b.name,'ko'));
+  players.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" ${p.on?'checked':''} data-k="on"></td>
+      <td>${esc(p.name)}</td>
+      <td><select data-k="grade">${[5,4,3,2,1].map(g=>`<option value="${g}" ${g==p.grade?'selected':''}>${GRADES[g]}</option>`).join('')}</select></td>
+      <td><input type="checkbox" ${p.gk?'checked':''} data-k="gk"></td>
+      <td><button class="del">삭제</button></td>`;
+    tr.querySelector('[data-k=on]').onchange = e=>{p.on=e.target.checked;save();count();};
+    tr.querySelector('[data-k=gk]').onchange = e=>{p.gk=e.target.checked;save();};
+    tr.querySelector('[data-k=grade]').onchange = e=>{p.grade=+e.target.value;save();render();};
+    tr.querySelector('.del').onclick = ()=>{ if(confirm(p.name+' 삭제할까요?')){players=players.filter(x=>x!==p);save();render();} };
+    tb.appendChild(tr);
+  });
+  count();
+}
+function count(){ $('count').textContent = `(전체 ${players.length}명 · 참석 ${players.filter(p=>p.on).length}명)`; }
+function esc(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+$('add').onclick = ()=>{
+  const name = $('name').value.trim(); if(!name) return;
+  if(players.some(p=>p.name===name)){ alert('이미 있는 이름이에요'); return; }
+  players.push({name, grade:+$('grade').value, gk:$('gk').checked, on:true});
+  $('name').value=''; $('gk').checked=false; save(); render(); $('name').focus();
+};
+$('name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('add').click(); });
+$('allOn').onclick = ()=>{ players.forEach(p=>p.on=true); save(); render(); };
+$('allOff').onclick = ()=>{ players.forEach(p=>p.on=false); save(); render(); };
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+const sum = t => t.reduce((s,p)=>s+p.grade,0);
+const spread = teams => { const s=teams.map(sum); return Math.max(...s)-Math.min(...s); };
+const variance = teams => { const s=teams.map(sum), m=s.reduce((a,b)=>a+b,0)/s.length; return s.reduce((a,b)=>a+(b-m)**2,0); };
+
+function balance(list, n){
+  const teams = Array.from({length:n},()=>[]);
+  // 1) 키퍼 가능자를 팀마다 먼저 한 명씩
+  const gks = shuffle(list.filter(p=>p.gk)).sort((a,b)=>b.grade-a.grade);
+  const firstGk = gks.slice(0,n);
+  // 키퍼는 약한 순서대로 팀 0..n-1 에 넣어 강한 필드 선수와 균형
+  firstGk.slice().reverse().forEach((p,i)=>teams[i].push(p));
+  // 2) 나머지는 점수순 스네이크 드래프트 (같은 점수는 무작위)
+  const rest = shuffle(list.filter(p=>!firstGk.includes(p))).sort((a,b)=>b.grade-a.grade);
+  let order = [];
+  while(order.length < rest.length){
+    const fwd = [...Array(n).keys()];
+    order.push(...fwd, ...fwd.slice().reverse());
+  }
+  // 인원수가 적은 팀부터 받도록 보정
+  rest.forEach(p=>{
+    const minSize = Math.min(...teams.map(t=>t.length));
+    let idx = order.shift();
+    while(teams[idx].length > minSize) idx = order.shift() ?? teams.findIndex(t=>t.length===minSize);
+    teams[idx].push(p);
+  });
+  // 3) 스왑 최적화: 키퍼 여부가 같은 선수끼리 바꿔서 점수 차이를 줄임
+  let improved = true, guard = 0;
+  while(improved && guard++ < 500){
+    improved = false;
+    for(let a=0;a<n;a++) for(let b=a+1;b<n;b++)
+      for(let i=0;i<teams[a].length;i++) for(let j=0;j<teams[b].length;j++){
+        const x=teams[a][i], y=teams[b][j];
+        if(x.gk!==y.gk || x.grade===y.grade) continue;
+        const before = variance(teams);
+        teams[a][i]=y; teams[b][j]=x;
+        if(variance(teams) < before - 1e-9){ improved = true; }
+        else { teams[a][i]=x; teams[b][j]=y; }
+      }
+  }
+  return teams;
+}
+
+function make(){
+  const n = +$('teamCount').value;
+  const on = players.filter(p=>p.on);
+  if(on.length < n*2){ $('result').innerHTML = `<p class="muted">참석 인원이 너무 적어요. (${on.length}명)</p>`; return; }
+  const teams = balance(on, n);
+  const names = ['A팀','B팀','C팀'];
+  $('result').innerHTML = `<div class="teams">${teams.map((t,i)=>`
+    <div class="team"><h3><span>${names[i]} (${t.length}명)</span><span>${sum(t)}점</span></h3>
+    <ul>${t.slice().sort((a,b)=>b.grade-a.grade).map(p=>`<li>${esc(p.name)} <span class="badge">${GRADES[p.grade]}</span>${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`).join('')}
+  </div><p class="summary">팀 점수 차이: 최대 <b>${spread(teams)}점</b> · 평균 ${(teams.map(sum).reduce((a,b)=>a+b,0)/n).toFixed(1)}점</p>`;
+}
+$('make').onclick = make;
+$('again').onclick = make;
+
+$('exp').onclick = ()=>{
+  const txt = JSON.stringify(players);
+  navigator.clipboard?.writeText(txt).then(()=>alert('명단을 복사했어요. 메모장 등에 붙여넣어 보관하세요.'), ()=>prompt('아래 내용을 복사하세요', txt));
+};
+$('imp').onclick = ()=>{
+  const txt = prompt('내보낸 명단 텍스트를 붙여넣으세요'); if(!txt) return;
+  try{ const d = JSON.parse(txt); if(!Array.isArray(d)) throw 0; players = d; save(); render(); alert('불러왔어요'); }
+  catch(e){ alert('형식이 올바르지 않아요'); }
+};
+
+render();
+</script>
+</body>
+</html>
