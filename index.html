@@ -546,7 +546,7 @@ window.addEventListener('error', e=> showErr('화면을 그리다 오류가 났�
 window.addEventListener('unhandledrejection', e=> showErr('데이터를 처리하다 오류가 났어요', e.reason && (e.reason.message || e.reason)));
 
 /* ---------- 종목 (풋살 / 축구) ---------- */
-let SPORT = (()=>{ try{ return localStorage.getItem('futsal-sport-v1') === 'soccer' ? 'soccer' : 'futsal'; }catch(e){ return 'futsal'; } })();
+let SPORT = 'futsal';   // 페이지를 열면 항상 풋살부터 (전환해도 기억하지 않음)
 const SPORT_LABEL = {futsal:'풋살', soccer:'축구'};
 const RESULT_ID = () => SPORT === 'soccer' ? 2 : 1;      // 공개된 팀 구성 번호
 const hasCoffee = () => SPORT !== 'soccer';              // 커피 내기는 풋살에서만
@@ -1994,7 +1994,7 @@ function applySport(){
 }
 document.querySelectorAll('.sportToggle button').forEach(b=>b.onclick = ()=>{
   if(b.dataset.sport === SPORT) return;
-  SPORT = b.dataset.sport; store.set('futsal-sport-v1', SPORT);
+  SPORT = b.dataset.sport;
   // 종목이 바뀌면 만들던 팀·선택한 날짜는 초기화하고 그 종목 데이터로 다시 불러오기
   lastTeams = null; lastTactics = []; $('result').innerHTML = ''; $('shareRow').style.display = 'none';
   selectedDayId = null; histDayId = null; hofHidden = false; awardYear = null;
