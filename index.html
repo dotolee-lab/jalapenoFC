@@ -545,6 +545,7 @@ window.addEventListener('unhandledrejection', e=> showErr('데이터를 처리�
 let SPORT = (()=>{ try{ return localStorage.getItem('futsal-sport-v1') === 'soccer' ? 'soccer' : 'futsal'; }catch(e){ return 'futsal'; } })();
 const SPORT_LABEL = {futsal:'풋살', soccer:'축구'};
 const RESULT_ID = () => SPORT === 'soccer' ? 2 : 1;      // 공개된 팀 구성 번호
+const hasCoffee = () => SPORT !== 'soccer';              // 커피 내기는 풋살에서만
 let sportMissing = false;                                 // setup-sport.sql 실행 전이면 true
 
 const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
@@ -778,11 +779,11 @@ function updateNeed(){
   $('need').textContent = text;
 }
 // 팀 인원 선택지: 풋살 6·7명, 축구 8~11명 (종목별로 마지막 선택 기억)
-const TEAM_SIZES = {futsal:[6,7], soccer:[8,9,10,11]};
+const TEAM_SIZES = {futsal:[6,7], soccer:[8,9,10,11,12,13,14,15]};
 const settingKey = () => SPORT === 'soccer' ? 'futsal-setting-soccer' : 'futsal-setting-v1';
 function setupTeamSize(){
   const sizes = TEAM_SIZES[SPORT];
-  $('teamSize').innerHTML = sizes.map(n=>`<option value="${n}">팀당 ${n}명</option>`).join('');
+  $('teamSize').innerHTML = sizes.map(n=>`<option value="${n}">팀당 ${n}명${SPORT === 'soccer' && n > 11 ? ` (교체 ${n-11}명)` : ''}</option>`).join('');
   let saved = null; try{ saved = JSON.parse(store.get(settingKey())); }catch(e){}
   $('teamCount').value = saved?.n || (SPORT === 'soccer' ? '2' : '3');
   $('teamSize').value = sizes.includes(+saved?.size) ? saved.size : (SPORT === 'soccer' ? 11 : 6);
@@ -813,7 +814,7 @@ const SOCCER_TACTICS = {
   11: ['4-4-2','4-3-3','4-2-3-1','3-5-2','3-4-3','5-3-2','4-1-4-1','4-5-1'],
 };
 const TACTIC_PRESETS_OF = () => SPORT === 'soccer' ? SOCCER_TACTICS : FUTSAL_TACTICS;
-const DEFAULT_TACTIC_OF = n => SPORT === 'soccer' ? ({8:'3-3-1', 9:'3-3-2', 10:'3-4-2', 11:'4-4-2'})[n] : ({4:'2-2', 5:'2-1-2', 6:'2-2-2', 7:'3-2-2', 8:'3-3-2'})[n];
+const DEFAULT_TACTIC_OF = n => SPORT === 'soccer' ? ({8:'3-3-1', 9:'3-3-2', 10:'3-4-2'})[n] || (n >= 11 ? '4-4-2' : '') : ({4:'2-2', 5:'2-1-2', 6:'2-2-2', 7:'3-2-2', 8:'3-3-2'})[n];
 const validTactic = t => typeof t === 'string' && /^[1-9](-[1-9]){1,3}$/.test(t) && t.split('-').reduce((a,b)=>a+ +b,0) <= 11;
 let lastTactics = [];
 
@@ -1152,7 +1153,8 @@ function renderStats(){
   const all = aggregate(period).map(r=>({...r, pts: r.g + r.a, wdl: r.w * 10000 + r.d * 100 - r.l, streak: streaks[r.id] || 0}));
 
   // ----- 그룹 버튼 + 위쪽 순위 카드 (고른 그룹에 맞는 카드) -----
-  const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
+  if(!hasCoffee() && statGroup === 'coffee') statGroup = 'game';
+  const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).filter(([g])=>g !== 'coffee' || hasCoffee()).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
   const cards = LEADER_CARDS[statGroup]();
   $('leaderBox').innerHTML = groupBar + `<div class="lb" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
     const list = withRanks(all.filter(r=>r[k] > 0).sort((a,b)=>b[k]-a[k] || a.name.localeCompare(b.name,'ko')), k);
@@ -1224,6 +1226,7 @@ function dayListBlock(field, label, placeholder, missingSql){
 }
 // 커피 내기 입력 블록 (진 팀 · 낸 사람 · 금액)
 function coffeeBlock(){
+  if(!hasCoffee()) return '';
   if(coffeeMissing) return '<h3 class="sub">☕ 커피 내기</h3><p class="muted">기록하려면 Supabase에서 setup-coffee.sql을 먼저 실행해 주세요.</p>';
   const day = days.find(x=>x.id===selectedDayId) || {};
   const used = [...new Set(stats.filter(r=>r.day_id===selectedDayId).map(r=>r.team).filter(Boolean))].sort();
@@ -1525,7 +1528,7 @@ function renderHistory(){
         return `<div><span class="muted">⏰ 지각</span><b>${nm(day.lates) || '-'}</b></div>
         <div class="${(day.noshows || []).length ? 'nsTile' : ''}"><span class="muted">🚫 노쇼</span><b>${nm(day.noshows) || '-'}</b></div>`; })()}
       ${(()=>{ const day = days.find(x=>x.id===histDayId) || {};
-        if(!(day.coffee_teams || []).length && !(day.coffee_payers || []).length) return '';
+        if(!hasCoffee() || (!(day.coffee_teams || []).length && !(day.coffee_payers || []).length)) return '';
         const amt = showAmounts();
         const payers = (day.coffee_payers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>{
           const a = coffeeAmounts.find(c=>c.day_id===day.id && c.player_id===x.id)?.amount;
@@ -1693,7 +1696,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : ''], ['내기 패', `${me.cl}회`, ''],
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ...(hasCoffee() ? [['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : ''], ['내기 패', `${me.cl}회`, '']] : []),
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
