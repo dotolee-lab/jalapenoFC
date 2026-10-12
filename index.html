@@ -297,6 +297,11 @@
   .leader{background:var(--accent2);border-radius:8px;padding:3px 8px}
   h3.sub{font-size:14px;margin:16px 0 8px}
   .game{display:flex;align-items:center;gap:6px;font-size:14px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .nameCell{white-space:nowrap}
+  .editName{background:none;padding:2px 6px;margin-left:4px;font-size:13px;opacity:.55}
+  .editName:hover{opacity:1}
+  .nameIn{width:110px !important;min-width:0 !important;padding:5px 8px !important;font-size:14px !important;margin-right:4px}
+  .nameCell .small{margin-left:2px}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
   .homeLink{color:inherit;text-decoration:none}
   .homeLink:hover{opacity:.8}
@@ -629,7 +634,7 @@ function render(){
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${canAttend ? `<input type="checkbox" ${p.on?'checked':''} data-k="on">` : (p.on?'✓':'')}</td>
-      <td>${esc(p.name)}</td>
+      <td class="nameCell">${admin ? `<span class="nmText">${esc(p.name)}</span><button class="editName" title="이름 수정" aria-label="이름 수정">✏️</button>` : esc(p.name)}</td>
       ${admin ? `
       <td><select data-k="grade">${[5,4,3,2,1].map(g=>`<option value="${g}" ${g==p.grade?'selected':''}>${GRADES[g]}</option>`).join('')}</select></td>
       <td><select data-k="act">${Object.keys(ACTS).map(x=>`<option ${x===p.act?'selected':''}>${x}</option>`).join('')}</select></td>
@@ -644,6 +649,21 @@ function render(){
     };
     if(admin){
       tr.querySelector('[data-k=gk]').onchange = async e=>{ p.gk=e.target.checked; await q(sb.from('players').update({gk:p.gk}).eq('id',p.id)); };
+      // 이름 수정: ✏️ 누르면 입력칸 → Enter/저장으로 반영, Esc/취소로 되돌리기
+      tr.querySelector('.editName').onclick = ()=>{
+        const cell = tr.querySelector('.nameCell');
+        cell.innerHTML = `<input type="text" class="nameIn" maxlength="20" value="${esc(p.name)}"><button class="small nameSave">저장</button><button class="ghost small nameCancel">취소</button>`;
+        const inp = cell.querySelector('.nameIn'); inp.focus(); inp.select();
+        const save = async ()=>{
+          const name = inp.value.trim();
+          if(!name || name === p.name){ render(); return; }
+          if(players.some(x=>x !== p && x.name === name)){ alert('이미 있는 이름이에요'); inp.focus(); return; }
+          if(await q(sb.from('players').update({name}).eq('id', p.id), '이름을 바꾸지 못했어요')){ p.name = name; render(); loadRecords(); }
+        };
+        cell.querySelector('.nameSave').onclick = save;
+        cell.querySelector('.nameCancel').onclick = ()=> render();
+        inp.onkeydown = e=>{ if(e.key === 'Enter') save(); if(e.key === 'Escape') render(); };
+      };
       tr.querySelectorAll('[data-pos]').forEach(cb=>cb.onchange = async ()=>{
         const picked = [...tr.querySelectorAll('[data-pos]:checked')].map(c=>c.dataset.pos);
         if(!picked.length){ cb.checked = true; alert('포지션은 최소 1개는 골라야 해요'); return; }
