@@ -88,6 +88,9 @@
   .awP{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:16px}
   .awP .avatar.big{margin:0;box-shadow:0 0 0 4px rgba(255,255,255,.6)}
   .awVal{font-weight:700;font-size:14px;opacity:.85}
+  .awMany{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .awMany b{font-size:28px;font-weight:900}
+  .awMany span{font-size:13px;opacity:.75}
   .awEmpty{flex:1;display:grid;place-items:center;font-size:14px;opacity:.7}
   .nsBadge{display:inline-block;background:#e5383b;color:#fff;font-weight:900;border-radius:8px;padding:2px 8px;box-shadow:0 0 0 2px rgba(229,56,59,.25);animation:nsPulse 1.8s ease-in-out infinite}
   @keyframes nsPulse{0%,100%{box-shadow:0 0 0 2px rgba(229,56,59,.25)}50%{box-shadow:0 0 0 5px rgba(229,56,59,.12)}}
@@ -369,6 +372,14 @@
   </section>
 
   <section class="card app" data-pane="stats">
+    <div class="histHead">
+      <h2>🏆 명예의 전당</h2>
+      <select id="awardYear" style="display:none"></select>
+    </div>
+    <div id="yearAwards"><p class="muted">불러오는 중…</p></div>
+  </section>
+
+  <section class="card app" data-pane="stats">
     <div id="leaderBox"></div>
     <div class="statHead">
       <h2>개인 기록</h2><span class="sep">|</span>
@@ -379,12 +390,7 @@
   </section>
 
   <section class="card app" data-pane="stats">
-    <div class="histHead">
-      <h2>🏆 명예의 전당</h2>
-      <select id="awardYear" style="display:none"></select>
-    </div>
-    <div id="yearAwards"></div>
-    <h3 class="sub">경기별 MVP</h3>
+    <h2>🎖️ 경기별 MVP</h2>
     <div id="hofList"><p class="muted">불러오는 중…</p></div>
   </section>
 
@@ -1383,7 +1389,7 @@ function renderMvpBanner(){
 function renderYearAwards(){
   const years = [...new Set(days.map(d=>d.played_on.slice(0,4)))].sort().reverse();
   const sel = $('awardYear');
-  if(!years.length){ sel.style.display = 'none'; $('yearAwards').innerHTML = ''; return; }
+  if(!years.length){ sel.style.display = 'none'; $('yearAwards').innerHTML = '<p class="muted">경기 기록이 쌓이면 올해의 수상자가 나와요.</p>'; return; }
   const thisYear = todayStr().slice(0,4);
   awardYear = years.includes(awardYear) ? awardYear : (years.includes(thisYear) ? thisYear : years[0]);
   sel.style.display = years.length > 1 ? '' : 'none';
@@ -1397,9 +1403,10 @@ function renderYearAwards(){
     const win = best ? rows.filter(r=>r[k]===best).sort((a,b)=>a.name.localeCompare(b.name,'ko')) : [];
     return `<div class="award ${cls}">
       <div class="awTitle">${icon} ${label(t)}</div>
-      ${win.length ? `<div class="awWin">${win.slice(0,3).map(w=>`<div class="awP">${avatar(w.name,'big')}<b>${nameLink(w.id, w.name)}</b></div>`).join('')}</div>
-        <div class="awVal">${best}${unit}${win.length > 3 ? ` · 외 ${win.length-3}명` : ''}</div>`
-      : '<div class="awEmpty">아직 기록이 없어요</div>'}
+      ${!win.length ? '<div class="awEmpty">아직 기록이 없어요</div>'
+        : win.length > 3 ? `<div class="awMany"><b>공동 ${win.length}명</b><span>기록이 갈리면 수상자가 나와요</span></div><div class="awVal">${best}${unit}</div>`
+        : `<div class="awWin">${win.map(w=>`<div class="awP">${avatar(w.name,'big')}<b>${nameLink(w.id, w.name)}</b></div>`).join('')}</div>
+           <div class="awVal">${win.length > 1 ? `공동 · ` : ''}${best}${unit}</div>`}
     </div>`;
   }).join('')}</div>`;
 }
