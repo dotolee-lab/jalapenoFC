@@ -100,6 +100,19 @@
   .daySum>div.nsTile{background:#e5383b;color:#fff}
   .daySum>div.nsTile .muted,.daySum>div.nsTile b,.daySum>div.nsTile .plink{color:#fff}
   .bkChip.nsChip{border-color:#e5383b;background:rgba(229,56,59,.12)}
+  /* 장비 보관 */
+  .gearGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media (max-width:700px){.gearGrid{grid-template-columns:1fr}}
+  .gearItem{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .gearItem.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .gearHead{font-size:15px;display:flex;align-items:center;gap:6px}
+  .gearWhen{margin-left:auto;font-size:12px}
+  .gearWho{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;align-items:center}
+  .gearChip{display:inline-flex;align-items:center;gap:6px;background:var(--head);border-radius:999px;padding:2px 10px 2px 2px;font-size:14px;font-weight:600}
+  .gearBtn{align-self:flex-start}
+  .gearSlots{display:flex;flex-direction:column;gap:6px}
+  .gearSel{width:100%}
+  .pcGear{font-size:12px;font-weight:700;color:var(--accent)}
   /* 일정 */
   .sched{display:flex;flex-direction:column;gap:8px}
   .ev{display:grid;grid-template-columns:56px 1fr auto auto;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;border-left:5px solid var(--accent)}
@@ -293,6 +306,11 @@
         <button id="evAdd">일정 추가</button>
       </div>
     </div>
+  </section>
+
+  <section class="card app" id="gearCard">
+    <h2>🎒 장비 보관</h2>
+    <div id="gearBox"><p class="muted">불러오는 중…</p></div>
   </section>
 
   <section class="card app">
@@ -512,6 +530,7 @@ async function loadAll(){
   render();
   loadRecords();
   loadEvents();
+  loadGear();
   const t = await sb.from('team_results').select('teams,created_at').eq('id',1).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
 }
@@ -1431,6 +1450,7 @@ function renderProfilePicker(){
       ${avatar(p.name,'md')}
       <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}${p.gk ? '<span class="badge">GK</span>' : ''}</span>
+      ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
@@ -1470,6 +1490,7 @@ function renderProfile(){
   const facts = [
 
     p.birth ? ['생년월일', `${fmtBirth(p.birth)}${age!=null?` (만 ${age}세)`:''}`] : null,
+    holdingOf(p.id).length ? ['🎒 보관 중', `<b>${holdingOf(p.id).map(esc).join(', ')}</b>`] : null,
   ].filter(Boolean);
 
   box.innerHTML = `
@@ -1647,6 +1668,56 @@ $('evKind').addEventListener('change', ()=>{
   // 종류를 고르면 제목 기본값 채워주기
   if(!$('evTitle').value.trim()) $('evTitle').value = {경기:'정기 경기', 회비:'회비 내는 날', 기타:''}[$('evKind').value] || '';
 });
+
+
+/* ---------- 장비 보관 (조끼 / 장비 / 예비 장비) ---------- */
+let gear = [], gearMissing = false, gearEditing = null;
+const GEAR_ICON = {vest:'🎽', gear:'⚽', spare:'📦'};
+async function loadGear(){
+  if(!sb) return;
+  const r = await sb.from('gear').select('id,label,max_holders,holders,sort,updated_at').order('sort');
+  gearMissing = !!r.error;
+  gear = r.error ? [] : r.data.map(g=>({...g, holders: g.holders || []}));
+  renderGear();
+  renderProfile();
+}
+const sinceText = iso => {
+  if(!iso) return '';
+  const d = daysBetween(new Date(iso).toLocaleDateString('sv-SE'), todayStr());
+  return d <= 0 ? '오늘' : d === 1 ? '어제' : `${d}일 전`;
+};
+const holdingOf = pid => gear.filter(g=>g.holders.includes(pid)).map(g=>g.label);
+function renderGear(){
+  const card = $('gearCard'), box = $('gearBox');
+  card.classList.toggle('admin-only', gearMissing);
+  if(gearMissing){ box.innerHTML = '<p class="muted">장비 보관을 쓰려면 Supabase에서 setup-gear.sql을 먼저 실행해 주세요.</p>'; return; }
+  const sorted = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  box.innerHTML = `<div class="gearGrid">${gear.map(g=>{
+    const who = g.holders.map(pid=>players.find(p=>p.id===pid)).filter(Boolean);
+    if(gearEditing === g.id){
+      const slots = Array.from({length: g.max_holders}, (_, i)=>g.holders[i] ?? '');
+      return `<div class="gearItem editing">
+        <div class="gearHead">${GEAR_ICON[g.id] || '🎒'} <b>${esc(g.label)}</b>${g.max_holders > 1 ? `<span class="muted"> 최대 ${g.max_holders}명</span>` : ''}</div>
+        <div class="gearSlots">${slots.map(v=>`<select class="gearSel"><option value="">- 없음 -</option>${sorted.map(p=>`<option value="${p.id}" ${p.id===v?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`).join('')}</div>
+        <div class="row" style="gap:6px;margin-top:8px"><button class="small" data-gear-save="${g.id}">저장</button><button class="ghost small" data-gear-cancel>취소</button></div>
+      </div>`;
+    }
+    return `<div class="gearItem">
+      <div class="gearHead">${GEAR_ICON[g.id] || '🎒'} <b>${esc(g.label)}</b>${g.holders.length ? `<span class="muted gearWhen">${sinceText(g.updated_at)}</span>` : ''}</div>
+      <div class="gearWho">${who.length ? who.map(p=>`<span class="gearChip">${avatar(p.name,'sm')}${nameLink(p.id, p.name)}</span>`).join('') : '<span class="muted">아무도 없음</span>'}</div>
+      <button class="ghost small gearBtn" data-gear-edit="${g.id}">내가 받았어요 / 변경</button>
+    </div>`;
+  }).join('')}</div>`;
+  box.querySelectorAll('[data-gear-edit]').forEach(b=>b.onclick = ()=>{ gearEditing = b.dataset.gearEdit; renderGear(); });
+  box.querySelectorAll('[data-gear-cancel]').forEach(b=>b.onclick = ()=>{ gearEditing = null; renderGear(); });
+  box.querySelectorAll('[data-gear-save]').forEach(b=>b.onclick = async ()=>{
+    const id = b.dataset.gearSave;
+    const picked = [...new Set([...box.querySelectorAll('.gearItem.editing .gearSel')].map(s=>+s.value).filter(Boolean))];
+    b.disabled = true;
+    if(await q(sb.rpc('set_gear', {p_id: id, p_holders: picked}), '보관자를 저장하지 못했어요')){ gearEditing = null; await loadGear(); }
+    else b.disabled = false;
+  });
+}
 
 /* ---------- 제목 누르면 메인으로 ---------- */
 $('homeLink').onclick = e=>{
