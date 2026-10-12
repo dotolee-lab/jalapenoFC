@@ -73,12 +73,42 @@
   .hofItem.latest{border-color:#f5b82e;box-shadow:0 0 0 1px #f5b82e inset}
   .hofRow{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px}
   .hofRow .muted{margin-left:auto}
+  /* 프로필 */
+  .plink{color:inherit;text-decoration:none}
+  .plink:hover{text-decoration:underline}
+  .pfPicker{display:flex;flex-wrap:wrap;gap:6px;max-height:156px;overflow-y:auto;padding:2px;margin-bottom:16px}
+  .pchip{display:inline-flex;align-items:center;gap:6px;background:var(--head);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 3px;font-size:14px}
+  .pchip small{color:var(--muted);font-size:11px}
+  .pchip.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .pfCard{border:1px solid var(--line);border-radius:16px;padding:18px}
+  .pfTop{display:flex;gap:16px;align-items:center}
+  .pfTop .avatar.big{margin:0;flex:none}
+  .pfId{min-width:0}
+  .pfName{font-size:26px;font-weight:800;line-height:1.2}
+  .pfMeta{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px}
+  .pfMeta .badge{margin-left:0}
+  .pfNum{font-weight:800;color:var(--hl);margin-right:4px}
+  .pfFacts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:14px}
+  .pfIntro{margin-top:8px;font-size:15px;color:var(--muted);font-style:italic}
+  .pfBday{margin-top:14px;background:linear-gradient(135deg,#ffe27d,#f5b82e);color:#3b2a00;border-radius:12px;padding:10px 14px;font-weight:700;text-align:center}
+  .pfEdit{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px}
+  .pfTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  @media (max-width:560px){.pfTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pfTop{flex-direction:column;text-align:center}.pfTop .avatar.big{margin:0 auto}.pfMeta,.pfFacts{justify-content:center}}
+  .pfTiles>div{background:var(--head);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px}
+  .pfTiles b{font-size:20px;color:var(--text)}
+  .pfTiles em{font-style:normal;font-size:12px;color:var(--hl);font-weight:700}
+  .pfRecent{display:flex;flex-direction:column;gap:6px}
+  .pfGame{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--text);text-decoration:none;font-size:14px}
+  .pfGame:hover{border-color:var(--accent)}
+  .pfGame .dt{font-weight:600}
+  .pfGame .tm{color:var(--muted)}
+  .pfMvp{display:flex;flex-wrap:wrap;gap:6px}
   /* 탭 */
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 16px;overflow-x:auto}
   .tabs button{background:none;color:var(--muted);border-radius:0;padding:10px 14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
   .tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
   section[data-pane]{display:none}
-  body.tab-team section[data-pane="team"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"]{display:block}
+  body.tab-team section[data-pane="team"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-profile section[data-pane="profile"]{display:block}
   body.shared .tabs{display:none}
   /* 경기 기록 탭 */
   .histHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -173,6 +203,7 @@
     <button data-tab="team" class="on">팀 구성</button>
     <button data-tab="stats">개인 기록</button>
     <button data-tab="history">경기 기록</button>
+    <button data-tab="profile">프로필</button>
   </nav>
 
   <section class="card notice" id="configNotice" style="display:none">
@@ -297,6 +328,15 @@
     <div id="dayEditor"></div>
   </section>
 
+  <section class="card app" data-pane="profile">
+    <div class="histHead">
+      <h2>선수 프로필</h2>
+      <input type="text" id="pfSearch" class="search" placeholder="🔍 이름 검색" style="max-width:220px">
+    </div>
+    <div id="pfPicker" class="pfPicker"></div>
+    <div id="pfBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
   <section class="card app admin-only" data-pane="team">
     <h2>관리</h2>
     <div class="row">
@@ -350,7 +390,12 @@ async function q(promise, msg){
 }
 async function loadAll(){
   if(!sb) return;
-  const res = await sb.from('players').select('id,name,pos,gk,attending').order('name');
+  let res = await sb.from('players').select('id,name,pos,gk,attending,number,foot,intro,birth').order('name');
+  profileColumnsMissing = false;
+  if(res.error && /column|number|foot|intro|birth/i.test(res.error.message)){
+    profileColumnsMissing = true;
+    res = await sb.from('players').select('id,name,pos,gk,attending').order('name');
+  }
   if(res.error){ $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`; return; }
   const ratings = {};
   if(isAdmin()){
@@ -359,6 +404,7 @@ async function loadAll(){
   }
   players = res.data.map(p=>({
     id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending,
+    number: p.number ?? null, foot: p.foot ?? null, intro: p.intro ?? null, birth: p.birth ?? null,
     grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
   }));
   render();
@@ -717,6 +763,7 @@ async function loadRecords(){
   renderHistory();
   renderMvpBanner();
   renderHofList();
+  renderProfile();
   if(isAdmin()) renderRecordEditor();
 }
 
@@ -778,11 +825,11 @@ function renderStats(){
     const body = top ? `
         <div class="medal">${top.rank}</div>
         ${avatar(top.name, 'big')}
-        <div class="lbName">${esc(top.name)}</div>
+        <div class="lbName">${nameLink(top.id, top.name)}</div>
         <div class="lbVal">${top[k]}${unit}</div>
         <ol class="lbList">${list.slice(1, 4).map(r=>`<li>
           <span class="rk">${r.rank}</span>${avatar(r.name, 'sm')}
-          <span class="nm">${esc(r.name)}<small>${esc(posText(r))}</small></span>
+          <span class="nm">${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span>
           <span class="v">${r[k]}${unit}</span></li>`).join('')}</ol>`
       : `<div class="lbEmpty">아직 기록이 없어요</div>`;
     return `<div class="lbCol"><h3 class="lbTitle">${title}</h3><div class="lbCard">${body}
@@ -804,7 +851,7 @@ function renderStats(){
       ${STAT_COLS.map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td class="c-rank">${r.rank}</td>
-      <td class="c-player"><span class="pl">${avatar(r.name,'sm')}<span>${esc(r.name)}<small>${esc(posText(r))}</small></span></span></td>
+      <td class="c-player"><span class="pl">${avatar(r.name,'sm')}<span>${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span></span></td>
       ${STAT_COLS.map(([k])=>`<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
     </tr>`).join('') || `<tr><td colspan="${STAT_COLS.length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
     </tbody></table></div>`;
@@ -947,7 +994,7 @@ $('backupBtn').onclick = async ()=>{
 
 
 /* ---------- 탭 ---------- */
-const TABS = ['team','stats','history'];
+const TABS = ['team','stats','history','profile'];
 function setTab(t){
   if(!TABS.includes(t)) t = 'team';
   TABS.forEach(x=>document.body.classList.toggle('tab-'+x, x===t));
@@ -1017,7 +1064,7 @@ function renderHistory(){
       const st = table.find(s=>s.team===t);
       const members = list.slice().sort((a,b)=>b.goals-a.goals || b.assists-a.assists || a.name.localeCompare(b.name,'ko'));
       return `<div class="team"><h3><span>${t ? t+'팀' : '팀 미정'} (${list.length}명)</span>${st && st.gp ? `<span class="muted" style="font-weight:500">${st.w}승 ${st.d}무 ${st.l}패</span>` : ''}</h3>
-        <ul class="roster">${members.map(r=>`<li>${avatar(r.name,'sm')}<span class="nm">${esc(r.name)}<small>${esc(r.pos.join('·'))}</small></span>
+        <ul class="roster">${members.map(r=>`<li>${avatar(r.name,'sm')}<span class="nm">${nameLink(r.player_id, r.name)}<small>${esc(r.pos.join('·'))}</small></span>
           <span class="tags">${r.goals ? `<span class="tag g">⚽ ${r.goals}</span>` : ''}${r.assists ? `<span class="tag a">어시 ${r.assists}</span>` : ''}${r.mvp ? '<span class="tag m">MVP</span>' : ''}</span></li>`).join('')}</ul></div>`;
     }).join('')}</div>` : '<p class="muted">출석 기록이 없어요.</p>';
 
@@ -1086,9 +1133,135 @@ function renderHofList(){
     <p class="muted" style="margin-top:0">MVP 최다 수상 · <b style="color:var(--text)">${kings.map(esc).join(', ')}</b> ${best}회</p>
     <div class="hofGrid">${awards.map((a,i)=>`<div class="hofItem ${i===0?'latest':''}">
       <div class="muted">${fmtDay(a.day.played_on)}</div>
-      ${a.winners.map(w=>`<div class="hofRow">${avatar(w.name,'sm')}<b>${esc(w.name)}</b><span class="muted">${w.goals?`⚽${w.goals}`:''}${w.assists?` 어시${w.assists}`:''}</span></div>`).join('')}
+      ${a.winners.map(w=>`<div class="hofRow">${avatar(w.name,'sm')}<b>${nameLink(w.player_id, w.name)}</b><span class="muted">${w.goals?`⚽${w.goals}`:''}${w.assists?` 어시${w.assists}`:''}</span></div>`).join('')}
     </div>`).join('')}</div>`;
 }
+
+
+/* ---------- 개인 프로필 ---------- */
+let profileId = null;
+let profileColumnsMissing = false;
+const FEET = ['오른발','왼발','양발'];
+function ageOf(birth){
+  if(!birth) return null;
+  const [y,m,d] = birth.split('-').map(Number), [ty,tm,td] = todayStr().split('-').map(Number);
+  return ty - y - ((tm < m || (tm === m && td < d)) ? 1 : 0);
+}
+const isBirthday = birth => !!birth && birth.slice(5) === todayStr().slice(5);
+const fmtBirth = birth => { const [y,m,d] = birth.split('-'); return `${y}.${m}.${d}`; };
+function openProfile(id){
+  profileId = id;
+  setTab('profile');
+  renderProfile();
+  window.scrollTo({top: 0});
+}
+// 이름을 누르면 프로필로 (표·카드·경기 기록 어디서나)
+document.addEventListener('click', e=>{
+  const el = e.target.closest('[data-pid-link]');
+  if(el){ e.preventDefault(); openProfile(+el.dataset.pidLink); }
+});
+const nameLink = (id, name) => id ? `<a href="#" class="plink" data-pid-link="${id}">${esc(name)}</a>` : esc(name);
+
+function renderProfilePicker(){
+  const qText = $('pfSearch').value.trim();
+  const list = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>!qText || p.name.includes(qText));
+  $('pfPicker').innerHTML = list.map(p=>`<button class="pchip ${p.id===profileId?'on':''}" data-pick="${p.id}">${avatar(p.name,'sm')}<span>${esc(p.name)}</span>${p.number!=null?`<small>#${p.number}</small>`:''}${isBirthday(p.birth)?'🎂':''}</button>`).join('')
+    || '<p class="muted">선수가 없어요.</p>';
+  $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); });
+}
+function renderProfile(){
+  renderProfilePicker();
+  const box = $('pfBox');
+  const p = players.find(x=>x.id===profileId);
+  if(!p){ box.innerHTML = '<p class="muted">위에서 선수를 고르면 프로필이 보여요.</p>'; return; }
+
+  const all = aggregate('all').map(r=>({...r, pts: r.g + r.a}));
+  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,pts:0,rate:-1};
+  const rankOf = k => {
+    if(!me[k]) return '';
+    const r = withRanks(all.filter(x=>x[k] > 0).sort((a,b)=>b[k]-a[k]), k).find(x=>x.id===p.id);
+    return r ? `<em>팀 ${r.rank}위</em>` : '';
+  };
+  const tiles = [
+    ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
+    ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')],
+  ];
+  // 최근 출석한 경기일 5개 (days는 최신순)
+  const myRows = stats.filter(r=>r.player_id===p.id);
+  const recent = days.filter(d=>myRows.some(r=>r.day_id===d.id)).slice(0,5).map(d=>{
+    const r = myRows.find(x=>x.day_id===d.id), res = dayResults(d.id, r.team);
+    return {d, r, res};
+  });
+  const mvpDays = days.filter(d=>myRows.some(r=>r.day_id===d.id && r.mvp));
+  const age = ageOf(p.birth);
+  const meta = [
+    p.number != null ? `<span class="pfNum">#${p.number}</span>` : '',
+    ...p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`),
+    p.gk ? '<span class="badge">GK</span>' : '',
+  ].join('');
+  const facts = [
+    p.foot ? ['주발', esc(p.foot)] : null,
+    p.birth ? ['생년월일', `${fmtBirth(p.birth)}${age!=null?` (만 ${age}세)`:''}`] : null,
+  ].filter(Boolean);
+
+  box.innerHTML = `
+    <div class="pfCard">
+      <div class="pfTop">
+        ${avatar(p.name,'big')}
+        <div class="pfId">
+          <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
+          <div class="pfMeta">${meta}</div>
+          ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
+          ${p.intro ? `<div class="pfIntro">“${esc(p.intro)}”</div>` : ''}
+        </div>
+      </div>
+      ${isBirthday(p.birth) ? `<div class="pfBday">🎉 오늘은 ${esc(p.name)} 님의 생일이에요! 생일 축하해요 🎂</div>` : ''}
+
+      <div class="admin-only pfEdit">
+        ${profileColumnsMissing ? '<p class="muted">등번호·주발·한마디·생년월일을 저장하려면 Supabase에서 setup-profile.sql을 먼저 실행해 주세요.</p>' : `
+        <div class="row">
+          <label class="chk">등번호 <input type="number" class="num" id="pfNumIn" min="0" max="99" value="${p.number ?? ''}"></label>
+          <select id="pfFootIn"><option value="">주발</option>${FEET.map(f=>`<option ${f===p.foot?'selected':''}>${f}</option>`).join('')}</select>
+          <label class="chk">생년월일 <input type="date" id="pfBirthIn" value="${p.birth ?? ''}" max="${todayStr()}"></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="pfIntroIn" maxlength="100" placeholder="한마디 (100자 이내)" value="${esc(p.intro ?? '')}">
+          <button id="pfSave">프로필 저장</button>
+        </div>`}
+      </div>
+
+      <h3 class="sub">통산 기록</h3>
+      <div class="pfTiles">${tiles.map(([k,v,rk])=>`<div><span class="muted">${k}</span><b>${v}</b>${rk}</div>`).join('')}</div>
+
+      <h3 class="sub">최근 경기</h3>
+      ${recent.length ? `<div class="pfRecent">${recent.map(({d,r,res})=>`
+        <a href="#" class="pfGame" data-day="${d.id}">
+          <span class="dt">${fmtDay(d.played_on)}</span>
+          <span class="tm">${r.team ? r.team+'팀' : '-'}${(res.w+res.d+res.l) ? ` · ${res.w}승 ${res.d}무 ${res.l}패` : ''}</span>
+          <span class="tags">${r.goals?`<span class="tag g">⚽ ${r.goals}</span>`:''}${r.assists?`<span class="tag a">어시 ${r.assists}</span>`:''}${r.mvp?'<span class="tag m">MVP</span>':''}</span>
+        </a>`).join('')}</div>` : '<p class="muted">아직 출석 기록이 없어요.</p>'}
+
+      <h3 class="sub">🏆 MVP 수상</h3>
+      ${mvpDays.length ? `<div class="pfMvp">${mvpDays.map(d=>`<span class="tag m">${fmtDay(d.played_on)}</span>`).join('')}</div>` : '<p class="muted">아직 MVP 수상 기록이 없어요.</p>'}
+    </div>`;
+
+  box.querySelectorAll('.pfGame').forEach(a=>a.onclick = e=>{
+    e.preventDefault(); histDayId = +a.dataset.day; renderHistory(); setTab('history'); window.scrollTo({top:0});
+  });
+  const save = $('pfSave');
+  if(save) save.onclick = async ()=>{
+    const numRaw = $('pfNumIn').value.trim();
+    const number = numRaw === '' ? null : parseInt(numRaw, 10);
+    if(number !== null && (isNaN(number) || number < 0 || number > 99)){ alert('등번호는 0~99 사이로 넣어주세요'); return; }
+    const row = { number, foot: $('pfFootIn').value || null, birth: $('pfBirthIn').value || null, intro: $('pfIntroIn').value.trim() || null };
+    save.disabled = true;
+    const ok = await q(sb.from('players').update(row).eq('id', p.id), '프로필을 저장하지 못했어요');
+    save.disabled = false;
+    if(ok){ Object.assign(p, row); renderProfile(); }
+  };
+}
+$('pfSearch').addEventListener('input', renderProfilePicker);
 
 /* ---------- 시작 ---------- */
 showShared();
