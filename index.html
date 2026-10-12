@@ -13,7 +13,11 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
   main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
-  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 16px;flex-wrap:wrap}
+  header{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 16px;flex-wrap:wrap}
+  #loginCard{position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:300px;max-width:calc(100vw - 32px);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);display:none;flex-direction:column;gap:8px}
+  #loginCard input{width:100%;flex:none}
+  .loginHead{display:flex;justify-content:space-between;align-items:center}
+  @media (max-width:560px){#loginCard{left:0;right:0;width:auto;max-width:none}}
   h1{font-size:22px;margin:0}
   h2{font-size:16px;margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -92,6 +96,7 @@
   .pfTiles>div.ns{background:#e5383b;color:#fff}
   .pfTiles>div.ns .muted,.pfTiles>div.ns b{color:#fff}
   .pfTiles>div.late b{color:#d98a00}
+  .daySum>div.venueTile{grid-column:1/-1}
   .daySum>div.nsTile{background:#e5383b;color:#fff}
   .daySum>div.nsTile .muted,.daySum>div.nsTile b,.daySum>div.nsTile .plink{color:#fff}
   .bkChip.nsChip{border-color:#e5383b;background:rgba(229,56,59,.12)}
@@ -250,7 +255,7 @@
   body.shared .app{display:none !important}
   #sharedView,#loginCard{display:none}
   body.shared #sharedView{display:block}
-  body.login-open:not(.admin) #loginCard{display:block}
+  body.login-open:not(.admin) #loginCard{display:flex}
 </style>
 </head>
 <body>
@@ -261,6 +266,12 @@
       <button class="ghost small" id="refreshBtn">새로고침</button>
       <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
       <button class="ghost small admin-only" id="logoutBtn">로그아웃</button>
+    </div>
+    <div class="app" id="loginCard">
+      <div class="loginHead"><b>관리자 로그인</b><button class="del" id="loginClose" aria-label="닫기">×</button></div>
+      <input type="email" id="email" placeholder="이메일" autocomplete="username">
+      <input type="password" id="password" placeholder="비밀번호" autocomplete="current-password">
+      <button id="doLogin">로그인</button>
     </div>
   </header>
 
@@ -308,14 +319,6 @@
     <p class="muted" style="margin-top:12px"><a href="./" style="color:var(--accent)">할라피뇨FC 팀관리 열기</a></p>
   </section>
 
-  <section class="card app" id="loginCard">
-    <h2>관리자 로그인</h2>
-    <div class="row">
-      <input type="email" id="email" placeholder="이메일" autocomplete="username">
-      <input type="password" id="password" placeholder="비밀번호" autocomplete="current-password">
-      <button id="doLogin">로그인</button>
-    </div>
-  </section>
 
 
   <section class="card app admin-only" data-pane="admin">
@@ -415,7 +418,7 @@
         <button class="ghost" id="addDay">경기일 추가</button>
       </span>
     </div>
-    <p class="muted">팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MVP를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
+    <p class="muted">다가오는 경기도 날짜를 미리 추가하고 구장을 넣어두면, 메인 화면 일정에 구장이 자동으로 표시돼요. 팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MVP를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
     <div id="dayEditor"></div>
   </section>
 
@@ -520,7 +523,9 @@ function applyMode(){
   if(typeof setTab === 'function' && !isAdmin() && document.body.classList.contains('tab-admin')) setTab('roster');
   $('migrate').style.display = (isAdmin() && store.get('futsal-players-v1')) ? '' : 'none';
 }
-$('loginBtn').onclick = ()=>{ document.body.classList.toggle('login-open'); $('email').focus(); };
+$('loginBtn').onclick = ()=>{ document.body.classList.toggle('login-open'); if(document.body.classList.contains('login-open')) $('email').focus(); };
+$('loginClose').onclick = ()=> document.body.classList.remove('login-open');
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') document.body.classList.remove('login-open'); });
 $('doLogin').onclick = async ()=>{
   const email = $('email').value.trim(), password = $('password').value;
   if(!email || !password) return;
@@ -839,7 +844,7 @@ $('migrate').onclick = async ()=>{
 
 
 /* ---------- 개인 기록 ---------- */
-let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, awardYear = null;
+let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, venueColumnMissing = false, awardYear = null;
 let statSort = {key:'g', dir:-1};
 const TEAM_LETTERS = ['A','B','C'];
 const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (이 기기 시간대 기준)
@@ -847,11 +852,15 @@ const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (�
 async function loadRecords(){
   if(!sb) return;
   let [d, g, s] = await Promise.all([
-    sb.from('match_days').select('id,played_on,bookers,lates,noshows').order('played_on', {ascending:false}),
+    sb.from('match_days').select('id,played_on,bookers,lates,noshows,venue').order('played_on', {ascending:false}),
     sb.from('match_games').select('id,day_id,home,away,home_score,away_score').order('id'),
     sb.from('player_stats').select('day_id,player_id,team,goals,assists,mvp'),
   ]);
-  bookingColumnMissing = false; lateColumnsMissing = false;
+  bookingColumnMissing = false; lateColumnsMissing = false; venueColumnMissing = false;
+  if(d.error && /venue|column/i.test(d.error.message)){   // setup-venue.sql 실행 전
+    venueColumnMissing = true;
+    d = await sb.from('match_days').select('id,played_on,bookers,lates,noshows').order('played_on', {ascending:false});
+  }
   if(d.error && /lates|noshows|column/i.test(d.error.message)){   // setup-extras.sql 실행 전
     lateColumnsMissing = true;
     d = await sb.from('match_days').select('id,played_on,bookers').order('played_on', {ascending:false});
@@ -875,6 +884,7 @@ async function loadRecords(){
   renderHofList();
   renderYearAwards();
   renderProfile();
+  renderSchedule();
   if(isAdmin()) renderRecordEditor();
 }
 
@@ -1033,7 +1043,15 @@ function renderRecordEditor(){
   const teamSummary = teamOpts.map(t=>{ const r = dayResults(selectedDayId, t); return `<span class="leader"><b>${t}팀</b> ${r.w}승 ${r.d}무 ${r.l}패</span>`; }).join('');
   const notIn = players.filter(p=>!rows.some(r=>r.player_id===p.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
 
+  const curDay = days.find(x=>x.id===selectedDayId) || {};
   box.innerHTML = `
+    <h3 class="sub">📍 구장</h3>
+    ${venueColumnMissing ? '<p class="muted">구장을 기록하려면 Supabase에서 setup-venue.sql을 먼저 실행해 주세요.</p>' : `
+    <div class="row">
+      <input type="text" id="venueIn" maxlength="60" placeholder="예: 기장 풋살파크 2구장" value="${esc(curDay.venue || '')}" list="venueList">
+      <datalist id="venueList">${[...new Set(days.map(x=>x.venue).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
+      <button class="ghost" id="venueSave">구장 저장</button>
+    </div>`}
     <h3 class="sub">경기 결과</h3>
     <div class="games">${dayGames.map(gm=>`<div class="game"><b>${gm.home}팀</b> ${gm.home_score} : ${gm.away_score} <b>${gm.away}팀</b>
       <button class="del" data-game="${gm.id}">삭제</button></div>`).join('') || '<p class="muted">아직 입력한 경기가 없어요.</p>'}</div>
@@ -1068,6 +1086,10 @@ function renderRecordEditor(){
       <button id="saveStats" style="margin-left:auto">기록 저장</button>
     </div>`;
 
+  if($('venueSave')) $('venueSave').onclick = async ()=>{
+    const venue = $('venueIn').value.trim() || null;
+    if(await q(sb.from('match_days').update({venue}).eq('id', selectedDayId), '구장을 저장하지 못했어요')) await loadRecords();
+  };
   const curList = field => days.find(x=>x.id===selectedDayId)?.[field] || [];
   const setList = async (field, list) => {
     if(await q(sb.from('match_days').update({[field]: list}).eq('id', selectedDayId), '저장하지 못했어요')) await loadRecords();
@@ -1188,7 +1210,9 @@ const fmtDay = str => {
   const sameYear = str.slice(0,4) === todayStr().slice(0,4);
   return d.toLocaleDateString('ko-KR', {year: sameYear ? undefined : 'numeric', month:'long', day:'numeric', weekday:'short'});
 };
+const pastDays = () => days.filter(d=>d.played_on <= todayStr());   // 미래 경기일(미리 잡아둔 구장)은 제외
 function renderHistory(){
+  const days = pastDays();
   const sel = $('histDay');
   if(!days.length){
     sel.innerHTML = '<option>기록 없음</option>'; $('histPrev').disabled = $('histNext').disabled = true;
@@ -1247,6 +1271,7 @@ function renderHistory(){
 
   $('histBox').innerHTML = `
     <div class="daySum">
+      ${(days.find(x=>x.id===histDayId) || {}).venue ? `<div class="venueTile"><span class="muted">📍 구장</span><b>${esc(days.find(x=>x.id===histDayId).venue)}</b></div>` : ''}
       <div><span class="muted">경기</span><b>${dayGames.length}</b></div>
       <div><span class="muted">출석</span><b>${rows.length}명</b></div>
       <div><span class="muted">총 골</span><b>${totalGoals}</b></div>
@@ -1262,8 +1287,8 @@ function renderHistory(){
     <h3 class="sub">팀별 선수 기록</h3>${rostersHtml}`;
 }
 $('histDay').addEventListener('change', ()=>{ histDayId = +$('histDay').value; renderHistory(); });
-$('histPrev').onclick = ()=>{ const i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; renderHistory(); } };
-$('histNext').onclick = ()=>{ const i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; renderHistory(); } };
+$('histPrev').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; renderHistory(); } };
+$('histNext').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; renderHistory(); } };
 
 
 /* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
@@ -1592,7 +1617,10 @@ function renderSchedule(){
         <div class="evDate"><b>${d.getMonth()+1}/${d.getDate()}</b><span>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</span></div>
         <div class="evBody">
           <div class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
-          <div class="evMeta">${[e.event_time, e.place && esc(e.place)].filter(Boolean).join(' · ')}</div>
+          <div class="evMeta">${(()=>{
+            const venue = e.kind === '경기' ? days.find(d=>d.played_on === e.next)?.venue : null;
+            return [e.event_time, venue ? `📍 ${esc(venue)}` : (e.place && esc(e.place))].filter(Boolean).join(' · ');
+          })()}</div>
         </div>
         ${badge}
         <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
