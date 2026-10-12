@@ -127,6 +127,13 @@
   .maplink:hover{color:var(--accent)}
   .mapIcon{font-size:.9em;margin-left:3px;text-decoration:none;display:inline-block}
   .todayVenue{display:inline-flex;align-items:center;gap:4px;background:var(--accent2);color:var(--text);border-radius:10px;padding:6px 12px;margin-bottom:10px;font-weight:700;font-size:14px}
+  /* 맨 위로 버튼: 아래로 내렸을 때만 오른쪽 아래에 나타남 */
+  .toTop{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:30;width:46px;height:46px;border-radius:50%;padding:0;
+         background:var(--accent);color:#fff;font-size:22px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.25);
+         opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
+  .toTop.show{opacity:.92;transform:none;pointer-events:auto}
+  .toTop:hover{opacity:1}
+  body.shared .toTop{display:none}
   /* 장비 보관 */
   .gearGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media (max-width:700px){.gearGrid{grid-template-columns:1fr}}
@@ -522,6 +529,7 @@
     <p class="muted">무료 플랜은 자동 백업이 없어요. 한 달에 한 번 정도 "전체 백업 파일 받기"로 명단·등급·기록 전체를 내려받아 보관하세요. (등급이 들어 있으니 공개된 곳에는 올리지 마세요)</p>
   </section>
 </main>
+<button id="toTop" class="toTop" aria-label="맨 위로" title="맨 위로">↑</button>
 
 <script>
 /* ===================== 설정 ===================== */
@@ -1523,7 +1531,7 @@ function renderHistory(){
       const members = list.slice().sort((a,b)=>b.goals-a.goals || b.assists-a.assists || a.name.localeCompare(b.name,'ko'));
       return `<div class="team"><h3><span>${t ? t+'팀' : '팀 미정'} (${list.length}명)</span>${st && st.gp ? `<span class="muted" style="font-weight:500">${st.w}승 ${st.d}무 ${st.l}패</span>` : ''}</h3>
         <ul class="roster">${members.map(r=>`<li>${avatar(r.name,'sm')}<span class="nm">${nameLink(r.player_id, r.name)}<small>${esc(r.pos.join('·'))}</small></span>
-          <span class="tags">${r.goals ? `<span class="tag g">⚽ ${r.goals}</span>` : ''}${r.assists ? `<span class="tag a">어시 ${r.assists}</span>` : ''}${r.mvp ? '<span class="tag m">MVP</span>' : ''}</span></li>`).join('')}</ul></div>`;
+          <span class="tags">${r.goals ? `<span class="tag g">⚽ ${r.goals}</span>` : ''}${r.assists ? `<span class="tag a" title="어시스트">👟 ${r.assists}</span>` : ''}${r.mvp ? '<span class="tag m">MVP</span>' : ''}</span></li>`).join('')}</ul></div>`;
     }).join('')}</div>` : '<p class="muted">출석 기록이 없어요.</p>';
 
   $('histBox').innerHTML = `
@@ -1770,7 +1778,7 @@ function renderProfile(){
         <a href="#" class="pfGame" data-day="${d.id}">
           <span class="dt">${fmtDay(d.played_on)}</span>
           <span class="tm">${r.team ? r.team+'팀' : '-'}${(res.w+res.d+res.l) ? ` · ${res.w}승 ${res.d}무 ${res.l}패` : ''}</span>
-          <span class="tags">${r.goals?`<span class="tag g">⚽ ${r.goals}</span>`:''}${r.assists?`<span class="tag a">어시 ${r.assists}</span>`:''}${r.mvp?'<span class="tag m">MVP</span>':''}</span>
+          <span class="tags">${r.goals?`<span class="tag g">⚽ ${r.goals}</span>`:''}${r.assists?`<span class="tag a" title="어시스트">👟 ${r.assists}</span>`:''}${r.mvp?'<span class="tag m">MVP</span>':''}</span>
         </a>`).join('')}</div>` : '<p class="muted">아직 출석 기록이 없어요.</p>'}
 
       <h3 class="sub">🏆 MVP 수상</h3>
@@ -2017,6 +2025,15 @@ $('homeLink').onclick = e=>{
   setTab('roster');
   window.scrollTo({top:0, behavior:'smooth'});
 };
+
+/* ---------- 맨 위로 버튼 ---------- */
+(()=>{
+  const btn = $('toTop');
+  const update = ()=> btn.classList.toggle('show', window.scrollY > 400);
+  window.addEventListener('scroll', update, {passive:true});
+  btn.onclick = ()=> window.scrollTo({top:0, behavior:'smooth'});
+  update();
+})();
 
 /* ---------- 시작 ---------- */
 applySport();
