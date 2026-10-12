@@ -79,6 +79,8 @@
   .pcGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
   .pcard{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px 10px 14px;text-align:center;cursor:pointer;transition:border-color .15s,transform .15s}
   .pcard:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .avatar.ph{background:var(--head);overflow:hidden;padding:0}
+  .avatar.ph img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
   .avatar.md{width:56px;height:56px;font-size:16px}
   .pcName{font-weight:700;font-size:16px}
   .pcMeta{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;font-size:13px;min-height:20px}
@@ -410,11 +412,16 @@ async function q(promise, msg){
 }
 async function loadAll(){
   if(!sb) return;
-  let res = await sb.from('players').select('id,name,pos,gk,attending,number,intro,birth,foot_left,foot_right').order('name');
-  profileColumnsMissing = false;
+  const BASE = 'id,name,pos,gk,attending', PROFILE = ',number,intro,birth,foot_left,foot_right';
+  profileColumnsMissing = false; photoColumnMissing = false;
+  let res = await sb.from('players').select(BASE + PROFILE + ',photo').order('name');
+  if(res.error && /column|photo/i.test(res.error.message)){
+    photoColumnMissing = true;      // setup-photo.sql 실행 전
+    res = await sb.from('players').select(BASE + PROFILE).order('name');
+  }
   if(res.error && /column|foot_|number|intro|birth/i.test(res.error.message)){
     profileColumnsMissing = true;   // setup-profile.sql 실행 전
-    res = await sb.from('players').select('id,name,pos,gk,attending').order('name');
+    res = await sb.from('players').select(BASE).order('name');
   }
   if(res.error){ $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`; return; }
   const ratings = {};
@@ -425,7 +432,7 @@ async function loadAll(){
   players = res.data.map(p=>({
     id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending,
     number: p.number ?? null, intro: p.intro ?? null, birth: p.birth ?? null,
-    footL: p.foot_left ?? null, footR: p.foot_right ?? null,
+    footL: p.foot_left ?? null, footR: p.foot_right ?? null, photo: p.photo ?? null,
     grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
   }));
   render();
@@ -494,7 +501,7 @@ function render(){
       tr.querySelector('[data-k=act]').onchange = async e=>{ p.act=e.target.value; render(); await saveRating(); };
       tr.querySelector('.del').onclick = async ()=>{
         if(!confirm(p.name+' 삭제할까요?\n이 선수의 출석·골·어시 기록도 함께 지워져요.')) return;
-        if(await q(sb.from('players').delete().eq('id',p.id))){ players = players.filter(x=>x!==p); render(); }
+        if(await q(sb.from('players').delete().eq('id',p.id))){ if(p.photo) sb.storage.from(PHOTO_BUCKET).remove([p.photo]); players = players.filter(x=>x!==p); render(); }
       };
     }
     tb.appendChild(tr);
@@ -825,9 +832,29 @@ const STAT_COLS = [
 const LEADER_CARDS = [['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['att','출석','회']];
 // 사진 대신 이름 동그라미: 세 글자 이름은 뒤 두 글자, 그 외는 앞 두 글자
 const shortName = n => { const s = String(n).trim(); return s.length === 3 ? s.slice(1) : s.slice(0, 2); };
+const PHOTO_BUCKET = 'player-photos';
+const photoUrl = path => `${SUPABASE_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(path)}`;
 function avatar(name, size){
+  const pl = players.find(p=>p.name === name);
+  if(pl && pl.photo) return `<span class="avatar ${size} ph"><img src="${photoUrl(pl.photo)}" alt="${esc(name)}" loading="lazy" decoding="async"></span>`;
   let h = 0; for(const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360;
   return `<span class="avatar ${size}" style="background:hsl(${h} 65% 55% / .18);color:hsl(${h} 55% 50%)">${esc(shortName(name))}</span>`;
+}
+// 사진을 정사각형으로 잘라 320×320으로 줄이기 (webp, 안 되면 jpeg)
+async function shrinkPhoto(file, size = 320){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((ok, bad)=>{ const i = new Image(); i.onload = ()=>ok(i); i.onerror = bad; i.src = url; });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, (img.naturalWidth - side)/2, (img.naturalHeight - side)/2, side, side, 0, 0, size, size);
+    const toBlob = (type, qv) => new Promise(r=>c.toBlob(r, type, qv));
+    let blob = await toBlob('image/webp', 0.82);
+    if(!blob || blob.type !== 'image/webp') blob = await toBlob('image/jpeg', 0.85);
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
 }
 const posText = r => (players.find(p=>p.id===r.id)?.pos || []).join('·');
 const statVal = (r, k) => k === 'rate' ? (r.rate < 0 ? '-' : Math.round(r.rate*100) + '%') : r[k];
@@ -1003,7 +1030,7 @@ $('backupBtn').onclick = async ()=>{
   const tr = await sb.from('team_results').select('*');
   const data = {
     exported_at: new Date().toISOString(),
-    players: players.map(({id,name,pos,gk,on})=>({id,name,pos,gk,attending:on})),
+    players: players.map(({id,name,pos,gk,on,number,birth,intro,footL,footR,photo})=>({id,name,pos,gk,attending:on,number,birth,intro,foot_left:footL,foot_right:footR,photo})),
     player_ratings: r.data || [], team_results: tr.data || [],
     match_days: days, match_games: games, player_stats: stats,
   };
@@ -1166,6 +1193,7 @@ function renderHofList(){
 /* ---------- 개인 프로필 ---------- */
 let profileId = null;
 let profileColumnsMissing = false;
+let photoColumnMissing = false;
 // 발바닥 아이콘: 왼발·오른발 점수(0~5). 점수가 더 높은 쪽(주발) 위에 점
 const SOLE = 'M23 2C35 2 42 11 41.5 24C41 34.5 36 39.5 35.5 47.5C35 56.5 30.5 62 23 62C15 62 11.5 56.5 12 47.5C12.5 40 5 34 5 23C5 10 11 2 23 2Z';
 function footIcon(score, side, main){
@@ -1182,6 +1210,9 @@ function feetHtml(p, size){
   const l = p.footL ?? -1, r = p.footR ?? -1, top = Math.max(l, r);
   const main = side => top > 0 && (side==='L' ? l : r) === top;
   return `<span class="feet ${size||''}" title="왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}">${footIcon(p.footL,'L',main('L'))}${footIcon(p.footR,'R',main('R'))}</span>`;
+}
+function renderAllAfterPhoto(){
+  renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderHofList();
 }
 const footOpts = v => `<option value="" ${v==null?'selected':''}>-</option>` + [0,1,2,3,4,5].map(n=>`<option value="${n}" ${v===n?'selected':''}>${n}</option>`).join('');
 function ageOf(birth){
@@ -1283,6 +1314,13 @@ function renderProfile(){
         <div class="row" style="margin-top:8px">
           <input type="text" id="pfIntroIn" maxlength="100" placeholder="한마디 (100자 이내)" value="${esc(p.intro ?? '')}">
           <button id="pfSave">프로필 저장</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          ${photoColumnMissing ? '<span class="muted">사진을 올리려면 Supabase에서 setup-photo.sql을 먼저 실행해 주세요.</span>' : `
+          <input type="file" id="pfPhotoIn" accept="image/*" hidden>
+          <button class="ghost" id="pfPhotoBtn">📷 사진 ${p.photo ? '바꾸기' : '올리기'}</button>
+          ${p.photo ? '<button class="ghost" id="pfPhotoDel">사진 삭제</button>' : ''}
+          <span class="muted" id="pfPhotoMsg">정사각형으로 잘라서 작게 줄여 저장돼요</span>`}
         </div>`}
       </div>
 
@@ -1306,6 +1344,33 @@ function renderProfile(){
     e.preventDefault(); histDayId = +a.dataset.day; renderHistory(); setTab('history'); window.scrollTo({top:0});
   });
   const save = $('pfSave');
+  const photoBtn = $('pfPhotoBtn');
+  if(photoBtn){
+    photoBtn.onclick = ()=> $('pfPhotoIn').click();
+    $('pfPhotoIn').onchange = async e=>{
+      const file = e.target.files[0]; if(!file) return;
+      photoBtn.disabled = true; $('pfPhotoMsg').textContent = '줄이는 중…';
+      try{
+        const blob = await shrinkPhoto(file);
+        const path = `p${p.id}-${Date.now()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
+        $('pfPhotoMsg').textContent = `올리는 중… (${Math.round(blob.size/1024)}KB)`;
+        const up = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, {contentType: blob.type, cacheControl: '31536000', upsert: false});
+        if(up.error) throw up.error;
+        if(await q(sb.from('players').update({photo: path}).eq('id', p.id), '사진 정보를 저장하지 못했어요')){
+          if(p.photo) await sb.storage.from(PHOTO_BUCKET).remove([p.photo]);   // 예전 사진 정리
+          p.photo = path; renderAllAfterPhoto();
+        }
+      }catch(err){ alert('사진을 올리지 못했어요\n' + (err.message || err)); renderProfile(); }
+    };
+  }
+  const photoDel = $('pfPhotoDel');
+  if(photoDel) photoDel.onclick = async ()=>{
+    if(!confirm('사진을 삭제할까요?')) return;
+    if(await q(sb.from('players').update({photo: null}).eq('id', p.id), '사진을 삭제하지 못했어요')){
+      await sb.storage.from(PHOTO_BUCKET).remove([p.photo]);
+      p.photo = null; renderAllAfterPhoto();
+    }
+  };
   if(save) save.onclick = async ()=>{
     const numRaw = $('pfNumIn').value.trim();
     const number = numRaw === '' ? null : parseInt(numRaw, 10);
