@@ -114,7 +114,7 @@
   .tabs button{background:none;color:var(--muted);border-radius:0;padding:10px 14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
   .tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
   section[data-pane]{display:none}
-  body.tab-team section[data-pane="team"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-roster section[data-pane="roster"]{display:block}
+  body.tab-admin section[data-pane="admin"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-roster section[data-pane="roster"]{display:block}
   body.shared .tabs{display:none}
   /* 경기 기록 탭 */
   .histHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -205,11 +205,16 @@
 
   <div id="mvpBanner" class="app"></div>
 
+  <section class="card app">
+    <h2>최근 공개된 팀 구성</h2>
+    <div id="published"><p class="muted">아직 공개된 팀 구성이 없어요.</p></div>
+  </section>
+
   <nav class="tabs app">
     <button data-tab="roster" class="on">선수 명단</button>
-    <button data-tab="team">팀 구성</button>
     <button data-tab="stats">개인 기록</button>
     <button data-tab="history">경기 기록</button>
+    <button data-tab="admin" class="admin-only">관리</button>
   </nav>
 
   <section class="card notice" id="configNotice" style="display:none">
@@ -233,12 +238,8 @@
     </div>
   </section>
 
-  <section class="card app" data-pane="team">
-    <h2>최근 공개된 팀 구성</h2>
-    <div id="published"><p class="muted">아직 공개된 팀 구성이 없어요.</p></div>
-  </section>
 
-  <section class="card app admin-only" data-pane="team">
+  <section class="card app admin-only" data-pane="admin">
     <h2>선수 등록</h2>
     <div class="row">
       <input type="text" id="name" placeholder="이름">
@@ -274,7 +275,7 @@
     <div id="hofList"><p class="muted">불러오는 중…</p></div>
   </section>
 
-  <section class="card app admin-only" data-pane="team">
+  <section class="card app admin-only" data-pane="admin">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">출석 · 등급 관리 <span class="muted" id="count"></span></h2>
       <div class="row admin-only">
@@ -290,7 +291,7 @@
     </div>
   </section>
 
-  <section class="card app admin-only" data-pane="team">
+  <section class="card app admin-only" data-pane="admin">
     <h2>팀 나누기</h2>
     <div class="row">
       <select id="teamCount"><option value="2">2팀</option><option value="3" selected>3팀</option></select>
@@ -345,7 +346,7 @@
     <div id="pfBox"></div>
   </section>
 
-  <section class="card app admin-only" data-pane="team">
+  <section class="card app admin-only" data-pane="admin">
     <h2>관리</h2>
     <div class="row">
       <button class="ghost" id="exp">명단 내보내기</button>
@@ -425,6 +426,7 @@ async function loadAll(){
 function applyMode(){
   document.body.classList.toggle('admin', isAdmin());
   $('modeLabel').textContent = isAdmin() ? '관리자' : '일반';
+  if(typeof setTab === 'function' && !isAdmin() && document.body.classList.contains('tab-admin')) setTab('roster');
   $('migrate').style.display = (isAdmin() && store.get('futsal-players-v1')) ? '' : 'none';
 }
 $('loginBtn').onclick = ()=>{ document.body.classList.toggle('login-open'); $('email').focus(); };
@@ -1002,9 +1004,9 @@ $('backupBtn').onclick = async ()=>{
 
 
 /* ---------- 탭 ---------- */
-const TABS = ['roster','team','stats','history'];
+const TABS = ['roster','stats','history','admin'];
 function setTab(t){
-  if(!TABS.includes(t)) t = 'roster';
+  if(!TABS.includes(t) || (t === 'admin' && !isAdmin())) t = 'roster';
   TABS.forEach(x=>document.body.classList.toggle('tab-'+x, x===t));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
   store.set('futsal-tab-v2', t);
