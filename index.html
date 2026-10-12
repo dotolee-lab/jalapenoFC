@@ -303,6 +303,10 @@
   .nameIn{width:110px !important;min-width:0 !important;padding:5px 8px !important;font-size:14px !important;margin-right:4px}
   .nameCell .small{margin-left:2px}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
+  .titleRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .sportToggle{display:inline-flex;background:var(--head);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .sportToggle button{background:none;color:var(--muted);border-radius:999px;padding:5px 14px;font-size:14px;font-weight:800}
+  .sportToggle button.on{background:var(--accent);color:#fff}
   .homeLink{color:inherit;text-decoration:none}
   .homeLink:hover{opacity:.8}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
@@ -318,7 +322,12 @@
 <body>
 <main>
   <header>
-    <h1><a href="./" id="homeLink" class="homeLink">⚽ 할라피뇨FC 팀관리</a><span class="mode" id="modeLabel">일반</span></h1>
+    <div class="titleRow">
+      <h1><a href="./" id="homeLink" class="homeLink">⚽ 할라피뇨FC 팀관리</a><span class="mode" id="modeLabel">일반</span></h1>
+      <div class="sportToggle app" role="tablist" aria-label="종목">
+        <button data-sport="futsal">풋살</button><button data-sport="soccer">축구</button>
+      </div>
+    </div>
     <div class="row app">
       <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
       <button class="ghost small admin-only" id="logoutBtn">로그아웃</button>
@@ -342,6 +351,7 @@
         <input type="date" id="evDate">
         <input type="time" id="evTime">
         <select id="evKind"><option value="경기">⚽ 경기</option><option value="회비">💰 회비</option><option value="기타">📌 기타</option></select>
+        <select id="evSport"><option value="futsal">풋살</option><option value="soccer">축구</option><option value="both">공통</option></select>
         <select id="evRepeat"><option value="none">반복 안 함</option><option value="weekly">매주 반복</option><option value="monthly">매월 반복</option><option value="halfyear">6개월마다 반복</option></select>
       </div>
       <div class="row" style="margin-top:8px">
@@ -442,7 +452,7 @@
     <h2>팀 나누기</h2>
     <div class="row">
       <select id="teamCount"><option value="2">2팀</option><option value="3" selected>3팀</option></select>
-      <select id="teamSize"><option value="6" selected>팀당 6명</option><option value="7">팀당 7명</option></select>
+      <select id="teamSize"></select>
       <button id="make">팀 구성하기</button>
       <button class="ghost" id="again">다시 섞기</button>
     </div>
@@ -531,6 +541,12 @@ function showErr(title, detail){
 window.addEventListener('error', e=> showErr('화면을 그리다 오류가 났어요', e.message));
 window.addEventListener('unhandledrejection', e=> showErr('데이터를 처리하다 오류가 났어요', e.reason && (e.reason.message || e.reason)));
 
+/* ---------- 종목 (풋살 / 축구) ---------- */
+let SPORT = (()=>{ try{ return localStorage.getItem('futsal-sport-v1') === 'soccer' ? 'soccer' : 'futsal'; }catch(e){ return 'futsal'; } })();
+const SPORT_LABEL = {futsal:'풋살', soccer:'축구'};
+const RESULT_ID = () => SPORT === 'soccer' ? 2 : 1;      // 공개된 팀 구성 번호
+let sportMissing = false;                                 // setup-sport.sql 실행 전이면 true
+
 const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
 const POSITIONS = ['공격','미드','수비'];
 const ACTS = {'좋음':1, '보통':0.5, '나쁨':0};
@@ -595,8 +611,9 @@ async function loadAll(){
   loadRecords();
   loadEvents();
   loadGear();
-  const t = await sb.from('team_results').select('teams,created_at').eq('id',1).maybeSingle();
+  const t = await sb.from('team_results').select('teams,created_at').eq('id', RESULT_ID()).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
+  else { publishedRow = null; $('published').innerHTML = `<p class="muted">${SPORT === 'soccer' ? '축구 팀 구성이 공개되면 여기에 보여요.' : '팀 구성은 매주 금요일에 공개돼요.'}</p>`; }
 }
 
 /* ---------- 관리자 로그인 (Supabase Auth) ---------- */
@@ -760,35 +777,55 @@ function updateNeed(){
   else text = `필요 ${need}명 · 참석 ${have}명 — ${need-have}명이 부족해서 팀당 ${per}명으로 구성돼요.`;
   $('need').textContent = text;
 }
+// 팀 인원 선택지: 풋살 6·7명, 축구 8~11명 (종목별로 마지막 선택 기억)
+const TEAM_SIZES = {futsal:[6,7], soccer:[8,9,10,11]};
+const settingKey = () => SPORT === 'soccer' ? 'futsal-setting-soccer' : 'futsal-setting-v1';
+function setupTeamSize(){
+  const sizes = TEAM_SIZES[SPORT];
+  $('teamSize').innerHTML = sizes.map(n=>`<option value="${n}">팀당 ${n}명</option>`).join('');
+  let saved = null; try{ saved = JSON.parse(store.get(settingKey())); }catch(e){}
+  $('teamCount').value = saved?.n || (SPORT === 'soccer' ? '2' : '3');
+  $('teamSize').value = sizes.includes(+saved?.size) ? saved.size : (SPORT === 'soccer' ? 11 : 6);
+  updateNeed();
+}
 ['teamCount','teamSize'].forEach(id=>$(id).addEventListener('change',()=>{
-  store.set('futsal-setting-v1', JSON.stringify({n:$('teamCount').value, size:$('teamSize').value}));
+  store.set(settingKey(), JSON.stringify({n:$('teamCount').value, size:$('teamSize').value}));
   updateNeed();
 }));
-try{ const s = JSON.parse(store.get('futsal-setting-v1')); if(s){ $('teamCount').value=s.n; $('teamSize').value=s.size; } }catch(e){}
 
 const TEAM_NAMES = ['A팀','B팀','C팀'];
 const ORDER = {공격:0, 미드:1, 수비:2};
 
 /* ---------- 전술 그림 ---------- */
 // 숫자는 수비 → 미드 → 공격 순서 (그림에서는 아래 → 위)
-const TACTIC_PRESETS = {
+const FUTSAL_TACTICS = {
   4: ['2-2','1-2-1'],
   5: ['2-1-2','2-2-1','1-2-2','3-1-1'],
   6: ['2-2-2','2-1-3','3-1-2','3-2-1','1-2-3','2-3-1','2-1-2-1'],
   7: ['3-2-2','2-3-2','2-2-3','3-3-1','3-1-3','2-2-2-1'],
   8: ['3-3-2','3-2-3','2-3-3','3-2-2-1'],
 };
-const DEFAULT_TACTIC = {4:'2-2', 5:'2-1-2', 6:'2-2-2', 7:'3-2-2', 8:'3-3-2'};
+// 축구: 골키퍼 제외 필드 선수 기준 (11명 → 필드 10명)
+const SOCCER_TACTICS = {
+  8:  ['3-3-1','2-3-2','3-2-2','2-4-1'],
+  9:  ['3-3-2','3-4-1','2-4-2','3-2-3'],
+  10: ['3-4-2','4-3-2','3-3-3','4-4-1'],
+  11: ['4-4-2','4-3-3','4-2-3-1','3-5-2','3-4-3','5-3-2','4-1-4-1','4-5-1'],
+};
+const TACTIC_PRESETS_OF = () => SPORT === 'soccer' ? SOCCER_TACTICS : FUTSAL_TACTICS;
+const DEFAULT_TACTIC_OF = n => SPORT === 'soccer' ? ({8:'3-3-1', 9:'3-3-2', 10:'3-4-2', 11:'4-4-2'})[n] : ({4:'2-2', 5:'2-1-2', 6:'2-2-2', 7:'3-2-2', 8:'3-3-2'})[n];
 const validTactic = t => typeof t === 'string' && /^[1-9](-[1-9]){1,3}$/.test(t) && t.split('-').reduce((a,b)=>a+ +b,0) <= 11;
 let lastTactics = [];
 
 function pitchSvg(tactic){
   const rows = tactic.split('-').map(Number);          // [수비, (미드...), 공격]
-  const W = 60, H = 90, R = rows.length;
+  const W = 60, H = 90, R = rows.length, soccer = SPORT === 'soccer';
   const color = i => i===0 ? 'var(--df)' : i===R-1 ? 'var(--fw)' : 'var(--mf)';
-  let dots = '';
+  // 축구는 맨 아래 골키퍼 점을 따로 그리고, 필드 선수는 그 위로
+  let dots = soccer ? `<circle cx="${W/2}" cy="83" r="4.2" fill="var(--muted)" stroke="var(--card)" stroke-width="1.2"/>` : '';
+  const yBottom = soccer ? 70 : 76, ySpan = soccer ? 56 : 60;
   rows.forEach((k,i)=>{
-    const y = R===1 ? H/2 : 76 - i*(60/(R-1));
+    const y = R===1 ? H/2 : yBottom - i*(ySpan/(R-1));
     for(let j=0;j<k;j++){
       const x = W*(j+1)/(k+1);
       dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.6" fill="${color(i)}" stroke="var(--card)" stroke-width="1.2"/>`;
@@ -798,14 +835,17 @@ function pitchSvg(tactic){
     <rect x="1" y="1" width="${W-2}" height="${H-2}" rx="4" fill="var(--pitch)" stroke="var(--pitchLine)" stroke-width="1.2"/>
     <line x1="1" y1="${H/2}" x2="${W-1}" y2="${H/2}" stroke="var(--pitchLine)" stroke-width="1"/>
     <circle cx="${W/2}" cy="${H/2}" r="7" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>
-    <path d="M18 1 v7 a12 6 0 0 0 24 0 v-7" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>
-    <path d="M18 ${H-1} v-7 a12 6 0 0 1 24 0 v7" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>
+    ${soccer
+      ? `<rect x="14" y="1" width="32" height="12" fill="none" stroke="var(--pitchLine)" stroke-width="1"/><rect x="22" y="1" width="16" height="5" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>
+         <rect x="14" y="${H-13}" width="32" height="12" fill="none" stroke="var(--pitchLine)" stroke-width="1"/><rect x="22" y="${H-6}" width="16" height="5" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>`
+      : `<path d="M18 1 v7 a12 6 0 0 0 24 0 v-7" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>
+         <path d="M18 ${H-1} v-7 a12 6 0 0 1 24 0 v7" fill="none" stroke="var(--pitchLine)" stroke-width="1"/>`}
     ${dots}</svg>`;
 }
 function tacticSelect(i, current){
-  const groups = Object.entries(TACTIC_PRESETS).map(([n,list])=>
-    `<optgroup label="${n}명">${list.map(t=>`<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('');
-  const isCustom = current && !Object.values(TACTIC_PRESETS).flat().includes(current);
+  const groups = Object.entries(TACTIC_PRESETS_OF()).map(([n,list])=>
+    `<optgroup label="${n}명${SPORT === 'soccer' ? ' (GK 포함)' : ''}">${list.map(t=>`<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('');
+  const isCustom = current && !Object.values(TACTIC_PRESETS_OF()).flat().includes(current);
   return `<select class="tacSel" data-team="${i}">
     <option value="" ${!current?'selected':''}>전술 없음</option>${groups}
     ${isCustom ? `<option value="${esc(current)}" selected>${esc(current)}</option>` : ''}
@@ -855,7 +895,7 @@ function make(){
   if(on.length < n*2){ $('result').innerHTML = `<p class="muted">참석 인원이 너무 적어요. (${on.length}명)</p>`; $('shareRow').style.display='none'; return; }
   lastTeams = balance(on, n);
   // 다시 섞어도 고른 전술은 유지, 처음이면 팀 인원에 맞는 기본 전술
-  if(lastTactics.length !== n) lastTactics = lastTeams.map(t=>DEFAULT_TACTIC[t.length] || '');
+  if(lastTactics.length !== n) lastTactics = lastTeams.map(t=>DEFAULT_TACTIC_OF(t.length) || '');
   showTeams(lastTeams);
 }
 $('make').onclick = make;
@@ -875,13 +915,13 @@ function renderPublished(row){
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">팀 구성은 매주 금요일에 공개돼요${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
       if(v === null){ renderPublished(publishedRow); return; }
       sel.disabled = true;
-      if(await q(sb.rpc('set_tactic', {p_team:i, p_tactic:v}), '전술을 저장하지 못했어요')){
+      if(await q(sb.rpc('set_tactic', SPORT === 'soccer' ? {p_team:i, p_tactic:v, p_result_id:2} : {p_team:i, p_tactic:v}), '전술을 저장하지 못했어요')){
         const next = tactics.slice(); while(next.length < teams.length) next.push(''); next[i] = v;
         renderPublished({...publishedRow, teams: {teams, tactics: next}});
       }
@@ -890,7 +930,8 @@ function renderPublished(row){
 }
 $('publishBtn').onclick = async ()=>{
   if(!lastTeams) return;
-  const row = {id:1, teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
+  if(SPORT === 'soccer' && sportMissing){ alert('축구 팀 구성을 공개하려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.'); return; }
+  const row = {id: RESULT_ID(), teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
   if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); await recordAttendance(lastTeams); alert('공개했어요. 오늘 출석도 자동으로 기록했어요.'); }
 };
 function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
@@ -955,6 +996,7 @@ async function loadRecords(){
   if(!sb) return;
   // 경기일 칸: 아직 실행 안 한 SQL이 있으면 그 칸만 빼고 다시 불러옴
   const DAY_OPTIONAL = [
+    ['sport',  ['sport']],                          // setup-sport.sql
     ['coffee', ['coffee_teams','coffee_payers']],   // setup-coffee.sql
     ['venue',  ['venue']],                          // setup-venue.sql
     ['late',   ['lates','noshows']],                // setup-extras.sql
@@ -972,7 +1014,7 @@ async function loadRecords(){
     if(!d.error || !/column|does not exist/i.test(d.error.message)) break;
     missing[name] = true; dayCols = dayCols.filter(c=>!cols.includes(c)); d = await loadDays();
   }
-  coffeeMissing = !!missing.coffee; venueColumnMissing = !!missing.venue; lateColumnsMissing = !!missing.late; bookingColumnMissing = !!missing.booking;
+  sportMissing = !!missing.sport; coffeeMissing = !!missing.coffee; venueColumnMissing = !!missing.venue; lateColumnsMissing = !!missing.late; bookingColumnMissing = !!missing.booking;
   // 커피 금액(공개 설정에 따라 일반 사용자에게는 비어서 옴)과 설정
   const [ca, st] = await Promise.all([
     sb.from('coffee_amounts').select('day_id,player_id,amount'),
@@ -988,7 +1030,12 @@ async function loadRecords(){
     $('statsBox').innerHTML = `<p class="muted">기록을 불러오지 못했어요: ${esc(err.message)}<br>Supabase에서 setup-records.sql을 실행했는지 확인해 주세요.</p>`;
     return;
   }
-  days = d.data.map(x=>({...x, bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || [], coffee_teams: x.coffee_teams || [], coffee_payers: x.coffee_payers || []})); games = g.data; stats = s.data;
+  days = d.data.map(x=>({...x, sport: x.sport || 'futsal', bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || [], coffee_teams: x.coffee_teams || [], coffee_payers: x.coffee_payers || []}))
+    .filter(x=>x.sport === SPORT);                       // 지금 종목의 경기일만
+  const dayIds = new Set(days.map(x=>x.id));
+  games = g.data.filter(x=>dayIds.has(x.day_id)); stats = s.data.filter(x=>dayIds.has(x.day_id));
+  coffeeAmounts = coffeeAmounts.filter(x=>dayIds.has(x.day_id));
+  if(SPORT === 'soccer' && sportMissing) showErr('축구 기록을 쓰려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.');
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   renderStats();
   renderHistory();
@@ -1337,7 +1384,7 @@ function renderRecordEditor(){
 $('daySel').addEventListener('change', ()=>{ selectedDayId = +$('daySel').value || null; renderRecordEditor(); });
 $('addDay').onclick = async ()=>{
   const date = $('newDay').value; if(!date){ alert('날짜를 골라주세요'); return; }
-  const r = await q(sb.from('match_days').upsert({played_on: date}, {onConflict:'played_on'}).select('id').single(), '경기일을 추가하지 못했어요');
+  const r = await q((sportMissing ? sb.from('match_days').upsert({played_on: date}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: date, sport: SPORT}, {onConflict:'played_on,sport'})).select('id').single(), '경기일을 추가하지 못했어요');
   if(r){ selectedDayId = r.id; await loadRecords(); }
 };
 $('delDay').onclick = async ()=>{
@@ -1351,7 +1398,7 @@ async function recordAttendance(teams){
   const today = todayStr();
   let day = days.find(x=>x.played_on === today);
   if(!day){
-    day = await q(sb.from('match_days').upsert({played_on: today}, {onConflict:'played_on'}).select('id,played_on').single(), '경기일을 만들지 못했어요');
+    day = await q((sportMissing ? sb.from('match_days').upsert({played_on: today}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: today, sport: SPORT}, {onConflict:'played_on,sport'})).select('id,played_on').single(), '경기일을 만들지 못했어요');
     if(!day) return;
   }
   const rows = teams.flatMap((t,i)=>t.filter(p=>p.id != null).map(p=>({day_id: day.id, player_id: p.id, team: TEAM_LETTERS[i]})));
@@ -1766,13 +1813,15 @@ $('pfSearch').addEventListener('input', renderProfilePicker);
 
 
 /* ---------- 일정 (다가오는 일정 / 회비 날 등) ---------- */
-let events = [], eventsMissing = false;
+let events = [], eventsMissing = false, eventsSportMissing = false;
 const KIND_ICON = {경기:'⚽', 회비:'💰', 기타:'📌'};
 // 회비처럼 6개월마다 내는 일정도 지원
 const REPEAT_LABEL = {weekly:'매주', monthly:'매월', halfyear:'6개월마다'};
 async function loadEvents(){
   if(!sb) return;
-  const r = await sb.from('events').select('id,event_date,event_time,kind,title,place,repeat').order('event_date');
+  let r = await sb.from('events').select('id,event_date,event_time,kind,title,place,repeat,sport').order('event_date');
+  eventsSportMissing = !!(r.error && /sport|column/i.test(r.error.message));
+  if(eventsSportMissing) r = await sb.from('events').select('id,event_date,event_time,kind,title,place,repeat').order('event_date');
   eventsMissing = !!r.error;
   events = r.error ? [] : r.data;
   renderSchedule();
@@ -1798,7 +1847,7 @@ function nextOccurrence(ev){
 function renderSchedule(){
   const card = $('scheduleCard'), list = $('schedList');
   const today = todayStr();
-  const items = events.map(e=>({...e, next: nextOccurrence(e)}))
+  const items = events.filter(e=>!e.sport || e.sport === 'both' || e.sport === SPORT).map(e=>({...e, next: nextOccurrence(e)}))
     .filter(e=>e.next >= today)
     .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''))
     .slice(0, 8);
@@ -1833,6 +1882,7 @@ $('evAdd').onclick = async ()=>{
     event_date: $('evDate').value, event_time: $('evTime').value || null, kind: $('evKind').value,
     title: $('evTitle').value.trim(), place: $('evPlace').value.trim() || null, repeat: $('evRepeat').value,
   };
+  if(!eventsSportMissing) row.sport = $('evSport').value;
   if(!row.event_date || !row.title){ alert('날짜와 제목을 넣어주세요'); return; }
   $('evAdd').disabled = true;
   const ok = await q(sb.from('events').insert(row), '일정을 추가하지 못했어요');
@@ -1842,6 +1892,8 @@ $('evAdd').onclick = async ()=>{
 $('evKind').addEventListener('change', ()=>{
   // 종류를 고르면 제목 기본값 채워주기
   if(!$('evTitle').value.trim()) $('evTitle').value = {경기:'정기 경기', 회비:'회비 내는 날', 기타:''}[$('evKind').value] || '';
+  // 경기 일정은 지금 종목, 회비·기타는 공통이 기본
+  $('evSport').value = $('evKind').value === '경기' ? SPORT : 'both';
 });
 
 
@@ -1901,6 +1953,24 @@ $('cfShowToggle').onchange = async e=>{
   }
 };
 
+/* ---------- 풋살 ⇄ 축구 전환 ---------- */
+function applySport(){
+  document.querySelectorAll('.sportToggle button').forEach(b=>b.classList.toggle('on', b.dataset.sport === SPORT));
+  document.body.classList.toggle('soccer', SPORT === 'soccer');
+  $('evSport').value = $('evKind').value === '경기' ? SPORT : 'both';
+  setupTeamSize();
+}
+document.querySelectorAll('.sportToggle button').forEach(b=>b.onclick = ()=>{
+  if(b.dataset.sport === SPORT) return;
+  SPORT = b.dataset.sport; store.set('futsal-sport-v1', SPORT);
+  // 종목이 바뀌면 만들던 팀·선택한 날짜는 초기화하고 그 종목 데이터로 다시 불러오기
+  lastTeams = null; lastTactics = []; $('result').innerHTML = ''; $('shareRow').style.display = 'none';
+  selectedDayId = null; histDayId = null; hofHidden = false; awardYear = null;
+  $('errBox').style.display = 'none';
+  applySport();
+  if(sb) loadAll();
+});
+
 /* ---------- 제목 누르면 메인으로 ---------- */
 $('homeLink').onclick = e=>{
   if(location.hash) return;            // 공유 링크 화면이면 주소 그대로 이동해서 메인으로
@@ -1912,6 +1982,7 @@ $('homeLink').onclick = e=>{
 };
 
 /* ---------- 시작 ---------- */
+applySport();
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, bad)=>setTimeout(()=>bad(new Error('시간 초과')), ms))]);
 function loadScript(src){
   return new Promise((ok, bad)=>{ const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = ()=>bad(new Error(src + ' 받기 실패')); document.head.appendChild(t); });
