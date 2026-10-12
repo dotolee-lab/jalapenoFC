@@ -57,6 +57,7 @@
   @keyframes twinkle{0%,100%{opacity:0;transform:scale(.6)}50%{opacity:.9;transform:scale(1.1)}}
   @media (prefers-reduced-motion: reduce){.hof .sparkles i{animation:none;opacity:.5}}
   .hofClose{position:absolute;right:10px;top:10px;width:30px;height:30px;padding:0;border-radius:50%;background:rgba(255,255,255,.45);color:#3b2a00;font-size:18px;line-height:30px}
+  .hofReopen{display:block;width:100%;margin-bottom:16px;padding:10px 14px;border-radius:12px;font-weight:800;color:#3b2a00;background:linear-gradient(135deg,#ffe27d,#f5b82e);box-shadow:0 4px 14px rgba(227,148,16,.25)}
   .hofEyebrow{position:relative;letter-spacing:.14em;font-size:12px;font-weight:800;opacity:.75}
   .hofDate{position:relative;font-size:15px;font-weight:700;margin-top:6px}
   .hofWinners{position:relative;display:flex;justify-content:center;gap:36px;flex-wrap:wrap;margin:16px 0 10px}
@@ -240,6 +241,8 @@
   h3.sub{font-size:14px;margin:16px 0 8px}
   .game{display:flex;align-items:center;gap:6px;font-size:14px;padding:4px 0;border-bottom:1px solid var(--line)}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
+  .homeLink{color:inherit;text-decoration:none}
+  .homeLink:hover{opacity:.8}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
   body:not(.admin) .admin-only{display:none !important}
@@ -253,7 +256,7 @@
 <body>
 <main>
   <header>
-    <h1>⚽ 할라피뇨FC 팀관리<span class="mode" id="modeLabel">일반</span></h1>
+    <h1><a href="./" id="homeLink" class="homeLink">⚽ 할라피뇨FC 팀관리</a><span class="mode" id="modeLabel">일반</span></h1>
     <div class="row app">
       <button class="ghost small" id="refreshBtn">새로고침</button>
       <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
@@ -271,7 +274,7 @@
         <input type="date" id="evDate">
         <input type="time" id="evTime">
         <select id="evKind"><option value="경기">⚽ 경기</option><option value="회비">💰 회비</option><option value="기타">📌 기타</option></select>
-        <select id="evRepeat"><option value="none">반복 안 함</option><option value="weekly">매주 반복</option><option value="monthly">매월 반복</option></select>
+        <select id="evRepeat"><option value="none">반복 안 함</option><option value="weekly">매주 반복</option><option value="monthly">매월 반복</option><option value="halfyear">6개월마다 반복</option></select>
       </div>
       <div class="row" style="margin-top:8px">
         <input type="text" id="evTitle" maxlength="60" placeholder="제목 (예: 정기 경기, 10월 회비)">
@@ -1264,7 +1267,8 @@ $('histNext').onclick = ()=>{ const i = days.findIndex(d=>d.id===histDayId); if(
 
 
 /* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
-const HOF_DAYS = 7;   // MVP 배너를 경기일로부터 며칠 동안 보여줄지
+const HOF_DAYS = 7;
+let hofHidden = false;   // × 누르면 이번 화면에서만 숨김 (새로고침하면 다시 보임)   // MVP 배너를 경기일로부터 며칠 동안 보여줄지
 function mvpAwards(){
   // 최신 경기일부터, MVP가 있는 날만
   return days.map(d=>({day:d, winners: stats.filter(r=>r.day_id===d.id && r.mvp)
@@ -1277,12 +1281,17 @@ function renderMvpBanner(){
   if(!latest){ box.innerHTML = ''; return; }
   const {day, winners} = latest;
   const diff = Math.round((new Date(todayStr()+'T00:00:00') - new Date(day.played_on+'T00:00:00')) / 86400000);
-  if(diff < 0 || diff > HOF_DAYS || store.get('futsal-hof-hide') === String(day.id)){ box.innerHTML = ''; return; }
+  if(diff < 0 || diff > HOF_DAYS){ box.innerHTML = ''; return; }
+  if(hofHidden){
+    box.innerHTML = `<button class="hofReopen">🏆 이번 주 MVP 다시 보기</button>`;
+    box.querySelector('.hofReopen').onclick = ()=>{ hofHidden = false; renderMvpBanner(); };
+    return;
+  }
   const totalMvp = pid => stats.filter(r=>r.player_id===pid && r.mvp).length;
   const sparkles = Array.from({length:14}, (_,i)=>`<i style="left:${(i*37)%100}%;top:${(i*53)%100}%;animation-delay:${(i%7)*0.35}s">✦</i>`).join('');
   box.innerHTML = `<div class="hof" role="region" aria-label="이번 주 MVP">
     <div class="sparkles" aria-hidden="true">${sparkles}</div>
-    <button class="hofClose" title="이번 주 배너 닫기" aria-label="닫기">×</button>
+    <button class="hofClose" title="배너 접기 (새로고침하면 다시 보여요)" aria-label="닫기">×</button>
     <div class="hofEyebrow">🏆 HALL OF FAME · 명예의 전당</div>
     <div class="hofDate">${fmtDay(day.played_on)} 경기 MVP</div>
     <div class="hofWinners">${winners.map(w=>{
@@ -1298,7 +1307,7 @@ function renderMvpBanner(){
     }).join('')}</div>
     <div class="hofFoot">${winners.length > 1 ? '공동 MVP 축하해요!' : '축하해요!'} 다음 경기까지 이 자리는 당신 거예요 👏</div>
   </div>`;
-  box.querySelector('.hofClose').onclick = ()=>{ store.set('futsal-hof-hide', String(day.id)); renderMvpBanner(); };
+  box.querySelector('.hofClose').onclick = ()=>{ hofHidden = true; renderMvpBanner(); };
 }
 function renderYearAwards(){
   const years = [...new Set(days.map(d=>d.played_on.slice(0,4)))].sort().reverse();
@@ -1539,7 +1548,8 @@ $('pfSearch').addEventListener('input', renderProfilePicker);
 /* ---------- 일정 (다가오는 일정 / 회비 날 등) ---------- */
 let events = [], eventsMissing = false;
 const KIND_ICON = {경기:'⚽', 회비:'💰', 기타:'📌'};
-const REPEAT_LABEL = {weekly:'매주', monthly:'매월'};
+// 회비처럼 6개월마다 내는 일정도 지원
+const REPEAT_LABEL = {weekly:'매주', monthly:'매월', halfyear:'6개월마다'};
 async function loadEvents(){
   if(!sb) return;
   const r = await sb.from('events').select('id,event_date,event_time,kind,title,place,repeat').order('event_date');
@@ -1554,14 +1564,14 @@ function nextOccurrence(ev){
   const today = todayStr(), base = ev.event_date;
   if(ev.repeat === 'none' || base >= today) return base;
   if(ev.repeat === 'weekly') return addDays(base, Math.ceil(daysBetween(base, today) / 7) * 7);
-  // 매월: 같은 날짜 (그 달에 없는 날이면 말일)
-  const day = +base.slice(8, 10);
-  let [y, m] = today.split('-').map(Number);
-  for(let i = 0; i < 2; i++){
+  // 매월·6개월마다: 시작일에서 1개월·6개월씩 더해가며 오늘 이후 첫 날짜 (그 달에 없는 날이면 말일)
+  const step = ev.repeat === 'halfyear' ? 6 : 1;
+  const [by, bm, bd] = base.split('-').map(Number);
+  for(let k = step; k < 1200; k += step){
+    const total = (bm - 1) + k, y = by + Math.floor(total / 12), m = total % 12 + 1;
     const last = new Date(y, m, 0).getDate();
-    const cand = `${y}-${String(m).padStart(2,'0')}-${String(Math.min(day, last)).padStart(2,'0')}`;
+    const cand = `${y}-${String(m).padStart(2,'0')}-${String(Math.min(bd, last)).padStart(2,'0')}`;
     if(cand >= today) return cand;
-    m++; if(m > 12){ m = 1; y++; }
   }
   return base;
 }
@@ -1609,6 +1619,16 @@ $('evKind').addEventListener('change', ()=>{
   // 종류를 고르면 제목 기본값 채워주기
   if(!$('evTitle').value.trim()) $('evTitle').value = {경기:'정기 경기', 회비:'회비 내는 날', 기타:''}[$('evKind').value] || '';
 });
+
+/* ---------- 제목 누르면 메인으로 ---------- */
+$('homeLink').onclick = e=>{
+  if(location.hash) return;            // 공유 링크 화면이면 주소 그대로 이동해서 메인으로
+  e.preventDefault();
+  profileId = null; renderProfile();
+  hofHidden = false; renderMvpBanner();
+  setTab('roster');
+  window.scrollTo({top:0, behavior:'smooth'});
+};
 
 /* ---------- 시작 ---------- */
 showShared();
