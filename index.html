@@ -80,6 +80,37 @@
   .awP .avatar.big{margin:0;box-shadow:0 0 0 4px rgba(255,255,255,.6)}
   .awVal{font-weight:700;font-size:14px;opacity:.85}
   .awEmpty{flex:1;display:grid;place-items:center;font-size:14px;opacity:.7}
+  .nsBadge{display:inline-block;background:#e5383b;color:#fff;font-weight:900;border-radius:8px;padding:2px 8px;box-shadow:0 0 0 2px rgba(229,56,59,.25);animation:nsPulse 1.8s ease-in-out infinite}
+  @keyframes nsPulse{0%,100%{box-shadow:0 0 0 2px rgba(229,56,59,.25)}50%{box-shadow:0 0 0 5px rgba(229,56,59,.12)}}
+  @media (prefers-reduced-motion: reduce){.nsBadge{animation:none}}
+  .nsWall{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#e5383b;color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+  .nsWall .nsHead{font-weight:900;letter-spacing:.02em;margin-right:4px}
+  .nsWall .nsItem{background:rgba(255,255,255,.18);border-radius:999px;padding:2px 10px}
+  .nsWall .plink{color:#fff;font-weight:700}
+  .lateCell{color:#d98a00;font-weight:700}
+  .pfTiles>div.ns{background:#e5383b;color:#fff}
+  .pfTiles>div.ns .muted,.pfTiles>div.ns b{color:#fff}
+  .pfTiles>div.late b{color:#d98a00}
+  .daySum>div.nsTile{background:#e5383b;color:#fff}
+  .daySum>div.nsTile .muted,.daySum>div.nsTile b,.daySum>div.nsTile .plink{color:#fff}
+  .bkChip.nsChip{border-color:#e5383b;background:rgba(229,56,59,.12)}
+  /* 일정 */
+  .sched{display:flex;flex-direction:column;gap:8px}
+  .ev{display:grid;grid-template-columns:56px 1fr auto auto;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;border-left:5px solid var(--accent)}
+  .ev.k-회비{border-left-color:#f5b82e}
+  .ev.k-기타{border-left-color:var(--mf)}
+  .evDate{display:flex;flex-direction:column;align-items:center;line-height:1.15}
+  .evDate b{font-size:18px}
+  .evDate span{font-size:12px;color:var(--muted)}
+  .evTitle{font-weight:700;font-size:15px}
+  .evMeta{font-size:13px;color:var(--muted)}
+  .rep{font-size:11px;font-weight:600;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--head);color:var(--muted)}
+  .dday{font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
+  .dday.soon{color:var(--hl)}
+  .dday.today{background:#e5383b;color:#fff;border-radius:8px;padding:3px 8px}
+  .ev .del{padding:2px 6px}
+  .schedForm{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  input[type=time]{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
   .bkChip{display:inline-flex;align-items:center;gap:6px;background:var(--head);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 2px;font-size:14px}
   .bkChip .del{padding:0 6px}
   .hofGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
@@ -125,7 +156,7 @@
   @media (max-width:560px){.pfFeet{justify-content:center}}
   .pfBday{margin-top:14px;background:linear-gradient(135deg,#ffe27d,#f5b82e);color:#3b2a00;border-radius:12px;padding:10px 14px;font-weight:700;text-align:center}
   .pfEdit{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px}
-  .pfTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .pfTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   @media (max-width:560px){.pfTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pfTop{flex-direction:column;text-align:center}.pfTop .avatar.big{margin:0 auto}.pfMeta,.pfFacts{justify-content:center}}
   .pfTiles>div{background:var(--head);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px}
   .pfTiles b{font-size:20px;color:var(--text)}
@@ -231,6 +262,24 @@
   </header>
 
   <div id="mvpBanner" class="app"></div>
+
+  <section class="card app" id="scheduleCard">
+    <h2>📅 다가오는 일정</h2>
+    <div id="schedList"><p class="muted">불러오는 중…</p></div>
+    <div class="admin-only schedForm">
+      <div class="row">
+        <input type="date" id="evDate">
+        <input type="time" id="evTime">
+        <select id="evKind"><option value="경기">⚽ 경기</option><option value="회비">💰 회비</option><option value="기타">📌 기타</option></select>
+        <select id="evRepeat"><option value="none">반복 안 함</option><option value="weekly">매주 반복</option><option value="monthly">매월 반복</option></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="evTitle" maxlength="60" placeholder="제목 (예: 정기 경기, 10월 회비)">
+        <input type="text" id="evPlace" maxlength="60" placeholder="장소·메모 (선택)">
+        <button id="evAdd">일정 추가</button>
+      </div>
+    </div>
+  </section>
 
   <section class="card app">
     <h2>최근 공개된 팀 구성</h2>
@@ -456,6 +505,7 @@ async function loadAll(){
   }));
   render();
   loadRecords();
+  loadEvents();
   const t = await sb.from('team_results').select('teams,created_at').eq('id',1).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
 }
@@ -786,7 +836,7 @@ $('migrate').onclick = async ()=>{
 
 
 /* ---------- 개인 기록 ---------- */
-let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, awardYear = null;
+let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, awardYear = null;
 let statSort = {key:'g', dir:-1};
 const TEAM_LETTERS = ['A','B','C'];
 const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (이 기기 시간대 기준)
@@ -794,11 +844,15 @@ const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (�
 async function loadRecords(){
   if(!sb) return;
   let [d, g, s] = await Promise.all([
-    sb.from('match_days').select('id,played_on,bookers').order('played_on', {ascending:false}),
+    sb.from('match_days').select('id,played_on,bookers,lates,noshows').order('played_on', {ascending:false}),
     sb.from('match_games').select('id,day_id,home,away,home_score,away_score').order('id'),
     sb.from('player_stats').select('day_id,player_id,team,goals,assists,mvp'),
   ]);
-  bookingColumnMissing = false;
+  bookingColumnMissing = false; lateColumnsMissing = false;
+  if(d.error && /lates|noshows|column/i.test(d.error.message)){   // setup-extras.sql 실행 전
+    lateColumnsMissing = true;
+    d = await sb.from('match_days').select('id,played_on,bookers').order('played_on', {ascending:false});
+  }
   if(d.error && /bookers|column/i.test(d.error.message)){   // setup-booking.sql 실행 전
     bookingColumnMissing = true;
     d = await sb.from('match_days').select('id,played_on').order('played_on', {ascending:false});
@@ -810,7 +864,7 @@ async function loadRecords(){
     $('statsBox').innerHTML = `<p class="muted">기록을 불러오지 못했어요: ${esc(err.message)}<br>Supabase에서 setup-records.sql을 실행했는지 확인해 주세요.</p>`;
     return;
   }
-  days = d.data.map(x=>({...x, bookers: x.bookers || []})); games = g.data; stats = s.data;
+  days = d.data.map(x=>({...x, bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || []})); games = g.data; stats = s.data;
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   renderStats();
   renderHistory();
@@ -844,8 +898,13 @@ function aggregate(period){
     return true;
   };
   const inPeriod = id => inDate(dayDate[id]);
-  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0}]));
-  days.forEach(d=>{ if(inDate(d.played_on)) (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; }); });
+  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0}]));
+  days.forEach(d=>{
+    if(!inDate(d.played_on)) return;
+    (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; });
+    (d.lates || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.late++; });
+    (d.noshows || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.ns++; });
+  });
   stats.forEach(r=>{
     const x = agg.get(r.player_id);
     if(!x || !inPeriod(r.day_id)) return;
@@ -855,7 +914,7 @@ function aggregate(period){
   return [...agg.values()].map(x=>({...x, gp: x.w + x.d + x.l, rate: (x.w + x.d + x.l) ? x.w / (x.w + x.d + x.l) : -1}));
 }
 const STAT_COLS = [
-  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'], ['bk','구장예약'],
+  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼'],
 ];
 const LEADER_CARDS = [['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['att','출석','회']];
 // 사진 대신 이름 동그라미: 세 글자 이름은 뒤 두 글자, 그 외는 앞 두 글자
@@ -923,13 +982,15 @@ function renderStats(){
   const ranked = dir < 0 ? withRanks(sorted, key) : sorted.map((r,i)=>({...r, rank:i+1}));
   const qText = $('statSearch').value.trim();
   const rows = qText ? ranked.filter(r=>r.name.includes(qText)) : ranked;
-  $('statsBox').innerHTML = `<div class="tablewrap"><table class="stats2">
+  const nsList = all.filter(r=>r.ns > 0).sort((a,b)=>b.ns-a.ns || a.name.localeCompare(b.name,'ko'));
+  const nsWall = nsList.length ? `<div class="nsWall"><span class="nsHead">🚫 노쇼</span>${nsList.map(r=>`<span class="nsItem">${nameLink(r.id, r.name)} <b>${r.ns}회</b></span>`).join('')}</div>` : '';
+  $('statsBox').innerHTML = nsWall + `<div class="tablewrap"><table class="stats2">
     <thead><tr><th class="c-rank">순위</th><th class="c-player">선수</th>
       ${STAT_COLS.map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td class="c-rank">${r.rank}</td>
       <td class="c-player"><span class="pl">${avatar(r.name,'sm')}<span>${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span></span></td>
-      ${STAT_COLS.map(([k])=>`<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
+      ${STAT_COLS.map(([k])=>k==='ns' && r.ns ? `<td><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="lateCell">${r.late}</td>` : `<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
     </tr>`).join('') || `<tr><td colspan="${STAT_COLS.length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
     </tbody></table></div>`;
   $('statsBox').querySelectorAll('th[data-k]').forEach(th=>th.onclick = ()=>{
@@ -942,6 +1003,17 @@ $('statPeriod').addEventListener('change', renderStats);
 $('statSearch').addEventListener('input', renderStats);
 
 /* ----- 관리자: 경기 기록 입력 ----- */
+// 경기일별 명단(구장 예약·지각·노쇼) 입력 블록
+function dayListBlock(field, label, placeholder, missingSql){
+  if(missingSql) return `<h3 class="sub">${label}</h3><p class="muted">기록하려면 Supabase에서 ${missingSql}을 먼저 실행해 주세요.</p>`;
+  const ids = days.find(x=>x.id===selectedDayId)?.[field] || [];
+  return `<h3 class="sub">${label}</h3>
+    <div class="row" style="gap:6px">
+      ${ids.map(pid=>{ const pl = players.find(x=>x.id===pid); return pl ? `<span class="bkChip ${field==='noshows'?'nsChip':''}">${avatar(pl.name,'sm')}${esc(pl.name)}<button class="del" data-list-del="${field}:${pid}" aria-label="빼기">×</button></span>` : ''; }).join('') || '<span class="muted">없음</span>'}
+      <select data-list-sel="${field}"><option value="">${placeholder}</option>${players.filter(x=>!ids.includes(x.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+      <button class="ghost" data-list-add="${field}">추가</button>
+    </div>`;
+}
 function renderRecordEditor(){
   const sel = $('daySel');
   sel.innerHTML = days.length ? days.map(x=>`<option value="${x.id}" ${x.id===selectedDayId?'selected':''}>${x.played_on}</option>`).join('') : '<option value="">경기일 없음</option>';
@@ -972,14 +1044,9 @@ function renderRecordEditor(){
     </div>
     ${dayGames.length ? `<div class="leaders" style="margin-top:8px">${teamSummary}</div>` : ''}
 
-    <h3 class="sub">구장 예약</h3>
-    ${bookingColumnMissing ? '<p class="muted">구장 예약을 기록하려면 Supabase에서 setup-booking.sql을 먼저 실행해 주세요.</p>' : (()=>{
-      const day = days.find(x=>x.id===selectedDayId), bk = day?.bookers || [];
-      return `<div class="row" style="gap:6px">
-        ${bk.map(pid=>{ const pl = players.find(x=>x.id===pid); return pl ? `<span class="bkChip">${avatar(pl.name,'sm')}${esc(pl.name)}<button class="del" data-unbook="${pid}" aria-label="빼기">×</button></span>` : ''; }).join('') || '<span class="muted">아직 없어요</span>'}
-        <select id="bookSel"><option value="">예약한 사람 추가…</option>${players.filter(x=>!bk.includes(x.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
-        <button class="ghost" id="addBook">추가</button>
-      </div>`; })()}
+    ${dayListBlock('bookers', '구장 예약', '예약한 사람 추가…', bookingColumnMissing ? 'setup-booking.sql' : '')}
+    ${dayListBlock('lates', '⏰ 지각', '지각한 사람 추가…', lateColumnsMissing ? 'setup-extras.sql' : '')}
+    ${dayListBlock('noshows', '🚫 노쇼', '노쇼한 사람 추가…', lateColumnsMissing ? 'setup-extras.sql' : '')}
 
     <h3 class="sub">선수 기록 <span class="muted">(출석 ${rows.length}명)</span></h3>
     <div class="tablewrap"><table>
@@ -998,12 +1065,24 @@ function renderRecordEditor(){
       <button id="saveStats" style="margin-left:auto">기록 저장</button>
     </div>`;
 
-  const setBookers = async list => {
-    if(await q(sb.from('match_days').update({bookers: list}).eq('id', selectedDayId), '구장 예약을 저장하지 못했어요')) await loadRecords();
+  const curList = field => days.find(x=>x.id===selectedDayId)?.[field] || [];
+  const setList = async (field, list) => {
+    if(await q(sb.from('match_days').update({[field]: list}).eq('id', selectedDayId), '저장하지 못했어요')) await loadRecords();
   };
-  const curBk = () => days.find(x=>x.id===selectedDayId)?.bookers || [];
-  if($('addBook')) $('addBook').onclick = ()=>{ const pid = +$('bookSel').value; if(pid) setBookers([...curBk(), pid]); };
-  box.querySelectorAll('[data-unbook]').forEach(b=>b.onclick = ()=> setBookers(curBk().filter(x=>x !== +b.dataset.unbook)));
+  box.querySelectorAll('[data-list-add]').forEach(btn=>btn.onclick = async ()=>{
+    const field = btn.dataset.listAdd, pid = +box.querySelector(`[data-list-sel="${field}"]`).value;
+    if(!pid) return;
+    if(field === 'noshows' && stats.some(r=>r.day_id===selectedDayId && r.player_id===pid)){
+      // 노쇼는 출석이 아니므로 그날 출석 기록에서 빼기
+      if(!confirm('이 선수는 그날 출석으로 되어 있어요. 노쇼로 바꾸면 출석과 그날 골·어시 기록이 빠져요. 계속할까요?')) return;
+      await q(sb.from('player_stats').delete().eq('day_id', selectedDayId).eq('player_id', pid));
+    }
+    setList(field, [...curList(field), pid]);
+  });
+  box.querySelectorAll('[data-list-del]').forEach(b=>b.onclick = ()=>{
+    const [field, pid] = b.dataset.listDel.split(':');
+    setList(field, curList(field).filter(x=>x !== +pid));
+  });
   box.querySelectorAll('[data-game]').forEach(b=>b.onclick = async ()=>{
     if(!confirm('이 경기 결과를 삭제할까요?')) return;
     if(await q(sb.from('match_games').delete().eq('id', +b.dataset.game))) await loadRecords();
@@ -1169,6 +1248,9 @@ function renderHistory(){
       <div><span class="muted">출석</span><b>${rows.length}명</b></div>
       <div><span class="muted">총 골</span><b>${totalGoals}</b></div>
       <div><span class="muted">MVP</span><b>${mvps.join(', ') || '-'}</b></div>
+      ${(()=>{ const day = days.find(x=>x.id===histDayId) || {}; const nm = ids => (ids || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ');
+        return `<div><span class="muted">⏰ 지각</span><b>${nm(day.lates) || '-'}</b></div>
+        <div class="${(day.noshows || []).length ? 'nsTile' : ''}"><span class="muted">🚫 노쇼</span><b>${nm(day.noshows) || '-'}</b></div>`; })()}
       <div><span class="muted">구장 예약</span><b>${(days.find(x=>x.id===histDayId)?.bookers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ') || '-'}</b></div>
       <div><span class="muted">최다 득점</span><b>${scorers.length ? scorers.join(', ') + ` (${topG}골)` : '-'}</b></div>
     </div>
@@ -1327,7 +1409,7 @@ function renderProfile(){
   if(!p){ profileId = null; box.innerHTML = ''; renderProfilePicker(); return; }
 
   const all = aggregate('all').map(r=>({...r, pts: r.g + r.a}));
-  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,bk:0,pts:0,rate:-1};
+  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,bk:0,late:0,ns:0,pts:0,rate:-1};
   const rankOf = k => {
     if(!me[k]) return '';
     const r = withRanks(all.filter(x=>x[k] > 0).sort((a,b)=>b[k]-a[k]), k).find(x=>x.id===p.id);
@@ -1336,7 +1418,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')],
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''],
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
@@ -1393,7 +1475,7 @@ function renderProfile(){
       </div>
 
       <h3 class="sub">통산 기록</h3>
-      <div class="pfTiles">${tiles.map(([k,v,rk])=>`<div><span class="muted">${k}</span><b>${v}</b>${rk}</div>`).join('')}</div>
+      <div class="pfTiles">${tiles.map(([k,v,rk,cls])=>`<div class="${cls||''}"><span class="muted">${k}</span><b>${cls==='ns' ? '🚫 ' : ''}${v}</b>${rk}</div>`).join('')}</div>
 
       <h3 class="sub">최근 경기</h3>
       ${recent.length ? `<div class="pfRecent">${recent.map(({d,r,res})=>`
@@ -1452,6 +1534,81 @@ function renderProfile(){
   };
 }
 $('pfSearch').addEventListener('input', renderProfilePicker);
+
+
+/* ---------- 일정 (다가오는 일정 / 회비 날 등) ---------- */
+let events = [], eventsMissing = false;
+const KIND_ICON = {경기:'⚽', 회비:'💰', 기타:'📌'};
+const REPEAT_LABEL = {weekly:'매주', monthly:'매월'};
+async function loadEvents(){
+  if(!sb) return;
+  const r = await sb.from('events').select('id,event_date,event_time,kind,title,place,repeat').order('event_date');
+  eventsMissing = !!r.error;
+  events = r.error ? [] : r.data;
+  renderSchedule();
+}
+const addDays = (str, n) => { const d = new Date(str + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
+const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+// 반복 일정은 오늘 이후 가장 가까운 날짜로
+function nextOccurrence(ev){
+  const today = todayStr(), base = ev.event_date;
+  if(ev.repeat === 'none' || base >= today) return base;
+  if(ev.repeat === 'weekly') return addDays(base, Math.ceil(daysBetween(base, today) / 7) * 7);
+  // 매월: 같은 날짜 (그 달에 없는 날이면 말일)
+  const day = +base.slice(8, 10);
+  let [y, m] = today.split('-').map(Number);
+  for(let i = 0; i < 2; i++){
+    const last = new Date(y, m, 0).getDate();
+    const cand = `${y}-${String(m).padStart(2,'0')}-${String(Math.min(day, last)).padStart(2,'0')}`;
+    if(cand >= today) return cand;
+    m++; if(m > 12){ m = 1; y++; }
+  }
+  return base;
+}
+function renderSchedule(){
+  const card = $('scheduleCard'), list = $('schedList');
+  const today = todayStr();
+  const items = events.map(e=>({...e, next: nextOccurrence(e)}))
+    .filter(e=>e.next >= today)
+    .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''))
+    .slice(0, 8);
+  // 일반 사용자에게는 일정이 있을 때만 보여줌
+  card.classList.toggle('admin-only', !items.length);
+  if(eventsMissing){ list.innerHTML = '<p class="muted">일정을 쓰려면 Supabase에서 setup-extras.sql을 먼저 실행해 주세요.</p>'; return; }
+  list.innerHTML = items.length ? `<div class="sched">${items.map(e=>{
+      const d = new Date(e.next + 'T00:00:00'), dd = daysBetween(today, e.next);
+      const badge = dd === 0 ? '<span class="dday today">D-DAY</span>' : dd === 1 ? '<span class="dday soon">내일</span>' : `<span class="dday ${dd <= 3 ? 'soon' : ''}">D-${dd}</span>`;
+      return `<div class="ev k-${e.kind}">
+        <div class="evDate"><b>${d.getMonth()+1}/${d.getDate()}</b><span>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</span></div>
+        <div class="evBody">
+          <div class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
+          <div class="evMeta">${[e.event_time, e.place && esc(e.place)].filter(Boolean).join(' · ')}</div>
+        </div>
+        ${badge}
+        <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
+      </div>`;
+    }).join('')}</div>` : '<p class="muted">예정된 일정이 없어요. 아래에서 추가해 보세요.</p>';
+  list.querySelectorAll('[data-del-ev]').forEach(b=>b.onclick = async ()=>{
+    const ev = events.find(x=>x.id === +b.dataset.delEv);
+    if(!confirm(`"${ev?.title}" 일정을 삭제할까요?${ev?.repeat !== 'none' ? '\n반복 일정 전체가 지워져요.' : ''}`)) return;
+    if(await q(sb.from('events').delete().eq('id', +b.dataset.delEv), '일정을 삭제하지 못했어요')) await loadEvents();
+  });
+}
+$('evAdd').onclick = async ()=>{
+  const row = {
+    event_date: $('evDate').value, event_time: $('evTime').value || null, kind: $('evKind').value,
+    title: $('evTitle').value.trim(), place: $('evPlace').value.trim() || null, repeat: $('evRepeat').value,
+  };
+  if(!row.event_date || !row.title){ alert('날짜와 제목을 넣어주세요'); return; }
+  $('evAdd').disabled = true;
+  const ok = await q(sb.from('events').insert(row), '일정을 추가하지 못했어요');
+  $('evAdd').disabled = false;
+  if(ok){ $('evTitle').value = ''; $('evPlace').value = ''; await loadEvents(); }
+};
+$('evKind').addEventListener('change', ()=>{
+  // 종류를 고르면 제목 기본값 채워주기
+  if(!$('evTitle').value.trim()) $('evTitle').value = {경기:'정기 경기', 회비:'회비 내는 날', 기타:''}[$('evKind').value] || '';
+});
 
 /* ---------- 시작 ---------- */
 showShared();
