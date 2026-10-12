@@ -333,7 +333,7 @@
 
   <section class="card app">
     <h2>최근 공개된 팀 구성</h2>
-    <div id="published"><p class="muted">아직 공개된 팀 구성이 없어요.</p></div>
+    <div id="published"><p class="muted">팀 구성은 매주 금요일에 공개돼요.</p></div>
   </section>
 
   <nav class="tabs app">
@@ -825,13 +825,12 @@ let publishedRow = null;
 function renderPublished(row){
   try{
     publishedRow = row;
-    const when = new Date(row.created_at).toLocaleString('ko-KR', {month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
     const {teams, tactics} = unpack(row.teams);
     const editable = !!sb && (ALLOW_PUBLIC_TACTIC || isAdmin());
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">${when} 공개${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+      + `<p class="muted" style="margin-top:0">팀 구성은 매주 금요일에 공개돼요${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
