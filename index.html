@@ -1105,8 +1105,8 @@ let statGroup = (()=>{ const g = store.get('futsal-statgroup-v1'); return STAT_G
 const statCols = () => STAT_GROUPS[statGroup].cols();
 // 그룹별 순위 카드 [기록, 제목, 단위, 더보기 누르면 정렬할 표 칸]
 const LEADER_CARDS = {
-  game:   ()=>[['g','득점','골'], ['a','도움','개'], ['mvp','MVP','회'], ['w','승리 요정','승','wdl']],
-  part:   ()=>[['att','출석','회'], ['late','⏰ 지각','회'], ['bk','구장 예약','회'], ['streak','🔥 연속 출석','연속','att']],
+  game:   ()=>[['g','득점','골'], ['a','도움','개'], ['mvp','MVP','회'], ['w','🔥 승리 요정','승','wdl']],
+  part:   ()=>[['att','출석','회'], ['late','지각','회'], ['bk','구장 예약','회'], ['streak','🔥 연속 출석','연속','att']],
   coffee: ()=>[['cf','커피 기부왕','회'], ...(showAmounts() ? [['cfAmt','커피 금액','원']] : []), ['cl','내기 불운왕','회']],
 };
 // 지금까지 이어지고 있는 연속 출석 (최근 경기일부터 거꾸로, 빠진 날에서 멈춤)
