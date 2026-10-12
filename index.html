@@ -100,6 +100,10 @@
   .daySum>div.nsTile{background:#e5383b;color:#fff}
   .daySum>div.nsTile .muted,.daySum>div.nsTile b,.daySum>div.nsTile .plink{color:#fff}
   .bkChip.nsChip{border-color:#e5383b;background:rgba(229,56,59,.12)}
+  .errBox{background:#e5383b;color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.5}
+  .errBox b{display:block;font-size:15px;margin-bottom:4px}
+  .errBox code{background:rgba(255,255,255,.2);border-radius:6px;padding:1px 6px;font-size:12px;word-break:break-all}
+  .errBox button{margin-top:10px;background:#fff;color:#e5383b;font-weight:800}
   /* 장비 보관 */
   .gearGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media (max-width:700px){.gearGrid{grid-template-columns:1fr}}
@@ -288,6 +292,7 @@
     </div>
   </header>
 
+  <div id="errBox" class="errBox" role="alert" style="display:none"></div>
   <div id="mvpBanner" class="app"></div>
 
   <section class="card app" id="scheduleCard">
@@ -463,7 +468,6 @@
   </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ===================== 설정 ===================== */
 // Supabase > Project Settings > API 에서 복사해서 붙여넣으세요.
@@ -474,6 +478,17 @@ const ALLOW_PUBLIC_ATTENDANCE = true;
 // 로그인 안 한 사람도 '공개된 팀 구성'의 전술을 바꿀 수 있게 할지 (false면 관리자만)
 const ALLOW_PUBLIC_TACTIC = true;
 /* ================================================ */
+
+/* ---------- 오류 안내 (원인을 화면에 보여줌) ---------- */
+function showErr(title, detail){
+  const box = document.getElementById('errBox'); if(!box) return;
+  const safe = t => String(t ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  box.innerHTML = `<b>⚠️ ${safe(title)}</b>${detail ? `<code>${safe(detail)}</code>` : ''}<br><button id="errRetry">다시 시도</button>`;
+  box.style.display = 'block';
+  document.getElementById('errRetry').onclick = ()=>{ box.style.display = 'none'; sb ? loadAll() : startApp(); };
+}
+window.addEventListener('error', e=> showErr('화면을 그리다 오류가 났어요', e.message));
+window.addEventListener('unhandledrejection', e=> showErr('데이터를 처리하다 오류가 났어요', e.reason && (e.reason.message || e.reason)));
 
 const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
 const POSITIONS = ['공격','미드','수비'];
@@ -515,7 +530,12 @@ async function loadAll(){
     profileColumnsMissing = true;   // setup-profile.sql 실행 전
     res = await sb.from('players').select(BASE).order('name');
   }
-  if(res.error){ $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`; return; }
+  if(res.error){
+    $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`;
+    showErr('선수 명단을 불러오지 못했어요. 네트워크를 확인하거나, Supabase 프로젝트가 일시정지(Paused) 상태인지 확인해 주세요.', res.error.message);
+    return;
+  }
+  $('errBox').style.display = 'none';
   const ratings = {};
   if(isAdmin()){
     const r = await sb.from('player_ratings').select('player_id,grade,act');
@@ -1735,20 +1755,50 @@ $('homeLink').onclick = e=>{
 };
 
 /* ---------- 시작 ---------- */
-showShared();
-applyMode();
-if(!SUPABASE_URL || !SUPABASE_KEY || !window.supabase){
-  $('configNotice').style.display = 'block';
-  $('list').innerHTML = `<tr><td colspan="8" class="muted">Supabase 설정 후 명단이 보여요.</td></tr>`;
-}else{
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  sb.auth.getSession().then(({data})=>{ session = data.session; applyMode(); loadAll(); });
-  sb.auth.onAuthStateChange((_event, s)=>{
-    const changed = !!s !== !!session;
-    session = s; applyMode();
-    if(changed){ lastTeams = null; lastTactics = []; $('result').innerHTML=''; $('shareRow').style.display='none'; loadAll(); }
-  });
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, bad)=>setTimeout(()=>bad(new Error('시간 초과')), ms))]);
+function loadScript(src){
+  return new Promise((ok, bad)=>{ const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = ()=>bad(new Error(src + ' 받기 실패')); document.head.appendChild(t); });
 }
+async function loadSupabaseLib(){
+  if(window.supabase) return;
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
+  ];
+  let last;
+  for(const u of urls){
+    try{ await withTimeout(loadScript(u), 8000); if(window.supabase) return; }catch(e){ last = e; }
+  }
+  throw last || new Error('라이브러리 없음');
+}
+let authWatching = false;
+async function startApp(){
+  showShared();
+  applyMode();
+  if(!SUPABASE_URL || !SUPABASE_KEY){
+    $('configNotice').style.display = 'block';
+    $('list').innerHTML = `<tr><td colspan="8" class="muted">Supabase 설정 후 명단이 보여요.</td></tr>`;
+    return;
+  }
+  try{ await loadSupabaseLib(); }
+  catch(e){ showErr('서버 연결 준비에 실패했어요. 와이파이/데이터 연결을 확인하고 다시 시도해 주세요.', e.message); return; }
+  if(!sb) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  loadAll();   // 로그인 확인을 기다리지 않고 바로 불러오기
+  try{
+    const { data } = await withTimeout(sb.auth.getSession(), 6000);
+    const was = !!session; session = data.session; applyMode();
+    if(!!session !== was) loadAll();
+  }catch(e){ /* 로그인 확인 실패해도 일반 화면은 그대로 */ }
+  if(!authWatching){
+    authWatching = true;
+    sb.auth.onAuthStateChange((_event, s)=>{
+      const changed = !!s !== !!session;
+      session = s; applyMode();
+      if(changed){ lastTeams = null; lastTactics = []; $('result').innerHTML=''; $('shareRow').style.display='none'; loadAll(); }
+    });
+  }
+}
+startApp();
 </script>
 </body>
 </html>
