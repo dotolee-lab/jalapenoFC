@@ -49,6 +49,30 @@
   .b-수비{background:var(--df2);color:var(--df)}
   .summary{margin-top:10px;font-size:14px}
   input.num{width:58px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px}
+  /* 명예의 전당 배너 */
+  .hof{position:relative;overflow:hidden;border-radius:20px;padding:30px 20px 24px;margin-bottom:18px;text-align:center;color:#3b2a00;
+       background:radial-gradient(circle at 15% 0%,#fff7d6 0,transparent 45%),radial-gradient(circle at 90% 100%,#ffd36b 0,transparent 40%),linear-gradient(135deg,#ffe27d,#f5b82e 55%,#e39410);
+       box-shadow:0 12px 32px rgba(227,148,16,.35)}
+  .hof .sparkles i{position:absolute;font-style:normal;color:#fff;opacity:0;font-size:14px;animation:twinkle 2.6s infinite}
+  @keyframes twinkle{0%,100%{opacity:0;transform:scale(.6)}50%{opacity:.9;transform:scale(1.1)}}
+  @media (prefers-reduced-motion: reduce){.hof .sparkles i{animation:none;opacity:.5}}
+  .hofClose{position:absolute;right:10px;top:10px;width:30px;height:30px;padding:0;border-radius:50%;background:rgba(255,255,255,.45);color:#3b2a00;font-size:18px;line-height:30px}
+  .hofEyebrow{position:relative;letter-spacing:.14em;font-size:12px;font-weight:800;opacity:.75}
+  .hofDate{position:relative;font-size:15px;font-weight:700;margin-top:6px}
+  .hofWinners{position:relative;display:flex;justify-content:center;gap:36px;flex-wrap:wrap;margin:16px 0 10px}
+  .hofW{display:flex;flex-direction:column;align-items:center}
+  .hofW .crown{font-size:30px;line-height:1;margin-bottom:-6px;position:relative;z-index:1}
+  .avatar.xl{width:104px;height:104px;font-size:30px;background:#fff !important;color:#c27c00 !important;box-shadow:0 0 0 6px rgba(255,255,255,.5),0 8px 18px rgba(160,100,0,.25)}
+  .hofName{font-size:clamp(36px,9vw,60px);font-weight:900;line-height:1.1;margin-top:12px;letter-spacing:-.01em;text-shadow:0 2px 0 rgba(255,255,255,.45)}
+  .hofChips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:10px}
+  .hofChips span{background:rgba(255,255,255,.6);border-radius:999px;padding:4px 11px;font-weight:700;font-size:14px}
+  .hofFoot{position:relative;font-size:14px;font-weight:600;opacity:.85;margin-top:6px}
+  body.shared #mvpBanner{display:none}
+  .hofGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .hofItem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+  .hofItem.latest{border-color:#f5b82e;box-shadow:0 0 0 1px #f5b82e inset}
+  .hofRow{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:14px}
+  .hofRow .muted{margin-left:auto}
   /* 탭 */
   .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 16px;overflow-x:auto}
   .tabs button{background:none;color:var(--muted);border-radius:0;padding:10px 14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
@@ -143,6 +167,8 @@
     </div>
   </header>
 
+  <div id="mvpBanner" class="app"></div>
+
   <nav class="tabs app">
     <button data-tab="team" class="on">팀 구성</button>
     <button data-tab="stats">개인 기록</button>
@@ -204,6 +230,11 @@
       <input type="text" id="statSearch" class="search" placeholder="🔍 선수 기록 검색">
     </div>
     <div id="statsBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
+  <section class="card app" data-pane="stats">
+    <h2>🏆 명예의 전당</h2>
+    <div id="hofList"><p class="muted">불러오는 중…</p></div>
   </section>
 
   <section class="card app admin-only" data-pane="team">
@@ -684,6 +715,8 @@ async function loadRecords(){
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   renderStats();
   renderHistory();
+  renderMvpBanner();
+  renderHofList();
   if(isAdmin()) renderRecordEditor();
 }
 
@@ -1003,6 +1036,59 @@ function renderHistory(){
 $('histDay').addEventListener('change', ()=>{ histDayId = +$('histDay').value; renderHistory(); });
 $('histPrev').onclick = ()=>{ const i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; renderHistory(); } };
 $('histNext').onclick = ()=>{ const i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; renderHistory(); } };
+
+
+/* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
+const HOF_DAYS = 7;   // MVP 배너를 경기일로부터 며칠 동안 보여줄지
+function mvpAwards(){
+  // 최신 경기일부터, MVP가 있는 날만
+  return days.map(d=>({day:d, winners: stats.filter(r=>r.day_id===d.id && r.mvp)
+      .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name})).filter(r=>r.name)}))
+    .filter(x=>x.winners.length);
+}
+function renderMvpBanner(){
+  const box = $('mvpBanner');
+  const latest = mvpAwards()[0];
+  if(!latest){ box.innerHTML = ''; return; }
+  const {day, winners} = latest;
+  const diff = Math.round((new Date(todayStr()+'T00:00:00') - new Date(day.played_on+'T00:00:00')) / 86400000);
+  if(diff < 0 || diff > HOF_DAYS || store.get('futsal-hof-hide') === String(day.id)){ box.innerHTML = ''; return; }
+  const totalMvp = pid => stats.filter(r=>r.player_id===pid && r.mvp).length;
+  const sparkles = Array.from({length:14}, (_,i)=>`<i style="left:${(i*37)%100}%;top:${(i*53)%100}%;animation-delay:${(i%7)*0.35}s">✦</i>`).join('');
+  box.innerHTML = `<div class="hof" role="region" aria-label="이번 주 MVP">
+    <div class="sparkles" aria-hidden="true">${sparkles}</div>
+    <button class="hofClose" title="이번 주 배너 닫기" aria-label="닫기">×</button>
+    <div class="hofEyebrow">🏆 HALL OF FAME · 명예의 전당</div>
+    <div class="hofDate">${fmtDay(day.played_on)} 경기 MVP</div>
+    <div class="hofWinners">${winners.map(w=>{
+      const res = dayResults(day.id, w.team);
+      const chips = [
+        w.goals ? `⚽ ${w.goals}골` : '', w.assists ? `어시 ${w.assists}` : '',
+        w.team && (res.w + res.d + res.l) ? `${w.team}팀 ${res.w}승 ${res.d}무 ${res.l}패` : '',
+        `누적 MVP ${totalMvp(w.player_id)}회`,
+      ].filter(Boolean);
+      return `<div class="hofW"><div class="crown">👑</div>${avatar(w.name,'xl')}
+        <div class="hofName">${esc(w.name)}</div>
+        <div class="hofChips">${chips.map(c=>`<span>${c}</span>`).join('')}</div></div>`;
+    }).join('')}</div>
+    <div class="hofFoot">${winners.length > 1 ? '공동 MVP 축하해요!' : '축하해요!'} 다음 경기까지 이 자리는 당신 거예요 👏</div>
+  </div>`;
+  box.querySelector('.hofClose').onclick = ()=>{ store.set('futsal-hof-hide', String(day.id)); renderMvpBanner(); };
+}
+function renderHofList(){
+  const awards = mvpAwards();
+  if(!awards.length){ $('hofList').innerHTML = '<p class="muted">아직 MVP 기록이 없어요. 경기 기록에서 MVP를 체크하면 여기에 쌓여요.</p>'; return; }
+  const count = {};
+  awards.forEach(a=>a.winners.forEach(w=>{ count[w.name] = (count[w.name]||0) + 1; }));
+  const best = Math.max(...Object.values(count));
+  const kings = Object.keys(count).filter(n=>count[n]===best).sort((a,b)=>a.localeCompare(b,'ko'));
+  $('hofList').innerHTML = `
+    <p class="muted" style="margin-top:0">MVP 최다 수상 · <b style="color:var(--text)">${kings.map(esc).join(', ')}</b> ${best}회</p>
+    <div class="hofGrid">${awards.map((a,i)=>`<div class="hofItem ${i===0?'latest':''}">
+      <div class="muted">${fmtDay(a.day.played_on)}</div>
+      ${a.winners.map(w=>`<div class="hofRow">${avatar(w.name,'sm')}<b>${esc(w.name)}</b><span class="muted">${w.goals?`⚽${w.goals}`:''}${w.assists?` 어시${w.assists}`:''}</span></div>`).join('')}
+    </div>`).join('')}</div>`;
+}
 
 /* ---------- 시작 ---------- */
 showShared();
