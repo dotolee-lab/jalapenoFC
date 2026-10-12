@@ -96,6 +96,17 @@
   .pfNum{font-weight:800;color:var(--hl);margin-right:4px}
   .pfFacts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:14px}
   .pfIntro{margin-top:8px;font-size:15px;color:var(--muted);font-style:italic}
+  .feet{display:inline-flex;gap:3px;vertical-align:middle}
+  .foot{width:40px;height:56px}
+  .feet.sm .foot{width:22px;height:31px}
+  .foot .sole{fill:#1f9a45;stroke:#157a33;stroke-width:1.2}
+  .foot .dot{fill:#fff;stroke:#157a33;stroke-width:1.2}
+  .foot .num{font:900 28px/1 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;fill:#fff;stroke:#157a33;stroke-width:1.4;paint-order:stroke}
+  .foot.empty .sole{fill:var(--line);stroke:var(--muted)}
+  .foot.empty .num{stroke:var(--muted)}
+  .pfFeet{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px}
+  .pfFeetLbl{font-size:12px}
+  @media (max-width:560px){.pfFeet{justify-content:center}}
   .pfBday{margin-top:14px;background:linear-gradient(135deg,#ffe27d,#f5b82e);color:#3b2a00;border-radius:12px;padding:10px 14px;font-weight:700;text-align:center}
   .pfEdit{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px}
   .pfTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -399,10 +410,10 @@ async function q(promise, msg){
 }
 async function loadAll(){
   if(!sb) return;
-  let res = await sb.from('players').select('id,name,pos,gk,attending,number,foot,intro,birth').order('name');
+  let res = await sb.from('players').select('id,name,pos,gk,attending,number,intro,birth,foot_left,foot_right').order('name');
   profileColumnsMissing = false;
-  if(res.error && /column|number|foot|intro|birth/i.test(res.error.message)){
-    profileColumnsMissing = true;
+  if(res.error && /column|foot_|number|intro|birth/i.test(res.error.message)){
+    profileColumnsMissing = true;   // setup-profile.sql 실행 전
     res = await sb.from('players').select('id,name,pos,gk,attending').order('name');
   }
   if(res.error){ $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`; return; }
@@ -413,7 +424,8 @@ async function loadAll(){
   }
   players = res.data.map(p=>({
     id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending,
-    number: p.number ?? null, foot: p.foot ?? null, intro: p.intro ?? null, birth: p.birth ?? null,
+    number: p.number ?? null, intro: p.intro ?? null, birth: p.birth ?? null,
+    footL: p.foot_left ?? null, footR: p.foot_right ?? null,
     grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
   }));
   render();
@@ -1154,7 +1166,24 @@ function renderHofList(){
 /* ---------- 개인 프로필 ---------- */
 let profileId = null;
 let profileColumnsMissing = false;
-const FEET = ['오른발','왼발','양발'];
+// 발바닥 아이콘: 왼발·오른발 점수(0~5). 점수가 더 높은 쪽(주발) 위에 점
+const SOLE = 'M23 2C35 2 42 11 41.5 24C41 34.5 36 39.5 35.5 47.5C35 56.5 30.5 62 23 62C15 62 11.5 56.5 12 47.5C12.5 40 5 34 5 23C5 10 11 2 23 2Z';
+function footIcon(score, side, main){
+  const empty = score == null;
+  const flip = side === 'L' ? 'transform="translate(46 0) scale(-1 1)"' : '';
+  return `<svg class="foot ${empty?'empty':''}" viewBox="0 0 46 64" role="img" aria-label="${side==='L'?'왼발':'오른발'} ${empty?'미입력':score+'점'}">
+    <path d="${SOLE}" ${flip} class="sole"/>
+    ${main ? '<circle cx="23" cy="12" r="4.2" class="dot"/>' : ''}
+    <text x="23" y="${main ? 45 : 42}" text-anchor="middle" class="num">${empty ? '-' : score}</text>
+  </svg>`;
+}
+function feetHtml(p, size){
+  if(p.footL == null && p.footR == null) return '';
+  const l = p.footL ?? -1, r = p.footR ?? -1, top = Math.max(l, r);
+  const main = side => top > 0 && (side==='L' ? l : r) === top;
+  return `<span class="feet ${size||''}" title="왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}">${footIcon(p.footL,'L',main('L'))}${footIcon(p.footR,'R',main('R'))}</span>`;
+}
+const footOpts = v => `<option value="" ${v==null?'selected':''}>-</option>` + [0,1,2,3,4,5].map(n=>`<option value="${n}" ${v===n?'selected':''}>${n}</option>`).join('');
 function ageOf(birth){
   if(!birth) return null;
   const [y,m,d] = birth.split('-').map(Number), [ty,tm,td] = todayStr().split('-').map(Number);
@@ -1186,6 +1215,7 @@ function renderProfilePicker(){
       ${avatar(p.name,'md')}
       <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}${p.gk ? '<span class="badge">GK</span>' : ''}</span>
+      ${feetHtml(p,'sm')}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
@@ -1223,7 +1253,7 @@ function renderProfile(){
     p.gk ? '<span class="badge">GK</span>' : '',
   ].join('');
   const facts = [
-    p.foot ? ['주발', esc(p.foot)] : null,
+
     p.birth ? ['생년월일', `${fmtBirth(p.birth)}${age!=null?` (만 ${age}세)`:''}`] : null,
   ].filter(Boolean);
 
@@ -1235,6 +1265,7 @@ function renderProfile(){
         <div class="pfId">
           <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
+          ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}<span class="muted pfFeetLbl">왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}</span></div>` : ''}
           ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
           ${p.intro ? `<div class="pfIntro">“${esc(p.intro)}”</div>` : ''}
         </div>
@@ -1242,10 +1273,11 @@ function renderProfile(){
       ${isBirthday(p.birth) ? `<div class="pfBday">🎉 오늘은 ${esc(p.name)} 님의 생일이에요! 생일 축하해요 🎂</div>` : ''}
 
       <div class="admin-only pfEdit">
-        ${profileColumnsMissing ? '<p class="muted">등번호·주발·한마디·생년월일을 저장하려면 Supabase에서 setup-profile.sql을 먼저 실행해 주세요.</p>' : `
+        ${profileColumnsMissing ? '<p class="muted">등번호·주발 점수·한마디·생년월일을 저장하려면 Supabase에서 setup-profile.sql을 먼저 실행해 주세요.</p>' : `
         <div class="row">
           <label class="chk">등번호 <input type="number" class="num" id="pfNumIn" min="0" max="99" value="${p.number ?? ''}"></label>
-          <select id="pfFootIn"><option value="">주발</option>${FEET.map(f=>`<option ${f===p.foot?'selected':''}>${f}</option>`).join('')}</select>
+          <label class="chk">왼발 <select id="pfFootL">${footOpts(p.footL)}</select></label>
+          <label class="chk">오른발 <select id="pfFootR">${footOpts(p.footR)}</select></label>
           <label class="chk">생년월일 <input type="date" id="pfBirthIn" value="${p.birth ?? ''}" max="${todayStr()}"></label>
         </div>
         <div class="row" style="margin-top:8px">
@@ -1278,11 +1310,12 @@ function renderProfile(){
     const numRaw = $('pfNumIn').value.trim();
     const number = numRaw === '' ? null : parseInt(numRaw, 10);
     if(number !== null && (isNaN(number) || number < 0 || number > 99)){ alert('등번호는 0~99 사이로 넣어주세요'); return; }
-    const row = { number, foot: $('pfFootIn').value || null, birth: $('pfBirthIn').value || null, intro: $('pfIntroIn').value.trim() || null };
+    const fv = id => $(id).value === '' ? null : +$(id).value;
+    const row = { number, foot_left: fv('pfFootL'), foot_right: fv('pfFootR'), birth: $('pfBirthIn').value || null, intro: $('pfIntroIn').value.trim() || null };
     save.disabled = true;
     const ok = await q(sb.from('players').update(row).eq('id', p.id), '프로필을 저장하지 못했어요');
     save.disabled = false;
-    if(ok){ Object.assign(p, row); renderProfile(); }
+    if(ok){ Object.assign(p, row, {footL: row.foot_left, footR: row.foot_right}); renderProfile(); }
   };
 }
 $('pfSearch').addEventListener('input', renderProfilePicker);
