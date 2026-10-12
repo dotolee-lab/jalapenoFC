@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>할라피뇨 랜덤 팀짜기</title>
+<title>풋살 팀 밸런서</title>
 <style>
   :root{--bg:#f5f7f6;--card:#fff;--text:#1d2420;--muted:#6b756f;--line:#e2e7e4;--accent:#1f8a5b;--accent2:#e8f5ee;--danger:#c0392b;
         --fw:#d9534f;--fw2:#fbe9e8;--mf:#2f7fd1;--mf2:#e6f0fb;--df:#c98a12;--df2:#fbf2df}
@@ -12,7 +12,8 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
   main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
-  h1{font-size:22px;margin:4px 0 16px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 16px}
+  h1{font-size:22px;margin:0}
   h2{font-size:16px;margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -20,6 +21,7 @@
   input[type=text]{flex:1;min-width:120px}
   button{padding:9px 14px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
   button.ghost{background:var(--accent2);color:var(--accent)}
+  button.small{padding:6px 10px;font-size:13px}
   button.del{background:none;color:var(--danger);padding:4px 8px}
   label.chk{display:flex;align-items:center;gap:4px;font-size:14px;color:var(--muted)}
   .tablewrap{overflow-x:auto}
@@ -38,24 +40,43 @@
   .b-미드{background:var(--mf2);color:var(--mf)}
   .b-수비{background:var(--df2);color:var(--df)}
   .summary{margin-top:10px;font-size:14px}
+  .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
+  /* 일반 모드에서는 관리자 전용 요소를 숨김 */
+  body:not(.admin) .admin-only{display:none !important}
+  body.shared .app{display:none}
+  #sharedView{display:none}
+  body.shared #sharedView{display:block}
 </style>
 </head>
 <body>
 <main>
-  <h1>⚽ 할라피뇨 랜덤 팀짜기</h1>
+  <header>
+    <h1>⚽ 풋살 팀 밸런서<span class="mode" id="modeLabel">일반</span></h1>
+    <div class="row app">
+      <button class="ghost small" id="loginBtn">관리자 로그인</button>
+      <button class="ghost small admin-only" id="logoutBtn">관리자 종료</button>
+    </div>
+  </header>
 
-  <section class="card">
+  <!-- 공유 링크로 열었을 때 보이는 결과 전용 화면 -->
+  <section class="card" id="sharedView">
+    <h2>오늘의 팀 구성</h2>
+    <div id="sharedResult"></div>
+    <p class="muted" style="margin-top:12px"><a href="./" style="color:var(--accent)">팀 밸런서 열기</a></p>
+  </section>
+
+  <section class="card app admin-only">
     <h2>선수 등록</h2>
     <div class="row">
       <input type="text" id="name" placeholder="이름">
       <select id="grade">
         <option value="5">S</option><option value="4">A</option><option value="3" selected>B</option><option value="2">C</option><option value="1">D</option>
       </select>
-      <select id="pos">
-        <option value="공격">공격</option><option value="미드" selected>미드</option><option value="수비">수비</option>
-      </select>
       <select id="act">
         <option value="좋음">활동량 좋음</option><option value="보통" selected>활동량 보통</option><option value="나쁨">활동량 나쁨</option>
+      </select>
+      <select id="pos">
+        <option value="공격">공격</option><option value="미드" selected>미드</option><option value="수비">수비</option>
       </select>
       <label class="chk"><input type="checkbox" id="gk"> 키퍼 가능</label>
       <button id="add">추가</button>
@@ -63,7 +84,7 @@
     <p class="muted">등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0 &nbsp;→ 총점 = 등급 + 활동량</p>
   </section>
 
-  <section class="card">
+  <section class="card app">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">선수 명단 <span class="muted" id="count"></span></h2>
       <div class="row">
@@ -73,13 +94,13 @@
     </div>
     <div class="tablewrap">
     <table>
-      <thead><tr><th>참석</th><th>이름</th><th>등급</th><th>활동량</th><th>총점</th><th>포지션</th><th>키퍼</th><th></th></tr></thead>
+      <thead><tr><th>참석</th><th>이름</th><th class="admin-only">등급</th><th class="admin-only">활동량</th><th class="admin-only">총점</th><th>포지션</th><th>키퍼</th><th class="admin-only"></th></tr></thead>
       <tbody id="list"></tbody>
     </table>
     </div>
   </section>
 
-  <section class="card">
+  <section class="card app">
     <h2>팀 나누기</h2>
     <div class="row">
       <select id="teamCount"><option value="2">2팀</option><option value="3" selected>3팀</option></select>
@@ -87,16 +108,21 @@
       <button id="make">팀 구성하기</button>
       <button class="ghost" id="again">다시 섞기</button>
     </div>
-    <p class="muted">총점(등급+활동량)을 가장 먼저 맞추고, 그다음 포지션과 키퍼 가능 인원이 팀마다 고르게 섞이도록 나눠요.</p>
+    <p class="muted">실력이 비슷하게, 포지션과 키퍼 가능 인원은 팀마다 고르게 나눠요.</p>
     <p class="muted" id="need"></p>
     <div id="result" style="margin-top:14px"></div>
+    <div class="row" id="shareRow" style="margin-top:10px;display:none">
+      <button class="ghost" id="shareBtn">결과 공유 링크 복사</button>
+      <span class="muted">링크에는 이름·포지션·키퍼 여부만 담기고 등급·활동량·점수는 들어가지 않아요.</span>
+    </div>
   </section>
 
-  <section class="card">
-    <h2>백업</h2>
+  <section class="card app admin-only">
+    <h2>관리</h2>
     <div class="row">
       <button class="ghost" id="exp">명단 내보내기</button>
       <button class="ghost" id="imp">명단 불러오기</button>
+      <button class="ghost" id="pwChange">비밀번호 변경</button>
     </div>
     <p class="muted">명단은 이 브라우저에 저장돼요. 다른 기기로 옮길 때는 내보내기로 복사한 텍스트를 불러오기에 붙여넣으세요.</p>
   </section>
@@ -109,34 +135,84 @@ const ACTS = {'좋음':1, '보통':0.5, '나쁨':0};
 const score = p => p.grade + (ACTS[p.act] ?? 0.5);
 const fmt = x => Number.isInteger(x) ? String(x) : x.toFixed(1);
 const KEY = 'futsal-players-v1';
+const PW_KEY = 'futsal-admin-pw-v1';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+};
 let players = normalize(load());
+let lastTeams = null;
 
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(players)); }catch(e){} }
+function load(){ try{ return JSON.parse(store.get(KEY)) || []; }catch(e){ return []; } }
+function save(){ store.set(KEY, JSON.stringify(players)); }
 // 예전 명단(포지션·활동량 없음)은 '미드'·'보통'으로 채워서 그대로 사용
 function normalize(list){ return list.map(p=>({...p, pos: POSITIONS.includes(p.pos) ? p.pos : '미드', act: (p.act in ACTS) ? p.act : '보통'})); }
-const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+/* ---------- 관리자 모드 ---------- */
+async function hash(text){
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('futsal:'+text));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){ // crypto를 못 쓰는 환경용 간단한 대체 해시
+    let h = 5381; for(const c of 'futsal:'+text) h = ((h<<5)+h + c.charCodeAt(0))|0; return 'x'+h;
+  }
+}
+const isAdmin = () => document.body.classList.contains('admin');
+function setAdmin(on){
+  document.body.classList.toggle('admin', on);
+  try{ sessionStorage.setItem('futsal-admin', on?'1':''); }catch(e){}
+  $('modeLabel').textContent = on ? '관리자' : '일반';
+  $('loginBtn').style.display = on ? 'none' : '';
+  render();
+  if(lastTeams) showTeams(lastTeams);
+}
+$('loginBtn').onclick = async ()=>{
+  const saved = store.get(PW_KEY);
+  if(!saved){
+    const pw = prompt('처음이라 관리자 비밀번호를 정해요.\n새 비밀번호를 입력하세요'); if(!pw) return;
+    const pw2 = prompt('한 번 더 입력하세요'); if(pw!==pw2){ alert('비밀번호가 서로 달라요'); return; }
+    store.set(PW_KEY, await hash(pw)); setAdmin(true); return;
+  }
+  const pw = prompt('관리자 비밀번호'); if(pw==null) return;
+  if(await hash(pw) === saved) setAdmin(true); else alert('비밀번호가 틀렸어요');
+};
+$('logoutBtn').onclick = ()=> setAdmin(false);
+$('pwChange').onclick = async ()=>{
+  const pw = prompt('새 비밀번호'); if(!pw) return;
+  const pw2 = prompt('한 번 더 입력하세요'); if(pw!==pw2){ alert('비밀번호가 서로 달라요'); return; }
+  store.set(PW_KEY, await hash(pw)); alert('변경했어요');
+};
+
+/* ---------- 명단 ---------- */
 function render(){
   const tb = $('list'); tb.innerHTML = '';
-  players.sort((a,b)=>score(b)-score(a) || a.name.localeCompare(b.name,'ko'));
-  players.forEach(p=>{
+  // 일반 모드에서는 이름순(점수순으로 정렬하면 순위가 드러나므로)
+  const list = players.slice().sort(isAdmin()
+    ? (a,b)=>score(b)-score(a) || a.name.localeCompare(b.name,'ko')
+    : (a,b)=>a.name.localeCompare(b.name,'ko'));
+  list.forEach(p=>{
     const tr = document.createElement('tr');
+    const admin = isAdmin();
     tr.innerHTML = `
       <td><input type="checkbox" ${p.on?'checked':''} data-k="on"></td>
       <td>${esc(p.name)}</td>
+      ${admin ? `
       <td><select data-k="grade">${[5,4,3,2,1].map(g=>`<option value="${g}" ${g==p.grade?'selected':''}>${GRADES[g]}</option>`).join('')}</select></td>
       <td><select data-k="act">${Object.keys(ACTS).map(x=>`<option ${x===p.act?'selected':''}>${x}</option>`).join('')}</select></td>
-      <td><b>${fmt(score(p))}</b></td>
-      <td><select data-k="pos">${POSITIONS.map(x=>`<option ${x===p.pos?'selected':''}>${x}</option>`).join('')}</select></td>
-      <td><input type="checkbox" ${p.gk?'checked':''} data-k="gk"></td>
-      <td><button class="del">삭제</button></td>`;
+      <td><b>${fmt(score(p))}</b></td>` : ''}
+      <td>${admin ? `<select data-k="pos">${POSITIONS.map(x=>`<option ${x===p.pos?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="badge b-${p.pos}" style="margin:0">${p.pos}</span>`}</td>
+      <td>${admin ? `<input type="checkbox" ${p.gk?'checked':''} data-k="gk">` : (p.gk?'GK':'')}</td>
+      ${admin ? `<td><button class="del">삭제</button></td>` : ''}`;
     tr.querySelector('[data-k=on]').onchange = e=>{p.on=e.target.checked;save();count();};
-    tr.querySelector('[data-k=gk]').onchange = e=>{p.gk=e.target.checked;save();};
-    tr.querySelector('[data-k=pos]').onchange = e=>{p.pos=e.target.value;save();};
-    tr.querySelector('[data-k=act]').onchange = e=>{p.act=e.target.value;save();render();};
-    tr.querySelector('[data-k=grade]').onchange = e=>{p.grade=+e.target.value;save();render();};
-    tr.querySelector('.del').onclick = ()=>{ if(confirm(p.name+' 삭제할까요?')){players=players.filter(x=>x!==p);save();render();} };
+    if(admin){
+      tr.querySelector('[data-k=gk]').onchange = e=>{p.gk=e.target.checked;save();};
+      tr.querySelector('[data-k=pos]').onchange = e=>{p.pos=e.target.value;save();};
+      tr.querySelector('[data-k=act]').onchange = e=>{p.act=e.target.value;save();render();};
+      tr.querySelector('[data-k=grade]').onchange = e=>{p.grade=+e.target.value;save();render();};
+      tr.querySelector('.del').onclick = ()=>{ if(confirm(p.name+' 삭제할까요?')){players=players.filter(x=>x!==p);save();render();} };
+    }
     tb.appendChild(tr);
   });
   count();
@@ -145,9 +221,8 @@ function count(){
   const on = players.filter(p=>p.on);
   const byPos = POSITIONS.map(x=>`${x} ${on.filter(p=>p.pos===x).length}`).join(' · ');
   $('count').textContent = `(전체 ${players.length}명 · 참석 ${on.length}명 — ${byPos})`;
-  if(typeof updateNeed === 'function') updateNeed();
+  updateNeed();
 }
-function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 $('add').onclick = ()=>{
   const name = $('name').value.trim(); if(!name) return;
@@ -167,23 +242,18 @@ function variance(arr){ const m=arr.reduce((a,b)=>a+b,0)/arr.length; return arr.
 
 // 비용: 총점 차이(가장 중요) + 포지션 쏠림 + 키퍼 가능 인원 쏠림 + 인원수 차이
 function cost(teams){
-  const score = variance(teams.map(sum)) * 10;
-  const pos = POSITIONS.reduce((s,x)=>s + variance(teams.map(t=>t.filter(p=>p.pos===x).length)), 0) * 3;
+  const s = variance(teams.map(sum)) * 10;
+  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.filter(p=>p.pos===x).length)), 0) * 3;
   const gk = variance(teams.map(t=>t.filter(p=>p.gk).length)) * 4;
   const size = variance(teams.map(t=>t.length)) * 100;
-  return score + pos + gk + size;
+  return s + pos + gk + size;
 }
-
 function snake(list, n){
   const teams = Array.from({length:n},()=>[]);
   const sorted = shuffle(list.slice()).sort((a,b)=>score(b)-score(a)); // 같은 총점끼리는 무작위
-  sorted.forEach((p,i)=>{
-    const round = Math.floor(i/n), k = i%n;
-    teams[round%2===0 ? k : n-1-k].push(p);
-  });
+  sorted.forEach((p,i)=>{ const round=Math.floor(i/n), k=i%n; teams[round%2===0 ? k : n-1-k].push(p); });
   return teams;
 }
-
 function improve(teams){
   const n = teams.length;
   let best = cost(teams), improved = true, guard = 0;
@@ -202,7 +272,6 @@ function improve(teams){
   }
   return {teams, c: best};
 }
-
 function balance(list, n){
   // 여러 번 시도해서 가장 균형 잡힌 결과 중 하나를 고름 (매번 조금씩 다른 조합)
   const results = [];
@@ -213,42 +282,74 @@ function balance(list, n){
 }
 
 // 필요 인원 안내: 팀 수 × 팀당 인원과 오늘 참석 인원 비교
-function needInfo(){
+function updateNeed(){
   const n = +$('teamCount').value, size = +$('teamSize').value;
   const need = n*size, have = players.filter(p=>p.on).length;
-  if(have === need) return {text:`필요 ${need}명 · 참석 ${have}명 — 딱 맞아요 ✅`, ok:true};
-  if(have > need){
-    const extra = have-need, lo = Math.floor(have/n), hi = Math.ceil(have/n);
-    return {text:`필요 ${need}명 · 참석 ${have}명 — ${extra}명이 남아서 교체 인원으로 나눠 넣어 팀당 ${lo===hi?lo:lo+'~'+hi}명이 돼요.`, ok:true};
-  }
-  const short = need-have, lo = Math.floor(have/n), hi = Math.ceil(have/n);
-  return {text:`필요 ${need}명 · 참석 ${have}명 — ${short}명이 부족해서 팀당 ${lo===hi?lo:lo+'~'+hi}명으로 구성돼요.`, ok:have>=n*2};
+  const lo = Math.floor(have/n), hi = Math.ceil(have/n), per = lo===hi ? lo : lo+'~'+hi;
+  let text;
+  if(have === need) text = `필요 ${need}명 · 참석 ${have}명 — 딱 맞아요 ✅`;
+  else if(have > need) text = `필요 ${need}명 · 참석 ${have}명 — ${have-need}명이 남아서 교체 인원으로 나눠 넣어 팀당 ${per}명이 돼요.`;
+  else text = `필요 ${need}명 · 참석 ${have}명 — ${need-have}명이 부족해서 팀당 ${per}명으로 구성돼요.`;
+  $('need').textContent = text;
 }
-function updateNeed(){ $('need').textContent = needInfo().text; }
 ['teamCount','teamSize'].forEach(id=>$(id).addEventListener('change',()=>{
-  try{ localStorage.setItem('futsal-setting-v1', JSON.stringify({n:$('teamCount').value, size:$('teamSize').value})); }catch(e){}
+  store.set('futsal-setting-v1', JSON.stringify({n:$('teamCount').value, size:$('teamSize').value}));
   updateNeed();
 }));
-try{ const s = JSON.parse(localStorage.getItem('futsal-setting-v1')); if(s){ $('teamCount').value=s.n; $('teamSize').value=s.size; } }catch(e){}
+try{ const s = JSON.parse(store.get('futsal-setting-v1')); if(s){ $('teamCount').value=s.n; $('teamSize').value=s.size; } }catch(e){}
 
+const TEAM_NAMES = ['A팀','B팀','C팀'];
+const ORDER = {공격:0, 미드:1, 수비:2};
+
+// 팀 카드 HTML. withScores=false면 등급·활동량·점수를 아예 만들지 않음
+function teamsHtml(teams, withScores){
+  return `<div class="teams">${teams.map((t,i)=>{
+    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos===x).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
+    const members = t.slice().sort((a,b)=>ORDER[a.pos]-ORDER[b.pos] || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
+    return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span>${fmt(sum(t))}점</span>` : ''}</h3>
+      <div class="pos">${posLine}</div>
+      <ul>${members.map(p=>`<li>${esc(p.name)} <span class="badge b-${p.pos}">${p.pos}</span>${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
+  }).join('')}</div>`;
+}
+function showTeams(teams){
+  const admin = isAdmin();
+  $('result').innerHTML = teamsHtml(teams, admin) + (admin
+    ? `<p class="summary">팀 점수 차이: 최대 <b>${fmt(spread(teams))}점</b> · 평균 ${fmt(+(teams.map(sum).reduce((a,b)=>a+b,0)/teams.length).toFixed(1))}점</p>`
+    : '');
+  $('shareRow').style.display = 'flex';
+}
 function make(){
   const n = +$('teamCount').value;
   const on = players.filter(p=>p.on);
-  if(on.length < n*2){ $('result').innerHTML = `<p class="muted">참석 인원이 너무 적어요. (${on.length}명)</p>`; return; }
-  const teams = balance(on, n);
-  const names = ['A팀','B팀','C팀'];
-  const order = {공격:0, 미드:1, 수비:2};
-  $('result').innerHTML = `<div class="teams">${teams.map((t,i)=>{
-    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos===x).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
-    const members = t.slice().sort((a,b)=>order[a.pos]-order[b.pos] || score(b)-score(a));
-    return `<div class="team"><h3><span>${names[i]} (${t.length}명)</span><span>${fmt(sum(t))}점</span></h3>
-      <div class="pos">${posLine}</div>
-      <ul>${members.map(p=>`<li>${esc(p.name)} <span class="badge b-${p.pos}">${p.pos}</span><span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>${p.gk?'<span class="badge">GK</span>':''}</li>`).join('')}</ul></div>`;
-  }).join('')}
-  </div><p class="summary">팀 점수 차이: 최대 <b>${fmt(spread(teams))}점</b> · 평균 ${(teams.map(sum).reduce((a,b)=>a+b,0)/n).toFixed(1)}점</p>`;
+  if(on.length < n*2){ $('result').innerHTML = `<p class="muted">참석 인원이 너무 적어요. (${on.length}명)</p>`; $('shareRow').style.display='none'; return; }
+  lastTeams = balance(on, n);
+  showTeams(lastTeams);
 }
 $('make').onclick = make;
 $('again').onclick = make;
+
+/* ---------- 결과 공유 링크 (등급 정보 없이 이름·포지션·키퍼만) ---------- */
+function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function decode(str){ str = str.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(str)))); }
+$('shareBtn').onclick = ()=>{
+  if(!lastTeams) return;
+  const data = lastTeams.map(t=>t.map(p=>[p.name, p.pos, p.gk?1:0]));
+  const url = location.href.split('#')[0] + '#r=' + encode(data);
+  if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>alert('공유 링크를 복사했어요. 단톡방에 붙여넣으면 돼요.'), ()=>prompt('아래 링크를 복사하세요', url));
+  else prompt('아래 링크를 복사하세요', url);
+};
+function showShared(){
+  const m = location.hash.match(/^#r=(.+)$/);
+  if(!m){ document.body.classList.remove('shared'); return false; }
+  try{
+    const data = decode(m[1]);
+    const teams = data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos: POSITIONS.includes(pos)?pos:'미드', gk:!!gk})));
+    $('sharedResult').innerHTML = teamsHtml(teams, false);
+  }catch(e){ $('sharedResult').innerHTML = '<p class="muted">링크가 올바르지 않아요.</p>'; }
+  document.body.classList.add('shared');
+  return true;
+}
+window.addEventListener('hashchange', showShared);
 
 /* ---------- 백업 ---------- */
 $('exp').onclick = ()=>{
@@ -262,7 +363,10 @@ $('imp').onclick = ()=>{
   catch(e){ alert('형식이 올바르지 않아요'); }
 };
 
-render();
+/* ---------- 시작 ---------- */
+showShared();
+let startAdmin = false; try{ startAdmin = sessionStorage.getItem('futsal-admin')==='1'; }catch(e){}
+setAdmin(startAdmin);
 </script>
 </body>
 </html>
