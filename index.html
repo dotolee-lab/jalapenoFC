@@ -99,6 +99,15 @@
   .nsWall .nsHead{font-weight:900;letter-spacing:.02em;margin-right:4px}
   .nsWall .nsItem{background:rgba(255,255,255,.18);border-radius:999px;padding:2px 10px}
   .nsWall .plink{color:#fff;font-weight:700}
+  .cfWall{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#8a5a2b;color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+  .cfWall .nsHead{font-weight:900;margin-right:4px}
+  .cfWall .nsItem{background:rgba(255,255,255,.18);border-radius:999px;padding:2px 10px}
+  .cfWall .plink{color:#fff;font-weight:700}
+  .pfTiles>div.cf b{color:#a86b33}
+  .daySum>div.cfTile{grid-column:1/-1;background:rgba(138,90,43,.14)}
+  .cfChip .cfAmt{width:84px;padding:3px 6px;font-size:13px}
+  .settingRow{display:flex;flex-direction:column;gap:4px;margin:14px 0 10px;padding:12px;border:1px solid var(--line);border-radius:12px}
+  .settingRow .switch{color:var(--text);font-size:15px}
   .lateCell{color:#d98a00;font-weight:700}
   .pfTiles>div.ns{background:#e5383b;color:#fff}
   .pfTiles>div.ns .muted,.pfTiles>div.ns b{color:#fff}
@@ -474,6 +483,10 @@
       <button class="ghost" id="imp">명단 불러오기</button>
       <button class="ghost" id="migrate" style="display:none">이 브라우저의 예전 명단 올리기</button>
       <button id="backupBtn">전체 백업 파일 받기</button>
+    </div>
+    <div class="settingRow">
+      <label class="chk switch"><input type="checkbox" id="cfShowToggle" checked> <b>☕ 커피 금액 공개</b></label>
+      <span class="muted">끄면 일반 사용자에게는 커피 금액이 아예 전달되지 않아요. 횟수는 계속 보이고, 관리자는 금액을 볼 수 있어요.</span>
     </div>
     <p class="muted">무료 플랜은 자동 백업이 없어요. 한 달에 한 번 정도 "전체 백업 파일 받기"로 명단·등급·기록 전체를 내려받아 보관하세요. (등급이 들어 있으니 공개된 곳에는 올리지 마세요)</p>
   </section>
@@ -898,31 +911,44 @@ $('migrate').onclick = async ()=>{
 
 
 /* ---------- 개인 기록 ---------- */
-let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, venueColumnMissing = false, awardYear = null;
+let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, venueColumnMissing = false, awardYear = null,
+    coffeeMissing = false, amountsMissing = false, coffeeAmounts = [], showCoffeeAmount = true;
+const showAmounts = () => !amountsMissing && (showCoffeeAmount || isAdmin());
+const won = n => (n || 0).toLocaleString('ko-KR') + '원';
 let statSort = {key:'g', dir:-1};
 const TEAM_LETTERS = ['A','B','C'];
 const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (이 기기 시간대 기준)
 
 async function loadRecords(){
   if(!sb) return;
+  // 경기일 칸: 아직 실행 안 한 SQL이 있으면 그 칸만 빼고 다시 불러옴
+  const DAY_OPTIONAL = [
+    ['coffee', ['coffee_teams','coffee_payers']],   // setup-coffee.sql
+    ['venue',  ['venue']],                          // setup-venue.sql
+    ['late',   ['lates','noshows']],                // setup-extras.sql
+    ['booking',['bookers']],                        // setup-booking.sql
+  ];
+  let dayCols = ['id','played_on', ...DAY_OPTIONAL.flatMap(([,c])=>c)];
+  const missing = {};
+  const loadDays = () => sb.from('match_days').select(dayCols.join(',')).order('played_on', {ascending:false});
   let [d, g, s] = await Promise.all([
-    sb.from('match_days').select('id,played_on,bookers,lates,noshows,venue').order('played_on', {ascending:false}),
+    loadDays(),
     sb.from('match_games').select('id,day_id,home,away,home_score,away_score').order('id'),
     sb.from('player_stats').select('day_id,player_id,team,goals,assists,mvp'),
   ]);
-  bookingColumnMissing = false; lateColumnsMissing = false; venueColumnMissing = false;
-  if(d.error && /venue|column/i.test(d.error.message)){   // setup-venue.sql 실행 전
-    venueColumnMissing = true;
-    d = await sb.from('match_days').select('id,played_on,bookers,lates,noshows').order('played_on', {ascending:false});
+  for(const [name, cols] of DAY_OPTIONAL){
+    if(!d.error || !/column|does not exist/i.test(d.error.message)) break;
+    missing[name] = true; dayCols = dayCols.filter(c=>!cols.includes(c)); d = await loadDays();
   }
-  if(d.error && /lates|noshows|column/i.test(d.error.message)){   // setup-extras.sql 실행 전
-    lateColumnsMissing = true;
-    d = await sb.from('match_days').select('id,played_on,bookers').order('played_on', {ascending:false});
-  }
-  if(d.error && /bookers|column/i.test(d.error.message)){   // setup-booking.sql 실행 전
-    bookingColumnMissing = true;
-    d = await sb.from('match_days').select('id,played_on').order('played_on', {ascending:false});
-  }
+  coffeeMissing = !!missing.coffee; venueColumnMissing = !!missing.venue; lateColumnsMissing = !!missing.late; bookingColumnMissing = !!missing.booking;
+  // 커피 금액(공개 설정에 따라 일반 사용자에게는 비어서 옴)과 설정
+  const [ca, st] = await Promise.all([
+    sb.from('coffee_amounts').select('day_id,player_id,amount'),
+    sb.from('app_settings').select('key,value'),
+  ]);
+  amountsMissing = !!ca.error; coffeeAmounts = ca.error ? [] : ca.data;
+  showCoffeeAmount = st.error ? true : (st.data.find(x=>x.key==='show_coffee_amount')?.value !== false);
+  if($('cfShowToggle')){ $('cfShowToggle').checked = showCoffeeAmount; $('cfShowToggle').disabled = amountsMissing || !!st.error; }
   const err = d.error || g.error || s.error;
   if(err){
     $('leaderBox').innerHTML = '';
@@ -930,7 +956,7 @@ async function loadRecords(){
     $('statsBox').innerHTML = `<p class="muted">기록을 불러오지 못했어요: ${esc(err.message)}<br>Supabase에서 setup-records.sql을 실행했는지 확인해 주세요.</p>`;
     return;
   }
-  days = d.data.map(x=>({...x, bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || []})); games = g.data; stats = s.data;
+  days = d.data.map(x=>({...x, bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || [], coffee_teams: x.coffee_teams || [], coffee_payers: x.coffee_payers || []})); games = g.data; stats = s.data;
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   renderStats();
   renderHistory();
@@ -965,13 +991,18 @@ function aggregate(period){
     return true;
   };
   const inPeriod = id => inDate(dayDate[id]);
-  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0}]));
+  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0, cf:0, cl:0, cfAmt:0}]));
   days.forEach(d=>{
     if(!inDate(d.played_on)) return;
     (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; });
     (d.lates || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.late++; });
     (d.noshows || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.ns++; });
+    (d.coffee_payers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.cf++; });
   });
+  // 커피 내기 진 팀 선수 = 내기 패, 금액은 공개된 경우에만 데이터가 있음
+  const coffeeTeamsOf = Object.fromEntries(days.map(d=>[d.id, d.coffee_teams || []]));
+  stats.forEach(r=>{ if(r.team && inPeriod(r.day_id) && coffeeTeamsOf[r.day_id]?.includes(r.team)){ const x = agg.get(r.player_id); if(x) x.cl++; } });
+  coffeeAmounts.forEach(a=>{ if(inPeriod(a.day_id)){ const x = agg.get(a.player_id); if(x) x.cfAmt += a.amount; } });
   stats.forEach(r=>{
     const x = agg.get(r.player_id);
     if(!x || !inPeriod(r.day_id)) return;
@@ -980,9 +1011,10 @@ function aggregate(period){
   });
   return [...agg.values()].map(x=>({...x, gp: x.w + x.d + x.l, rate: (x.w + x.d + x.l) ? x.w / (x.w + x.d + x.l) : -1}));
 }
-const STAT_COLS = [
-  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼'],
+const STAT_COLS_BASE = [
+  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼'], ['cf','☕ 커피'], ['cl','내기 패'],
 ];
+const statCols = () => showAmounts() ? [...STAT_COLS_BASE, ['cfAmt','커피 금액']] : STAT_COLS_BASE;
 const LEADER_CARDS = [['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['att','출석','회']];
 // 사진 대신 이름 동그라미: 세 글자 이름은 뒤 두 글자, 그 외는 앞 두 글자
 const shortName = n => { const s = String(n).trim(); return s.length === 3 ? s.slice(1) : s.slice(0, 2); };
@@ -1044,6 +1076,7 @@ function renderStats(){
   });
 
   // ----- 아래쪽 기록 표 -----
+  if(statSort.key === 'cfAmt' && !showAmounts()) statSort = {key:'g', dir:-1};
   const {key, dir} = statSort;
   const sorted = all.slice().sort((a,b)=> (dir * (a[key] - b[key])) || a.name.localeCompare(b.name,'ko'));
   const ranked = dir < 0 ? withRanks(sorted, key) : sorted.map((r,i)=>({...r, rank:i+1}));
@@ -1051,14 +1084,17 @@ function renderStats(){
   const rows = qText ? ranked.filter(r=>r.name.includes(qText)) : ranked;
   const nsList = all.filter(r=>r.ns > 0).sort((a,b)=>b.ns-a.ns || a.name.localeCompare(b.name,'ko'));
   const nsWall = nsList.length ? `<div class="nsWall"><span class="nsHead">🚫 노쇼</span>${nsList.map(r=>`<span class="nsItem">${nameLink(r.id, r.name)} <b>${r.ns}회</b></span>`).join('')}</div>` : '';
-  $('statsBox').innerHTML = nsWall + `<div class="tablewrap"><table class="stats2">
+  const amt = showAmounts();
+  const cfList = all.filter(r=>r.cf > 0).sort((a,b)=>(amt ? b.cfAmt-a.cfAmt : 0) || b.cf-a.cf || a.name.localeCompare(b.name,'ko'));
+  const cfWall = cfList.length ? `<div class="cfWall"><span class="nsHead">☕ 커피 기부왕</span>${cfList.slice(0,8).map(r=>`<span class="nsItem">${nameLink(r.id, r.name)} <b>${r.cf}회</b>${amt && r.cfAmt ? ` · ${won(r.cfAmt)}` : ''}</span>`).join('')}</div>` : '';
+  $('statsBox').innerHTML = nsWall + cfWall + `<div class="tablewrap"><table class="stats2">
     <thead><tr><th class="c-rank">순위</th><th class="c-player">선수</th>
-      ${STAT_COLS.map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
+      ${statCols().map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td class="c-rank">${r.rank}</td>
       <td class="c-player"><span class="pl">${avatar(r.name,'sm')}<span>${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span></span></td>
-      ${STAT_COLS.map(([k])=>k==='ns' && r.ns ? `<td><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="lateCell">${r.late}</td>` : `<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
-    </tr>`).join('') || `<tr><td colspan="${STAT_COLS.length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
+      ${statCols().map(([k])=>k==='ns' && r.ns ? `<td><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="lateCell">${r.late}</td>` : k==='cfAmt' ? `<td class="${k===key?'hl':''}">${r.cfAmt ? won(r.cfAmt) : 0}</td>` : `<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
+    </tr>`).join('') || `<tr><td colspan="${statCols().length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
     </tbody></table></div>`;
   $('statsBox').querySelectorAll('th[data-k]').forEach(th=>th.onclick = ()=>{
     const k = th.dataset.k;
@@ -1080,6 +1116,30 @@ function dayListBlock(field, label, placeholder, missingSql){
       <select data-list-sel="${field}"><option value="">${placeholder}</option>${players.filter(x=>!ids.includes(x.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
       <button class="ghost" data-list-add="${field}">추가</button>
     </div>`;
+}
+// 커피 내기 입력 블록 (진 팀 · 낸 사람 · 금액)
+function coffeeBlock(){
+  if(coffeeMissing) return '<h3 class="sub">☕ 커피 내기</h3><p class="muted">기록하려면 Supabase에서 setup-coffee.sql을 먼저 실행해 주세요.</p>';
+  const day = days.find(x=>x.id===selectedDayId) || {};
+  const used = [...new Set(stats.filter(r=>r.day_id===selectedDayId).map(r=>r.team).filter(Boolean))].sort();
+  const letters = used.length ? used : TEAM_LETTERS;
+  const lose = day.coffee_teams || [], payers = day.coffee_payers || [];
+  const teamOf = pid => stats.find(r=>r.day_id===selectedDayId && r.player_id===pid)?.team;
+  const amountOf = pid => coffeeAmounts.find(a=>a.day_id===selectedDayId && a.player_id===pid)?.amount ?? '';
+  // 진 팀 선수를 목록 위쪽에
+  const cands = players.filter(x=>!payers.includes(x.id)).sort((a,b)=>(lose.includes(teamOf(b.id)) - lose.includes(teamOf(a.id))) || a.name.localeCompare(b.name,'ko'));
+  return `<h3 class="sub">☕ 커피 내기</h3>
+    <div class="row" style="gap:12px"><span class="muted">진 팀</span>${letters.map(t=>`<label class="chk"><input type="checkbox" data-cteam="${t}" ${lose.includes(t)?'checked':''}> ${t}팀</label>`).join('')}</div>
+    <div class="row" style="gap:6px;margin-top:8px"><span class="muted">낸 사람</span>
+      ${payers.map(pid=>{ const pl = players.find(x=>x.id===pid); return pl ? `<span class="bkChip cfChip">${avatar(pl.name,'sm')}${esc(pl.name)}${amountsMissing ? '' : `<input type="number" class="num cfAmt" data-pid="${pid}" min="0" step="100" value="${amountOf(pid)}" placeholder="원">`}<button class="del" data-list-del="coffee_payers:${pid}" aria-label="빼기">×</button></span>` : ''; }).join('') || '<span class="muted">없음</span>'}
+      <select data-list-sel="coffee_payers"><option value="">낸 사람 추가…</option>${cands.map(x=>`<option value="${x.id}">${esc(x.name)}${lose.includes(teamOf(x.id)) ? ' (진 팀)' : ''}</option>`).join('')}</select>
+      <button class="ghost" data-list-add="coffee_payers">추가</button>
+    </div>
+    ${payers.length && !amountsMissing ? `<div class="row" style="gap:6px;margin-top:8px">
+      <input type="number" class="num" id="cfTotal" min="0" step="100" placeholder="총액" style="width:110px">
+      <button class="ghost" id="cfSplit">총액 나눠 채우기</button>
+      <button id="cfSave">금액 저장</button>
+    </div>` : ''}`;
 }
 function renderRecordEditor(){
   const sel = $('daySel');
@@ -1122,6 +1182,7 @@ function renderRecordEditor(){
     ${dayListBlock('bookers', '구장 예약', '예약한 사람 추가…', bookingColumnMissing ? 'setup-booking.sql' : '')}
     ${dayListBlock('lates', '⏰ 지각', '지각한 사람 추가…', lateColumnsMissing ? 'setup-extras.sql' : '')}
     ${dayListBlock('noshows', '🚫 노쇼', '노쇼한 사람 추가…', lateColumnsMissing ? 'setup-extras.sql' : '')}
+    ${coffeeBlock()}
 
     <h3 class="sub">선수 기록 <span class="muted">(출석 ${rows.length}명)</span></h3>
     <div class="tablewrap"><table>
@@ -1158,10 +1219,30 @@ function renderRecordEditor(){
     }
     setList(field, [...curList(field), pid]);
   });
-  box.querySelectorAll('[data-list-del]').forEach(b=>b.onclick = ()=>{
+  box.querySelectorAll('[data-list-del]').forEach(b=>b.onclick = async ()=>{
     const [field, pid] = b.dataset.listDel.split(':');
+    if(field === 'coffee_payers' && !amountsMissing) await sb.from('coffee_amounts').delete().eq('day_id', selectedDayId).eq('player_id', +pid);
     setList(field, curList(field).filter(x=>x !== +pid));
   });
+  // 커피 내기: 진 팀 체크
+  box.querySelectorAll('[data-cteam]').forEach(cb=>cb.onchange = ()=>{
+    const teams = [...box.querySelectorAll('[data-cteam]:checked')].map(x=>x.dataset.cteam);
+    setList('coffee_teams', teams);
+  });
+  // 커피 금액: 총액을 낸 사람 수로 나눠 채우기(100원 단위) → 저장
+  if($('cfSplit')) $('cfSplit').onclick = ()=>{
+    const total = parseInt($('cfTotal').value, 10) || 0, inputs = [...box.querySelectorAll('.cfAmt')];
+    if(!total || !inputs.length) return;
+    const each = Math.floor(total / inputs.length / 100) * 100;
+    inputs.forEach((inp, i)=>{ inp.value = i === 0 ? total - each * (inputs.length - 1) : each; });
+  };
+  if($('cfSave')) $('cfSave').onclick = async ()=>{
+    const rows = [...box.querySelectorAll('.cfAmt')].map(inp=>({day_id: selectedDayId, player_id: +inp.dataset.pid, amount: Math.max(0, parseInt(inp.value, 10) || 0)}));
+    $('cfSave').disabled = true;
+    const ok = await q(sb.from('coffee_amounts').upsert(rows, {onConflict:'day_id,player_id'}), '금액을 저장하지 못했어요');
+    $('cfSave').disabled = false;
+    if(ok){ await loadRecords(); alert('저장했어요'); }
+  };
   box.querySelectorAll('[data-game]').forEach(b=>b.onclick = async ()=>{
     if(!confirm('이 경기 결과를 삭제할까요?')) return;
     if(await q(sb.from('match_games').delete().eq('id', +b.dataset.game))) await loadRecords();
@@ -1233,7 +1314,7 @@ $('backupBtn').onclick = async ()=>{
     exported_at: new Date().toISOString(),
     players: players.map(({id,name,pos,gk,on,number,birth,intro,footL,footR,photo})=>({id,name,pos,gk,attending:on,number,birth,intro,foot_left:footL,foot_right:footR,photo})),
     player_ratings: r.data || [], team_results: tr.data || [],
-    match_days: days, match_games: games, player_stats: stats,
+    match_days: days, match_games: games, player_stats: stats, coffee_amounts: coffeeAmounts,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -1338,6 +1419,14 @@ function renderHistory(){
       ${(()=>{ const day = days.find(x=>x.id===histDayId) || {}; const nm = ids => (ids || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ');
         return `<div><span class="muted">⏰ 지각</span><b>${nm(day.lates) || '-'}</b></div>
         <div class="${(day.noshows || []).length ? 'nsTile' : ''}"><span class="muted">🚫 노쇼</span><b>${nm(day.noshows) || '-'}</b></div>`; })()}
+      ${(()=>{ const day = days.find(x=>x.id===histDayId) || {};
+        if(!(day.coffee_teams || []).length && !(day.coffee_payers || []).length) return '';
+        const amt = showAmounts();
+        const payers = (day.coffee_payers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>{
+          const a = coffeeAmounts.find(c=>c.day_id===day.id && c.player_id===x.id)?.amount;
+          return nameLink(x.id, x.name) + (amt && a ? ` (${won(a)})` : '');
+        }).join(', ');
+        return `<div class="cfTile"><span class="muted">☕ 커피 내기</span><b>${(day.coffee_teams || []).length ? `패: ${day.coffee_teams.map(t=>t+'팀').join(', ')}` : ''}${payers ? `${(day.coffee_teams || []).length ? ' · ' : ''}낸 사람: ${payers}` : ''}</b></div>`; })()}
       <div><span class="muted">구장 예약</span><b>${(days.find(x=>x.id===histDayId)?.bookers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ') || '-'}</b></div>
       <div><span class="muted">최다 득점</span><b>${scorers.length ? scorers.join(', ') + ` (${topG}골)` : '-'}</b></div>
     </div>
@@ -1490,7 +1579,7 @@ function renderProfile(){
   if(!p){ profileId = null; box.innerHTML = ''; renderProfilePicker(); return; }
 
   const all = aggregate('all').map(r=>({...r, pts: r.g + r.a}));
-  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,bk:0,late:0,ns:0,pts:0,rate:-1};
+  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,bk:0,late:0,ns:0,cf:0,cl:0,cfAmt:0,pts:0,rate:-1};
   const rankOf = k => {
     if(!me[k]) return '';
     const r = withRanks(all.filter(x=>x[k] > 0).sort((a,b)=>b[k]-a[k]), k).find(x=>x.id===p.id);
@@ -1499,7 +1588,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''],
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : ''], ['내기 패', `${me.cl}회`, ''],
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
@@ -1746,6 +1835,13 @@ function renderGear(){
     else b.disabled = false;
   });
 }
+
+$('cfShowToggle').onchange = async e=>{
+  const on = e.target.checked;
+  if(await q(sb.from('app_settings').upsert({key:'show_coffee_amount', value: on, updated_at: new Date().toISOString()}), '설정을 저장하지 못했어요')){
+    showCoffeeAmount = on; renderStats(); renderHistory(); renderProfile();
+  }
+};
 
 /* ---------- 제목 누르면 메인으로 ---------- */
 $('homeLink').onclick = e=>{
