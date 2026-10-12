@@ -111,6 +111,10 @@
   .errBox b{display:block;font-size:15px;margin-bottom:4px}
   .errBox code{background:rgba(255,255,255,.2);border-radius:6px;padding:1px 6px;font-size:12px;word-break:break-all}
   .errBox button{margin-top:10px;background:#fff;color:#e5383b;font-weight:800}
+  .maplink{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+  .maplink:hover{color:var(--accent)}
+  .mapIcon{font-size:.9em;margin-left:3px;text-decoration:none;display:inline-block}
+  .todayVenue{display:inline-flex;align-items:center;gap:4px;background:var(--accent2);color:var(--text);border-radius:10px;padding:6px 12px;margin-bottom:10px;font-weight:700;font-size:14px}
   /* 장비 보관 */
   .gearGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media (max-width:700px){.gearGrid{grid-template-columns:1fr}}
@@ -507,6 +511,9 @@ const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
 };
+// 네이버 지도 검색 링크 (휴대폰에서는 앱이 있으면 앱으로 열림)
+const naverMapUrl = q => 'https://map.naver.com/p/search/' + encodeURIComponent(String(q).trim());
+const mapLink = name => `<a class="maplink" href="${naverMapUrl(name)}" target="_blank" rel="noopener" title="네이버 지도에서 보기">${esc(name)}<span class="mapIcon">🗺️</span></a>`;
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function normPos(v){
   const arr = (Array.isArray(v) ? v : String(v||'').split(',')).filter(x=>POSITIONS.includes(x));
@@ -821,7 +828,10 @@ function renderPublished(row){
     const when = new Date(row.created_at).toLocaleString('ko-KR', {month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
     const {teams, tactics} = unpack(row.teams);
     const editable = !!sb && (ALLOW_PUBLIC_TACTIC || isAdmin());
-    $('published').innerHTML = `<p class="muted" style="margin-top:0">${when} 공개${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+    const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
+    const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
+    $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
+      + `<p class="muted" style="margin-top:0">${when} 공개${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
@@ -929,6 +939,7 @@ async function loadRecords(){
   renderYearAwards();
   renderProfile();
   renderSchedule();
+  if(publishedRow) renderPublished(publishedRow);
   if(isAdmin()) renderRecordEditor();
 }
 
@@ -1320,7 +1331,7 @@ function renderHistory(){
 
   $('histBox').innerHTML = `
     <div class="daySum">
-      ${(days.find(x=>x.id===histDayId) || {}).venue ? `<div class="venueTile"><span class="muted">📍 구장</span><b>${esc(days.find(x=>x.id===histDayId).venue)}</b></div>` : ''}
+      ${(days.find(x=>x.id===histDayId) || {}).venue ? `<div class="venueTile"><span class="muted">📍 구장</span><b>${mapLink(days.find(x=>x.id===histDayId).venue)}</b></div>` : ''}
       <div><span class="muted">경기</span><b>${dayGames.length}</b></div>
       <div><span class="muted">출석</span><b>${rows.length}명</b></div>
       <div><span class="muted">총 골</span><b>${totalGoals}</b></div>
@@ -1657,7 +1668,8 @@ function renderSchedule(){
           <div class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
           <div class="evMeta">${(()=>{
             const venue = e.kind === '경기' ? days.find(d=>d.played_on === e.next)?.venue : null;
-            return [e.event_time, venue ? `📍 ${esc(venue)}` : (e.place && esc(e.place))].filter(Boolean).join(' · ');
+            const where = venue ? `📍 ${mapLink(venue)}` : (e.place ? (e.kind === '경기' ? `📍 ${mapLink(e.place)}` : esc(e.place)) : '');
+            return [e.event_time, where].filter(Boolean).join(' · ');
           })()}</div>
         </div>
         ${badge}
