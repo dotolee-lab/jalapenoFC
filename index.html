@@ -99,7 +99,7 @@
   .nsWall .nsHead{font-weight:900;letter-spacing:.02em;margin-right:4px}
   .nsWall .nsItem{background:rgba(255,255,255,.18);border-radius:999px;padding:2px 10px}
   .nsWall .plink{color:#fff;font-weight:700}
-  .statGroups{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+  .statGroups{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
   .statGroups .sg{background:var(--head);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700;white-space:nowrap}
   .statGroups .sg.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .cfWall{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#8a5a2b;color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
@@ -245,7 +245,7 @@
   .tag{font-size:12px;padding:1px 7px;border-radius:999px;background:var(--head);white-space:nowrap}
   .tag.m{background:#f5b82e;color:#fff;font-weight:700}
   /* 순위 카드 */
-  .lb{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}
+  .lb{display:grid;grid-template-columns:repeat(var(--lbn,4),minmax(0,1fr));gap:14px;margin-bottom:26px}
   @media (max-width:860px){.lb{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(240px,80%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}.lbCol{scroll-snap-align:start}}
   .lbTitle{font-size:17px;margin:0 0 8px}
   .lbCard{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:20px 16px 0;text-align:center;display:flex;flex-direction:column;min-height:330px}
@@ -1031,7 +1031,21 @@ const STAT_GROUPS = {
 };
 let statGroup = (()=>{ const g = store.get('futsal-statgroup-v1'); return STAT_GROUPS[g] ? g : 'game'; })();
 const statCols = () => STAT_GROUPS[statGroup].cols();
-const LEADER_CARDS = [['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['att','출석','회']];
+// 그룹별 순위 카드 [기록, 제목, 단위, 더보기 누르면 정렬할 표 칸]
+const LEADER_CARDS = {
+  game:   ()=>[['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['w','승리 요정','승','wdl']],
+  part:   ()=>[['att','출석','회'], ['mvp','MVP','회'], ['bk','구장 예약','회'], ['streak','🔥 연속 출석','연속','att']],
+  coffee: ()=>[['cf','커피 기부왕','회'], ...(showAmounts() ? [['cfAmt','커피 금액','원']] : []), ['cl','내기 불운왕','회']],
+};
+// 지금까지 이어지고 있는 연속 출석 (최근 경기일부터 거꾸로, 빠진 날에서 멈춤)
+function attendanceStreaks(){
+  const past = days.filter(d=>d.played_on <= todayStr());   // 최신순
+  const attended = new Set(stats.map(r=>r.day_id + ':' + r.player_id));
+  const out = {};
+  players.forEach(p=>{ let n = 0; for(const d of past){ if(attended.has(d.id + ':' + p.id)) n++; else break; } out[p.id] = n; });
+  return out;
+}
+const cardVal = (r, k, unit) => unit === '원' ? won(r[k]) : `${r[k]}${unit}`;
 // 사진 대신 이름 동그라미: 세 글자 이름은 뒤 두 글자, 그 외는 앞 두 글자
 const shortName = n => { const s = String(n).trim(); return s.length === 3 ? s.slice(1) : s.slice(0, 2); };
 const PHOTO_BUCKET = 'player-photos';
@@ -1067,29 +1081,34 @@ function withRanks(list, k){
 }
 function renderStats(){
   const period = $('statPeriod').value;
-  const all = aggregate(period).map(r=>({...r, pts: r.g + r.a, wdl: r.w * 10000 + r.d * 100 - r.l}));
+  const streaks = attendanceStreaks();
+  const all = aggregate(period).map(r=>({...r, pts: r.g + r.a, wdl: r.w * 10000 + r.d * 100 - r.l, streak: streaks[r.id] || 0}));
 
-  // ----- 위쪽 순위 카드 -----
-  $('leaderBox').innerHTML = `<div class="lb">${LEADER_CARDS.map(([k, title, unit])=>{
+  // ----- 그룹 버튼 + 위쪽 순위 카드 (고른 그룹에 맞는 카드) -----
+  const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
+  const cards = LEADER_CARDS[statGroup]();
+  $('leaderBox').innerHTML = groupBar + `<div class="lb" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
     const list = withRanks(all.filter(r=>r[k] > 0).sort((a,b)=>b[k]-a[k] || a.name.localeCompare(b.name,'ko')), k);
     const top = list[0];
     const body = top ? `
         <div class="medal">${top.rank}</div>
         ${avatar(top.name, 'big')}
         <div class="lbName">${nameLink(top.id, top.name)}</div>
-        <div class="lbVal">${top[k]}${unit}</div>
+        <div class="lbVal">${cardVal(top, k, unit)}</div>
         <ol class="lbList">${list.slice(1, 4).map(r=>`<li>
           <span class="rk">${r.rank}</span>${avatar(r.name, 'sm')}
           <span class="nm">${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span>
-          <span class="v">${r[k]}${unit}</span></li>`).join('')}</ol>`
+          <span class="v">${cardVal(r, k, unit)}</span></li>`).join('')}</ol>`
       : `<div class="lbEmpty">아직 기록이 없어요</div>`;
     return `<div class="lbCol"><h3 class="lbTitle">${title}</h3><div class="lbCard">${body}
-      <button class="more" data-k="${k}">더보기</button></div></div>`;
+      <button class="more" data-k="${sortKey || k}">더보기</button></div></div>`;
   }).join('')}</div>`;
+  $('leaderBox').querySelectorAll('[data-sg]').forEach(b=>b.onclick = ()=>{
+    statGroup = b.dataset.sg; store.set('futsal-statgroup-v1', statGroup);
+    statSort = {key: STAT_GROUPS[statGroup].def, dir:-1}; renderStats();
+  });
   $('leaderBox').querySelectorAll('.more').forEach(b=>b.onclick = ()=>{
-    const k = b.dataset.k;
-    statGroup = Object.keys(STAT_GROUPS).find(g=>STAT_GROUPS[g].cols().some(([c])=>c===k)) || 'game'; store.set('futsal-statgroup-v1', statGroup);
-    statSort = {key: k, dir: -1}; renderStats();
+    statSort = {key: b.dataset.k, dir: -1}; renderStats();
     $('statsBox').scrollIntoView({behavior:'smooth', block:'start'});
   });
 
@@ -1106,8 +1125,7 @@ function renderStats(){
   const amt = showAmounts();
   const cfList = all.filter(r=>r.cf > 0).sort((a,b)=>(amt ? b.cfAmt-a.cfAmt : 0) || b.cf-a.cf || a.name.localeCompare(b.name,'ko'));
   const cfWall = cfList.length ? `<div class="cfWall"><span class="nsHead">☕ 커피 기부왕</span>${cfList.slice(0,8).map(r=>`<span class="nsItem">${nameLink(r.id, r.name)} <b>${r.cf}회</b>${amt && r.cfAmt ? ` · ${won(r.cfAmt)}` : ''}</span>`).join('')}</div>` : '';
-  const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
-  $('statsBox').innerHTML = groupBar + (statGroup === 'part' ? nsWall : '') + (statGroup === 'coffee' ? cfWall : '') + `<div class="tablewrap"><table class="stats2">
+  $('statsBox').innerHTML = (statGroup === 'part' ? nsWall : '') + (statGroup === 'coffee' ? cfWall : '') + `<div class="tablewrap"><table class="stats2">
     <thead><tr><th class="c-rank">순위</th><th class="c-player">선수</th>
       ${statCols().map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>`<tr>
@@ -1116,10 +1134,6 @@ function renderStats(){
       ${statCols().map(([k])=>k==='ns' && r.ns ? `<td><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="lateCell">${r.late}</td>` : k==='cfAmt' ? `<td class="${k===key?'hl':''}">${r.cfAmt ? won(r.cfAmt) : 0}</td>` : `<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
     </tr>`).join('') || `<tr><td colspan="${statCols().length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
     </tbody></table></div>`;
-  $('statsBox').querySelectorAll('[data-sg]').forEach(b=>b.onclick = ()=>{
-    statGroup = b.dataset.sg; store.set('futsal-statgroup-v1', statGroup);
-    statSort = {key: STAT_GROUPS[statGroup].def, dir:-1}; renderStats();
-  });
   $('statsBox').querySelectorAll('th[data-k]').forEach(th=>th.onclick = ()=>{
     const k = th.dataset.k;
     statSort = statSort.key === k ? {key:k, dir:-statSort.dir} : {key:k, dir:-1};
