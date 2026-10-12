@@ -68,6 +68,20 @@
   .hofChips span{background:rgba(255,255,255,.6);border-radius:999px;padding:4px 11px;font-weight:700;font-size:14px}
   .hofFoot{position:relative;font-size:14px;font-weight:600;opacity:.85;margin-top:6px}
   body.shared #mvpBanner{display:none}
+  .awards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:6px}
+  @media (max-width:700px){.awards{grid-template-columns:1fr}}
+  .award{border-radius:16px;padding:16px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:190px}
+  .award.gold{background:linear-gradient(135deg,#fff3c4,#ffd86b);color:#3b2a00}
+  .award.green{background:linear-gradient(135deg,#ddf6e7,#ade6c4);color:#0c3a21}
+  .award.blue{background:linear-gradient(135deg,#e2edff,#b9d1ff);color:#0f2a5c}
+  .awTitle{font-weight:800;font-size:15px}
+  .awWin{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .awP{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:16px}
+  .awP .avatar.big{margin:0;box-shadow:0 0 0 4px rgba(255,255,255,.6)}
+  .awVal{font-weight:700;font-size:14px;opacity:.85}
+  .awEmpty{flex:1;display:grid;place-items:center;font-size:14px;opacity:.7}
+  .bkChip{display:inline-flex;align-items:center;gap:6px;background:var(--head);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 2px;font-size:14px}
+  .bkChip .del{padding:0 6px}
   .hofGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
   .hofItem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
   .hofItem.latest{border-color:#f5b82e;box-shadow:0 0 0 1px #f5b82e inset}
@@ -81,7 +95,7 @@
   .pcard:hover{border-color:var(--accent);transform:translateY(-1px)}
   .avatar.ph{background:var(--head);overflow:hidden;padding:0}
   .avatar.ph img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
-  .avatar.md{width:56px;height:56px;font-size:16px}
+  .avatar.md{width:84px;height:84px;font-size:22px}
   .pcName{font-weight:700;font-size:16px}
   .pcMeta{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;font-size:13px;min-height:20px}
   .pcMeta .badge{margin-left:0}
@@ -90,7 +104,7 @@
   .pfBack{margin-bottom:12px}
   .pfCard{border:1px solid var(--line);border-radius:16px;padding:18px}
   .pfTop{display:flex;gap:16px;align-items:center}
-  .pfTop .avatar.big{margin:0;flex:none}
+  .pfTop .avatar.big{margin:0;flex:none;width:128px;height:128px;font-size:34px}
   .pfId{min-width:0}
   .pfName{font-size:26px;font-weight:800;line-height:1.2}
   .pfMeta{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px}
@@ -111,7 +125,7 @@
   @media (max-width:560px){.pfFeet{justify-content:center}}
   .pfBday{margin-top:14px;background:linear-gradient(135deg,#ffe27d,#f5b82e);color:#3b2a00;border-radius:12px;padding:10px 14px;font-weight:700;text-align:center}
   .pfEdit{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px}
-  .pfTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .pfTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   @media (max-width:560px){.pfTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pfTop{flex-direction:column;text-align:center}.pfTop .avatar.big{margin:0 auto}.pfMeta,.pfFacts{justify-content:center}}
   .pfTiles>div{background:var(--head);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px}
   .pfTiles b{font-size:20px;color:var(--text)}
@@ -284,7 +298,12 @@
   </section>
 
   <section class="card app" data-pane="stats">
-    <h2>🏆 명예의 전당</h2>
+    <div class="histHead">
+      <h2>🏆 명예의 전당</h2>
+      <select id="awardYear" style="display:none"></select>
+    </div>
+    <div id="yearAwards"></div>
+    <h3 class="sub">경기별 MVP</h3>
     <div id="hofList"><p class="muted">불러오는 중…</p></div>
   </section>
 
@@ -767,18 +786,23 @@ $('migrate').onclick = async ()=>{
 
 
 /* ---------- 개인 기록 ---------- */
-let days = [], games = [], stats = [], selectedDayId = null;
+let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, awardYear = null;
 let statSort = {key:'g', dir:-1};
 const TEAM_LETTERS = ['A','B','C'];
 const todayStr = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD (이 기기 시간대 기준)
 
 async function loadRecords(){
   if(!sb) return;
-  const [d, g, s] = await Promise.all([
-    sb.from('match_days').select('id,played_on').order('played_on', {ascending:false}),
+  let [d, g, s] = await Promise.all([
+    sb.from('match_days').select('id,played_on,bookers').order('played_on', {ascending:false}),
     sb.from('match_games').select('id,day_id,home,away,home_score,away_score').order('id'),
     sb.from('player_stats').select('day_id,player_id,team,goals,assists,mvp'),
   ]);
+  bookingColumnMissing = false;
+  if(d.error && /bookers|column/i.test(d.error.message)){   // setup-booking.sql 실행 전
+    bookingColumnMissing = true;
+    d = await sb.from('match_days').select('id,played_on').order('played_on', {ascending:false});
+  }
   const err = d.error || g.error || s.error;
   if(err){
     $('leaderBox').innerHTML = '';
@@ -786,12 +810,13 @@ async function loadRecords(){
     $('statsBox').innerHTML = `<p class="muted">기록을 불러오지 못했어요: ${esc(err.message)}<br>Supabase에서 setup-records.sql을 실행했는지 확인해 주세요.</p>`;
     return;
   }
-  days = d.data; games = g.data; stats = s.data;
+  days = d.data.map(x=>({...x, bookers: x.bookers || []})); games = g.data; stats = s.data;
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   renderStats();
   renderHistory();
   renderMvpBanner();
   renderHofList();
+  renderYearAwards();
   renderProfile();
   if(isAdmin()) renderRecordEditor();
 }
@@ -811,13 +836,16 @@ function dayResults(dayId, team){
 function aggregate(period){
   const dayDate = Object.fromEntries(days.map(x=>[x.id, x.played_on]));
   const today = todayStr();
-  const inPeriod = id => {
-    const date = dayDate[id]; if(!date) return false;
+  const inDate = date => {
+    if(!date) return false;
     if(period === 'year') return date.slice(0,4) === today.slice(0,4);
     if(period === 'month') return date.slice(0,7) === today.slice(0,7);
+    if(String(period).startsWith('y:')) return date.slice(0,4) === period.slice(2);
     return true;
   };
-  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0}]));
+  const inPeriod = id => inDate(dayDate[id]);
+  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0}]));
+  days.forEach(d=>{ if(inDate(d.played_on)) (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; }); });
   stats.forEach(r=>{
     const x = agg.get(r.player_id);
     if(!x || !inPeriod(r.day_id)) return;
@@ -827,7 +855,7 @@ function aggregate(period){
   return [...agg.values()].map(x=>({...x, gp: x.w + x.d + x.l, rate: (x.w + x.d + x.l) ? x.w / (x.w + x.d + x.l) : -1}));
 }
 const STAT_COLS = [
-  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'],
+  ['g','득점'], ['a','도움'], ['pts','공격포인트'], ['gp','경기'], ['w','승'], ['d','무'], ['l','패'], ['rate','승률'], ['att','출석'], ['mvp','MVP'], ['bk','구장예약'],
 ];
 const LEADER_CARDS = [['g','득점','골'], ['a','도움','개'], ['pts','공격포인트','P'], ['att','출석','회']];
 // 사진 대신 이름 동그라미: 세 글자 이름은 뒤 두 글자, 그 외는 앞 두 글자
@@ -944,6 +972,15 @@ function renderRecordEditor(){
     </div>
     ${dayGames.length ? `<div class="leaders" style="margin-top:8px">${teamSummary}</div>` : ''}
 
+    <h3 class="sub">구장 예약</h3>
+    ${bookingColumnMissing ? '<p class="muted">구장 예약을 기록하려면 Supabase에서 setup-booking.sql을 먼저 실행해 주세요.</p>' : (()=>{
+      const day = days.find(x=>x.id===selectedDayId), bk = day?.bookers || [];
+      return `<div class="row" style="gap:6px">
+        ${bk.map(pid=>{ const pl = players.find(x=>x.id===pid); return pl ? `<span class="bkChip">${avatar(pl.name,'sm')}${esc(pl.name)}<button class="del" data-unbook="${pid}" aria-label="빼기">×</button></span>` : ''; }).join('') || '<span class="muted">아직 없어요</span>'}
+        <select id="bookSel"><option value="">예약한 사람 추가…</option>${players.filter(x=>!bk.includes(x.id)).sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+        <button class="ghost" id="addBook">추가</button>
+      </div>`; })()}
+
     <h3 class="sub">선수 기록 <span class="muted">(출석 ${rows.length}명)</span></h3>
     <div class="tablewrap"><table>
       <thead><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th><th>MVP</th><th></th></tr></thead>
@@ -961,6 +998,12 @@ function renderRecordEditor(){
       <button id="saveStats" style="margin-left:auto">기록 저장</button>
     </div>`;
 
+  const setBookers = async list => {
+    if(await q(sb.from('match_days').update({bookers: list}).eq('id', selectedDayId), '구장 예약을 저장하지 못했어요')) await loadRecords();
+  };
+  const curBk = () => days.find(x=>x.id===selectedDayId)?.bookers || [];
+  if($('addBook')) $('addBook').onclick = ()=>{ const pid = +$('bookSel').value; if(pid) setBookers([...curBk(), pid]); };
+  box.querySelectorAll('[data-unbook]').forEach(b=>b.onclick = ()=> setBookers(curBk().filter(x=>x !== +b.dataset.unbook)));
   box.querySelectorAll('[data-game]').forEach(b=>b.onclick = async ()=>{
     if(!confirm('이 경기 결과를 삭제할까요?')) return;
     if(await q(sb.from('match_games').delete().eq('id', +b.dataset.game))) await loadRecords();
@@ -1126,6 +1169,7 @@ function renderHistory(){
       <div><span class="muted">출석</span><b>${rows.length}명</b></div>
       <div><span class="muted">총 골</span><b>${totalGoals}</b></div>
       <div><span class="muted">MVP</span><b>${mvps.join(', ') || '-'}</b></div>
+      <div><span class="muted">구장 예약</span><b>${(days.find(x=>x.id===histDayId)?.bookers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ') || '-'}</b></div>
       <div><span class="muted">최다 득점</span><b>${scorers.length ? scorers.join(', ') + ` (${topG}골)` : '-'}</b></div>
     </div>
     <h3 class="sub">경기 결과</h3>${matchesHtml}
@@ -1174,6 +1218,31 @@ function renderMvpBanner(){
   </div>`;
   box.querySelector('.hofClose').onclick = ()=>{ store.set('futsal-hof-hide', String(day.id)); renderMvpBanner(); };
 }
+function renderYearAwards(){
+  const years = [...new Set(days.map(d=>d.played_on.slice(0,4)))].sort().reverse();
+  const sel = $('awardYear');
+  if(!years.length){ sel.style.display = 'none'; $('yearAwards').innerHTML = ''; return; }
+  const thisYear = todayStr().slice(0,4);
+  awardYear = years.includes(awardYear) ? awardYear : (years.includes(thisYear) ? thisYear : years[0]);
+  sel.style.display = years.length > 1 ? '' : 'none';
+  sel.innerHTML = years.map(y=>`<option value="${y}" ${y===awardYear?'selected':''}>${y}년</option>`).join('');
+  const rows = aggregate('y:' + awardYear);
+  const label = t => awardYear === thisYear ? `올해의 ${t}` : `${awardYear} ${t}`;
+  // 서포터 = 그해 구장 예약을 가장 많이 한 사람
+  const AWARDS = [['mvp','MVP','🏆','회 수상','gold'], ['att','출석왕','📅','회 출석','green'], ['bk','서포터','🤝','회 구장 예약','blue']];
+  $('yearAwards').innerHTML = `<div class="awards">${AWARDS.map(([k, t, icon, unit, cls])=>{
+    const best = Math.max(0, ...rows.map(r=>r[k]));
+    const win = best ? rows.filter(r=>r[k]===best).sort((a,b)=>a.name.localeCompare(b.name,'ko')) : [];
+    return `<div class="award ${cls}">
+      <div class="awTitle">${icon} ${label(t)}</div>
+      ${win.length ? `<div class="awWin">${win.slice(0,3).map(w=>`<div class="awP">${avatar(w.name,'big')}<b>${nameLink(w.id, w.name)}</b></div>`).join('')}</div>
+        <div class="awVal">${best}${unit}${win.length > 3 ? ` · 외 ${win.length-3}명` : ''}</div>`
+      : '<div class="awEmpty">아직 기록이 없어요</div>'}
+    </div>`;
+  }).join('')}</div>`;
+}
+$('awardYear').addEventListener('change', ()=>{ awardYear = $('awardYear').value; renderYearAwards(); });
+
 function renderHofList(){
   const awards = mvpAwards();
   if(!awards.length){ $('hofList').innerHTML = '<p class="muted">아직 MVP 기록이 없어요. 경기 기록에서 MVP를 체크하면 여기에 쌓여요.</p>'; return; }
@@ -1212,7 +1281,7 @@ function feetHtml(p, size){
   return `<span class="feet ${size||''}" title="왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}">${footIcon(p.footL,'L',main('L'))}${footIcon(p.footR,'R',main('R'))}</span>`;
 }
 function renderAllAfterPhoto(){
-  renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderHofList();
+  renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderHofList(); renderYearAwards();
 }
 const footOpts = v => `<option value="" ${v==null?'selected':''}>-</option>` + [0,1,2,3,4,5].map(n=>`<option value="${n}" ${v===n?'selected':''}>${n}</option>`).join('');
 function ageOf(birth){
@@ -1246,7 +1315,6 @@ function renderProfilePicker(){
       ${avatar(p.name,'md')}
       <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}${p.gk ? '<span class="badge">GK</span>' : ''}</span>
-      ${feetHtml(p,'sm')}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
@@ -1259,7 +1327,7 @@ function renderProfile(){
   if(!p){ profileId = null; box.innerHTML = ''; renderProfilePicker(); return; }
 
   const all = aggregate('all').map(r=>({...r, pts: r.g + r.a}));
-  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,pts:0,rate:-1};
+  const me = all.find(r=>r.id===p.id) || {att:0,gp:0,w:0,d:0,l:0,g:0,a:0,mvp:0,bk:0,pts:0,rate:-1};
   const rankOf = k => {
     if(!me[k]) return '';
     const r = withRanks(all.filter(x=>x[k] > 0).sort((a,b)=>b[k]-a[k]), k).find(x=>x.id===p.id);
@@ -1268,7 +1336,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')],
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')],
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
