@@ -12,14 +12,15 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5}
   main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
-  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 16px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 16px;flex-wrap:wrap}
   h1{font-size:22px;margin:0}
   h2{font-size:16px;margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  input[type=text],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
-  input[type=text]{flex:1;min-width:120px}
+  input[type=text],input[type=email],input[type=password],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
+  input[type=text],input[type=email],input[type=password]{flex:1;min-width:120px}
   button{padding:9px 14px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
   button.ghost{background:var(--accent2);color:var(--accent)}
   button.small{padding:6px 10px;font-size:13px}
   button.del{background:none;color:var(--danger);padding:4px 8px}
@@ -42,11 +43,13 @@
   .summary{margin-top:10px;font-size:14px}
   .posCell label{display:inline-flex;align-items:center;gap:2px;margin-right:8px;font-size:13px}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
-  /* 일반 모드에서는 관리자 전용 요소를 숨김 */
+  .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
   body:not(.admin) .admin-only{display:none !important}
-  body.shared .app{display:none}
-  #sharedView{display:none}
+  body.admin .guest-only{display:none !important}
+  body.shared .app{display:none !important}
+  #sharedView,#loginCard{display:none}
   body.shared #sharedView{display:block}
+  body.login-open:not(.admin) #loginCard{display:block}
 </style>
 </head>
 <body>
@@ -54,16 +57,36 @@
   <header>
     <h1>⚽ 풋살 팀 밸런서<span class="mode" id="modeLabel">일반</span></h1>
     <div class="row app">
-      <button class="ghost small" id="loginBtn">관리자 로그인</button>
-      <button class="ghost small admin-only" id="logoutBtn">관리자 종료</button>
+      <button class="ghost small" id="refreshBtn">새로고침</button>
+      <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
+      <button class="ghost small admin-only" id="logoutBtn">로그아웃</button>
     </div>
   </header>
+
+  <section class="card notice" id="configNotice" style="display:none">
+    <h2>설정이 필요해요</h2>
+    <p class="muted" style="color:var(--text)">index.html 맨 아래 쪽의 <code>SUPABASE_URL</code>과 <code>SUPABASE_KEY</code>에 Supabase 프로젝트 값을 넣어주세요.</p>
+  </section>
 
   <!-- 공유 링크로 열었을 때 보이는 결과 전용 화면 -->
   <section class="card" id="sharedView">
     <h2>오늘의 팀 구성</h2>
     <div id="sharedResult"></div>
     <p class="muted" style="margin-top:12px"><a href="./" style="color:var(--accent)">팀 밸런서 열기</a></p>
+  </section>
+
+  <section class="card app" id="loginCard">
+    <h2>관리자 로그인</h2>
+    <div class="row">
+      <input type="email" id="email" placeholder="이메일" autocomplete="username">
+      <input type="password" id="password" placeholder="비밀번호" autocomplete="current-password">
+      <button id="doLogin">로그인</button>
+    </div>
+  </section>
+
+  <section class="card app">
+    <h2>최근 공개된 팀 구성</h2>
+    <div id="published"><p class="muted">아직 공개된 팀 구성이 없어요.</p></div>
   </section>
 
   <section class="card app admin-only">
@@ -90,20 +113,21 @@
   <section class="card app">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">선수 명단 <span class="muted" id="count"></span></h2>
-      <div class="row">
+      <div class="row admin-only">
         <button class="ghost" id="allOn">전체 참석</button>
         <button class="ghost" id="allOff">전체 해제</button>
       </div>
     </div>
+    <p class="muted guest-only" id="guestHint"></p>
     <div class="tablewrap">
     <table>
       <thead><tr><th>참석</th><th>이름</th><th class="admin-only">등급</th><th class="admin-only">활동량</th><th class="admin-only">총점</th><th>포지션</th><th>키퍼</th><th class="admin-only"></th></tr></thead>
-      <tbody id="list"></tbody>
+      <tbody id="list"><tr><td colspan="8" class="muted">불러오는 중…</td></tr></tbody>
     </table>
     </div>
   </section>
 
-  <section class="card app">
+  <section class="card app admin-only">
     <h2>팀 나누기</h2>
     <div class="row">
       <select id="teamCount"><option value="2">2팀</option><option value="3" selected>3팀</option></select>
@@ -111,12 +135,13 @@
       <button id="make">팀 구성하기</button>
       <button class="ghost" id="again">다시 섞기</button>
     </div>
-    <p class="muted">실력이 비슷하게, 포지션과 키퍼 가능 인원은 팀마다 고르게 나눠요.</p>
+    <p class="muted">총점이 비슷하게, 포지션과 키퍼 가능 인원은 팀마다 고르게 나눠요.</p>
     <p class="muted" id="need"></p>
     <div id="result" style="margin-top:14px"></div>
     <div class="row" id="shareRow" style="margin-top:10px;display:none">
-      <button class="ghost" id="shareBtn">결과 공유 링크 복사</button>
-      <span class="muted">링크에는 이름·포지션·키퍼 여부만 담기고 등급·활동량·점수는 들어가지 않아요.</span>
+      <button id="publishBtn">이 팀 구성 공개하기</button>
+      <button class="ghost" id="shareBtn">공유 링크 복사</button>
+      <span class="muted">공개하면 누구나 이 페이지에서 볼 수 있어요. 공개·링크 모두 이름·포지션·키퍼만 담겨요.</span>
     </div>
   </section>
 
@@ -125,87 +150,101 @@
     <div class="row">
       <button class="ghost" id="exp">명단 내보내기</button>
       <button class="ghost" id="imp">명단 불러오기</button>
-      <button class="ghost" id="pwChange">비밀번호 변경</button>
+      <button class="ghost" id="migrate" style="display:none">이 브라우저의 예전 명단 올리기</button>
     </div>
-    <p class="muted">명단은 이 브라우저에 저장돼요. 다른 기기로 옮길 때는 내보내기로 복사한 텍스트를 불러오기에 붙여넣으세요.</p>
+    <p class="muted">명단은 온라인 DB에 저장돼서 누가 열어도 같은 명단이 보여요. 내보내기는 백업용이에요.</p>
   </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* ===================== 설정 ===================== */
+// Supabase > Project Settings > API 에서 복사해서 붙여넣으세요.
+const SUPABASE_URL = 'https://gudwubeutvkhjrsardtc.supabase.co';   // 예: 'https://abcdefgh.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_DD4LX04ysEDt7T0ELcdo8Q_Cl1hSPPE';   // anon(public) 키 또는 publishable 키
+// 로그인 안 한 사람도 참석 체크를 할 수 있게 할지 (false면 관리자만)
+const ALLOW_PUBLIC_ATTENDANCE = true;
+/* ================================================ */
+
 const GRADES = {5:'S',4:'A',3:'B',2:'C',1:'D'};
 const POSITIONS = ['공격','미드','수비'];
 const ACTS = {'좋음':1, '보통':0.5, '나쁨':0};
 const score = p => p.grade + (ACTS[p.act] ?? 0.5);
 const fmt = x => Number.isInteger(x) ? String(x) : x.toFixed(1);
-const KEY = 'futsal-players-v1';
-const PW_KEY = 'futsal-admin-pw-v1';
 const $ = id => document.getElementById(id);
 const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
 };
-let players = normalize(load());
-let lastTeams = null;
-
-function load(){ try{ return JSON.parse(store.get(KEY)) || []; }catch(e){ return []; } }
-function save(){ store.set(KEY, JSON.stringify(players)); }
-// 예전 명단(포지션 1개/없음·활동량 없음)은 배열·'보통'으로 채워서 그대로 사용
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function normPos(v){
   const arr = (Array.isArray(v) ? v : String(v||'').split(',')).filter(x=>POSITIONS.includes(x));
-  const uniq = POSITIONS.filter(x=>arr.includes(x)); // 공격-미드-수비 순서로 정리
+  const uniq = POSITIONS.filter(x=>arr.includes(x));
   return uniq.length ? uniq : ['미드'];
 }
-function normalize(list){ return list.map(p=>({...p, pos: normPos(p.pos), act: (p.act in ACTS) ? p.act : '보통'})); }
 const posBadges = p => p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('');
-function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* ---------- 관리자 모드 ---------- */
-async function hash(text){
-  try{
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('futsal:'+text));
-    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  }catch(e){ // crypto를 못 쓰는 환경용 간단한 대체 해시
-    let h = 5381; for(const c of 'futsal:'+text) h = ((h<<5)+h + c.charCodeAt(0))|0; return 'x'+h;
-  }
+let sb = null, session = null, players = [], lastTeams = null;
+const isAdmin = () => !!session;
+
+/* ---------- DB 읽기/쓰기 ---------- */
+async function q(promise, msg){
+  const { data, error } = await promise;
+  if(error){ alert((msg || '저장하지 못했어요') + '\n' + error.message); await loadAll(); return null; }
+  return data ?? true;
 }
-const isAdmin = () => document.body.classList.contains('admin');
-function setAdmin(on){
-  document.body.classList.toggle('admin', on);
-  try{ sessionStorage.setItem('futsal-admin', on?'1':''); }catch(e){}
-  $('modeLabel').textContent = on ? '관리자' : '일반';
-  $('loginBtn').style.display = on ? 'none' : '';
+async function loadAll(){
+  if(!sb) return;
+  const res = await sb.from('players').select('id,name,pos,gk,attending').order('name');
+  if(res.error){ $('list').innerHTML = `<tr><td colspan="8" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`; return; }
+  const ratings = {};
+  if(isAdmin()){
+    const r = await sb.from('player_ratings').select('player_id,grade,act');
+    if(!r.error) r.data.forEach(x=>ratings[x.player_id]=x);
+  }
+  players = res.data.map(p=>({
+    id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending,
+    grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
+  }));
   render();
-  if(lastTeams) showTeams(lastTeams);
+  const t = await sb.from('team_results').select('teams,created_at').eq('id',1).maybeSingle();
+  if(!t.error && t.data) renderPublished(t.data);
 }
-$('loginBtn').onclick = async ()=>{
-  const saved = store.get(PW_KEY);
-  if(!saved){
-    const pw = prompt('처음이라 관리자 비밀번호를 정해요.\n새 비밀번호를 입력하세요'); if(!pw) return;
-    const pw2 = prompt('한 번 더 입력하세요'); if(pw!==pw2){ alert('비밀번호가 서로 달라요'); return; }
-    store.set(PW_KEY, await hash(pw)); setAdmin(true); return;
-  }
-  const pw = prompt('관리자 비밀번호'); if(pw==null) return;
-  if(await hash(pw) === saved) setAdmin(true); else alert('비밀번호가 틀렸어요');
+
+/* ---------- 관리자 로그인 (Supabase Auth) ---------- */
+function applyMode(){
+  document.body.classList.toggle('admin', isAdmin());
+  $('modeLabel').textContent = isAdmin() ? '관리자' : '일반';
+  $('migrate').style.display = (isAdmin() && store.get('futsal-players-v1')) ? '' : 'none';
+  $('guestHint').textContent = ALLOW_PUBLIC_ATTENDANCE ? '오늘 올 수 있으면 내 이름 옆 참석을 체크해 주세요.' : '';
+}
+$('loginBtn').onclick = ()=>{ document.body.classList.toggle('login-open'); $('email').focus(); };
+$('doLogin').onclick = async ()=>{
+  const email = $('email').value.trim(), password = $('password').value;
+  if(!email || !password) return;
+  $('doLogin').disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $('doLogin').disabled = false;
+  if(error){ alert('로그인 실패: ' + error.message); return; }
+  $('password').value = ''; document.body.classList.remove('login-open');
 };
-$('logoutBtn').onclick = ()=> setAdmin(false);
-$('pwChange').onclick = async ()=>{
-  const pw = prompt('새 비밀번호'); if(!pw) return;
-  const pw2 = prompt('한 번 더 입력하세요'); if(pw!==pw2){ alert('비밀번호가 서로 달라요'); return; }
-  store.set(PW_KEY, await hash(pw)); alert('변경했어요');
-};
+$('password').addEventListener('keydown', e=>{ if(e.key==='Enter') $('doLogin').click(); });
+$('logoutBtn').onclick = async ()=>{ await sb.auth.signOut(); };
+$('refreshBtn').onclick = ()=> loadAll();
 
 /* ---------- 명단 ---------- */
 function render(){
   const tb = $('list'); tb.innerHTML = '';
-  // 일반 모드에서는 이름순(점수순으로 정렬하면 순위가 드러나므로)
-  const list = players.slice().sort(isAdmin()
+  const admin = isAdmin();
+  const list = players.slice().sort(admin
     ? (a,b)=>score(b)-score(a) || a.name.localeCompare(b.name,'ko')
     : (a,b)=>a.name.localeCompare(b.name,'ko'));
+  if(!list.length) tb.innerHTML = `<tr><td colspan="8" class="muted">등록된 선수가 없어요.</td></tr>`;
+  const canAttend = admin || ALLOW_PUBLIC_ATTENDANCE;
   list.forEach(p=>{
     const tr = document.createElement('tr');
-    const admin = isAdmin();
     tr.innerHTML = `
-      <td><input type="checkbox" ${p.on?'checked':''} data-k="on"></td>
+      <td>${canAttend ? `<input type="checkbox" ${p.on?'checked':''} data-k="on">` : (p.on?'✓':'')}</td>
       <td>${esc(p.name)}</td>
       ${admin ? `
       <td><select data-k="grade">${[5,4,3,2,1].map(g=>`<option value="${g}" ${g==p.grade?'selected':''}>${GRADES[g]}</option>`).join('')}</select></td>
@@ -214,17 +253,26 @@ function render(){
       <td class="posCell">${admin ? POSITIONS.map(x=>`<label><input type="checkbox" data-pos="${x}" ${p.pos.includes(x)?'checked':''}>${x}</label>`).join('') : posBadges(p)}</td>
       <td>${admin ? `<input type="checkbox" ${p.gk?'checked':''} data-k="gk">` : (p.gk?'GK':'')}</td>
       ${admin ? `<td><button class="del">삭제</button></td>` : ''}`;
-    tr.querySelector('[data-k=on]').onchange = e=>{p.on=e.target.checked;save();count();};
+    if(canAttend) tr.querySelector('[data-k=on]').onchange = async e=>{
+      p.on = e.target.checked; count();
+      if(admin) await q(sb.from('players').update({attending:p.on}).eq('id',p.id));
+      else await q(sb.rpc('set_attendance', {p_id:p.id, p_on:p.on}));
+    };
     if(admin){
-      tr.querySelector('[data-k=gk]').onchange = e=>{p.gk=e.target.checked;save();};
-      tr.querySelectorAll('[data-pos]').forEach(cb=>cb.onchange = ()=>{
+      tr.querySelector('[data-k=gk]').onchange = async e=>{ p.gk=e.target.checked; await q(sb.from('players').update({gk:p.gk}).eq('id',p.id)); };
+      tr.querySelectorAll('[data-pos]').forEach(cb=>cb.onchange = async ()=>{
         const picked = [...tr.querySelectorAll('[data-pos]:checked')].map(c=>c.dataset.pos);
         if(!picked.length){ cb.checked = true; alert('포지션은 최소 1개는 골라야 해요'); return; }
-        p.pos = normPos(picked); save(); count();
+        p.pos = normPos(picked); count();
+        await q(sb.from('players').update({pos:p.pos}).eq('id',p.id));
       });
-      tr.querySelector('[data-k=act]').onchange = e=>{p.act=e.target.value;save();render();};
-      tr.querySelector('[data-k=grade]').onchange = e=>{p.grade=+e.target.value;save();render();};
-      tr.querySelector('.del').onclick = ()=>{ if(confirm(p.name+' 삭제할까요?')){players=players.filter(x=>x!==p);save();render();} };
+      const saveRating = ()=> q(sb.from('player_ratings').upsert({player_id:p.id, grade:p.grade, act:p.act}));
+      tr.querySelector('[data-k=grade]').onchange = async e=>{ p.grade=+e.target.value; render(); await saveRating(); };
+      tr.querySelector('[data-k=act]').onchange = async e=>{ p.act=e.target.value; render(); await saveRating(); };
+      tr.querySelector('.del').onclick = async ()=>{
+        if(!confirm(p.name+' 삭제할까요?')) return;
+        if(await q(sb.from('players').delete().eq('id',p.id))){ players = players.filter(x=>x!==p); render(); }
+      };
     }
     tb.appendChild(tr);
   });
@@ -237,35 +285,39 @@ function count(){
   updateNeed();
 }
 
-$('add').onclick = ()=>{
+$('add').onclick = async ()=>{
   const name = $('name').value.trim(); if(!name) return;
   if(players.some(p=>p.name===name)){ alert('이미 있는 이름이에요'); return; }
   const picked = [...document.querySelectorAll('.posNew:checked')].map(c=>c.value);
   if(!picked.length){ alert('포지션을 1개 이상 골라주세요'); return; }
-  players.push({name, grade:+$('grade').value, act:$('act').value, pos:normPos(picked), gk:$('gk').checked, on:true});
-  $('name').value=''; $('gk').checked=false; save(); render(); $('name').focus();
+  $('add').disabled = true;
+  const row = await q(sb.from('players').insert({name, pos:normPos(picked), gk:$('gk').checked, attending:true}).select('id').single(), '선수를 추가하지 못했어요');
+  if(row) await q(sb.from('player_ratings').insert({player_id:row.id, grade:+$('grade').value, act:$('act').value}));
+  $('add').disabled = false;
+  $('name').value=''; $('gk').checked=false;
+  await loadAll(); $('name').focus();
 };
 $('name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('add').click(); });
-$('allOn').onclick = ()=>{ players.forEach(p=>p.on=true); save(); render(); };
-$('allOff').onclick = ()=>{ players.forEach(p=>p.on=false); save(); render(); };
+async function setAll(on){ if(await q(sb.from('players').update({attending:on}).gte('id',0))){ players.forEach(p=>p.on=on); render(); } }
+$('allOn').onclick = ()=> setAll(true);
+$('allOff').onclick = ()=> setAll(false);
 
 /* ---------- 팀 밸런싱 ---------- */
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 const sum = t => t.reduce((s,p)=>s+score(p),0);
 const spread = teams => { const s=teams.map(sum); return Math.max(...s)-Math.min(...s); };
 function variance(arr){ const m=arr.reduce((a,b)=>a+b,0)/arr.length; return arr.reduce((a,b)=>a+(b-m)**2,0); }
-
 // 비용: 총점 차이(가장 중요) + 포지션 쏠림 + 키퍼 가능 인원 쏠림 + 인원수 차이
 function cost(teams){
   const s = variance(teams.map(sum)) * 10;
-  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.reduce((s,p)=>s + (p.pos.includes(x) ? 1/p.pos.length : 0), 0))), 0) * 3;
+  const pos = POSITIONS.reduce((acc,x)=>acc + variance(teams.map(t=>t.reduce((v,p)=>v + (p.pos.includes(x) ? 1/p.pos.length : 0), 0))), 0) * 3;
   const gk = variance(teams.map(t=>t.filter(p=>p.gk).length)) * 4;
   const size = variance(teams.map(t=>t.length)) * 100;
   return s + pos + gk + size;
 }
 function snake(list, n){
   const teams = Array.from({length:n},()=>[]);
-  const sorted = shuffle(list.slice()).sort((a,b)=>score(b)-score(a)); // 같은 총점끼리는 무작위
+  const sorted = shuffle(list.slice()).sort((a,b)=>score(b)-score(a));
   sorted.forEach((p,i)=>{ const round=Math.floor(i/n), k=i%n; teams[round%2===0 ? k : n-1-k].push(p); });
   return teams;
 }
@@ -288,15 +340,12 @@ function improve(teams){
   return {teams, c: best};
 }
 function balance(list, n){
-  // 여러 번 시도해서 가장 균형 잡힌 결과 중 하나를 고름 (매번 조금씩 다른 조합)
   const results = [];
   for(let r=0;r<40;r++) results.push(improve(snake(list,n)));
   const min = Math.min(...results.map(x=>x.c));
   const good = results.filter(x=>x.c <= min + 1e-9);
   return good[Math.floor(Math.random()*good.length)].teams;
 }
-
-// 필요 인원 안내: 팀 수 × 팀당 인원과 오늘 참석 인원 비교
 function updateNeed(){
   const n = +$('teamCount').value, size = +$('teamSize').value;
   const need = n*size, have = players.filter(p=>p.on).length;
@@ -315,8 +364,7 @@ try{ const s = JSON.parse(store.get('futsal-setting-v1')); if(s){ $('teamCount')
 
 const TEAM_NAMES = ['A팀','B팀','C팀'];
 const ORDER = {공격:0, 미드:1, 수비:2};
-
-// 팀 카드 HTML. withScores=false면 등급·활동량·점수를 아예 만들지 않음
+// withScores=false면 등급·활동량·점수를 아예 만들지 않음
 function teamsHtml(teams, withScores){
   return `<div class="teams">${teams.map((t,i)=>{
     const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
@@ -327,10 +375,8 @@ function teamsHtml(teams, withScores){
   }).join('')}</div>`;
 }
 function showTeams(teams){
-  const admin = isAdmin();
-  $('result').innerHTML = teamsHtml(teams, admin) + (admin
-    ? `<p class="summary">팀 점수 차이: 최대 <b>${fmt(spread(teams))}점</b> · 평균 ${fmt(+(teams.map(sum).reduce((a,b)=>a+b,0)/teams.length).toFixed(1))}점</p>`
-    : '');
+  $('result').innerHTML = teamsHtml(teams, true) +
+    `<p class="summary">팀 점수 차이: 최대 <b>${fmt(spread(teams))}점</b> · 평균 ${fmt(+(teams.map(sum).reduce((a,b)=>a+b,0)/teams.length).toFixed(1))}점</p>`;
   $('shareRow').style.display = 'flex';
 }
 function make(){
@@ -343,45 +389,83 @@ function make(){
 $('make').onclick = make;
 $('again').onclick = make;
 
-/* ---------- 결과 공유 링크 (등급 정보 없이 이름·포지션·키퍼만) ---------- */
+/* ---------- 공개 / 공유 (이름·포지션·키퍼만) ---------- */
+const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
+const fromPublic = data => data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos:normPos(pos), gk:!!gk})));
+function renderPublished(row){
+  try{
+    const when = new Date(row.created_at).toLocaleString('ko-KR', {month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
+    $('published').innerHTML = `<p class="muted" style="margin-top:0">${when} 공개</p>` + teamsHtml(fromPublic(row.teams), false);
+  }catch(e){}
+}
+$('publishBtn').onclick = async ()=>{
+  if(!lastTeams) return;
+  const row = {id:1, teams: publicData(lastTeams), created_at: new Date().toISOString()};
+  if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); alert('공개했어요. 이제 누구나 페이지에서 볼 수 있어요.'); }
+};
 function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function decode(str){ str = str.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(str)))); }
 $('shareBtn').onclick = ()=>{
   if(!lastTeams) return;
-  const data = lastTeams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
-  const url = location.href.split('#')[0] + '#r=' + encode(data);
-  if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>alert('공유 링크를 복사했어요. 단톡방에 붙여넣으면 돼요.'), ()=>prompt('아래 링크를 복사하세요', url));
+  const url = location.href.split('#')[0] + '#r=' + encode(publicData(lastTeams));
+  if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>alert('공유 링크를 복사했어요.'), ()=>prompt('아래 링크를 복사하세요', url));
   else prompt('아래 링크를 복사하세요', url);
 };
 function showShared(){
   const m = location.hash.match(/^#r=(.+)$/);
-  if(!m){ document.body.classList.remove('shared'); return false; }
-  try{
-    const data = decode(m[1]);
-    const teams = data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos: normPos(pos), gk:!!gk})));
-    $('sharedResult').innerHTML = teamsHtml(teams, false);
-  }catch(e){ $('sharedResult').innerHTML = '<p class="muted">링크가 올바르지 않아요.</p>'; }
+  if(!m){ document.body.classList.remove('shared'); return; }
+  try{ $('sharedResult').innerHTML = teamsHtml(fromPublic(decode(m[1])), false); }
+  catch(e){ $('sharedResult').innerHTML = '<p class="muted">링크가 올바르지 않아요.</p>'; }
   document.body.classList.add('shared');
-  return true;
 }
 window.addEventListener('hashchange', showShared);
 
-/* ---------- 백업 ---------- */
+/* ---------- 백업 / 가져오기 ---------- */
 $('exp').onclick = ()=>{
-  const txt = JSON.stringify(players);
+  const txt = JSON.stringify(players.map(({name,grade,act,pos,gk,on})=>({name,grade,act,pos,gk,on})));
   if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>alert('명단을 복사했어요. 메모장 등에 붙여넣어 보관하세요.'), ()=>prompt('아래 내용을 복사하세요', txt));
   else prompt('아래 내용을 복사하세요', txt);
 };
-$('imp').onclick = ()=>{
+async function importList(list){
+  if(!Array.isArray(list) || !list.length){ alert('가져올 선수가 없어요'); return; }
+  const clean = list.filter(p=>p && p.name).map(p=>({
+    name:String(p.name).trim(), pos:normPos(p.pos), gk:!!p.gk, attending: p.on !== false,
+    grade: [1,2,3,4,5].includes(+p.grade) ? +p.grade : 3, act: (p.act in ACTS) ? p.act : '보통',
+  }));
+  const saved = await q(sb.from('players').upsert(clean.map(({name,pos,gk,attending})=>({name,pos,gk,attending})), {onConflict:'name'}).select('id,name'), '명단을 올리지 못했어요');
+  if(!saved) return;
+  const idByName = Object.fromEntries(saved.map(r=>[r.name, r.id]));
+  await q(sb.from('player_ratings').upsert(clean.map(p=>({player_id:idByName[p.name], grade:p.grade, act:p.act}))));
+  await loadAll();
+  alert(`${clean.length}명을 올렸어요. 같은 이름은 덮어썼어요.`);
+}
+$('imp').onclick = async ()=>{
   const txt = prompt('내보낸 명단 텍스트를 붙여넣으세요'); if(!txt) return;
-  try{ const d = JSON.parse(txt); if(!Array.isArray(d)) throw 0; players = normalize(d); save(); render(); alert('불러왔어요'); }
-  catch(e){ alert('형식이 올바르지 않아요'); }
+  try{ await importList(JSON.parse(txt)); }catch(e){ alert('형식이 올바르지 않아요'); }
+};
+$('migrate').onclick = async ()=>{
+  try{
+    const list = JSON.parse(store.get('futsal-players-v1') || '[]');
+    if(!confirm(`이 브라우저에 저장된 예전 명단 ${list.length}명을 온라인 DB로 올릴까요?`)) return;
+    await importList(list);
+  }catch(e){ alert('예전 명단을 읽지 못했어요'); }
 };
 
 /* ---------- 시작 ---------- */
 showShared();
-let startAdmin = false; try{ startAdmin = sessionStorage.getItem('futsal-admin')==='1'; }catch(e){}
-setAdmin(startAdmin);
+applyMode();
+if(!SUPABASE_URL || !SUPABASE_KEY || !window.supabase){
+  $('configNotice').style.display = 'block';
+  $('list').innerHTML = `<tr><td colspan="8" class="muted">Supabase 설정 후 명단이 보여요.</td></tr>`;
+}else{
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb.auth.getSession().then(({data})=>{ session = data.session; applyMode(); loadAll(); });
+  sb.auth.onAuthStateChange((_event, s)=>{
+    const changed = !!s !== !!session;
+    session = s; applyMode();
+    if(changed){ lastTeams = null; $('result').innerHTML=''; $('shareRow').style.display='none'; loadAll(); }
+  });
+}
 </script>
 </body>
 </html>
