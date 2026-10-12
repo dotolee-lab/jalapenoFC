@@ -142,7 +142,7 @@
   .pcGear{font-size:12px;font-weight:700;color:var(--accent)}
   /* 일정 */
   .sched{display:flex;flex-direction:column;gap:8px}
-  .ev{display:grid;grid-template-columns:56px 1fr auto auto;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;border-left:5px solid var(--accent)}
+  .ev{display:grid;grid-template-columns:56px 1fr auto auto auto;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;border-left:5px solid var(--accent)}
   .ev.k-회비{border-left-color:#f5b82e}
   .ev.k-기타{border-left-color:var(--mf)}
   .evDate{display:flex;flex-direction:column;align-items:center;line-height:1.15}
@@ -155,6 +155,9 @@
   .dday.soon{color:var(--hl)}
   .dday.today{background:#e5383b;color:#fff;border-radius:8px;padding:3px 8px}
   .ev .del{padding:2px 6px}
+  .evEdit{background:none;padding:2px 6px;font-size:14px;opacity:.6}
+  .evEdit:hover{opacity:1}
+  .schedForm.editing{border-top-color:var(--accent);background:var(--accent2);border-radius:12px;padding:12px}
   .schedForm{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
   input[type=time]{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
   .bkChip{display:inline-flex;align-items:center;gap:6px;background:var(--head);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 2px;font-size:14px}
@@ -358,6 +361,7 @@
         <input type="text" id="evTitle" maxlength="60" placeholder="제목 (예: 정기 경기, 10월 회비)">
         <input type="text" id="evPlace" maxlength="60" placeholder="장소·메모 (선택)">
         <button id="evAdd">일정 추가</button>
+        <button class="ghost" id="evCancel" style="display:none">취소</button>
       </div>
     </div>
   </section>
@@ -1871,15 +1875,38 @@ function renderSchedule(){
           })()}</div>
         </div>
         ${badge}
+        <button class="evEdit admin-only" data-edit-ev="${e.id}" title="수정" aria-label="수정">✏️</button>
         <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
       </div>`;
     }).join('')}</div>` : '<p class="muted">예정된 일정이 없어요. 아래에서 추가해 보세요.</p>';
+  list.querySelectorAll('[data-edit-ev]').forEach(b=>b.onclick = ()=> startEditEvent(+b.dataset.editEv));
   list.querySelectorAll('[data-del-ev]').forEach(b=>b.onclick = async ()=>{
     const ev = events.find(x=>x.id === +b.dataset.delEv);
     if(!confirm(`"${ev?.title}" 일정을 삭제할까요?${ev?.repeat !== 'none' ? '\n반복 일정 전체가 지워져요.' : ''}`)) return;
     if(await q(sb.from('events').delete().eq('id', +b.dataset.delEv), '일정을 삭제하지 못했어요')) await loadEvents();
   });
 }
+// 일정 수정: 입력칸에 채워 넣고 저장 버튼을 '수정 저장'으로
+let editingEventId = null;
+function startEditEvent(id){
+  const ev = events.find(x=>x.id === id); if(!ev) return;
+  editingEventId = id;
+  $('evDate').value = ev.event_date; $('evTime').value = ev.event_time || '';
+  $('evKind').value = ev.kind; $('evRepeat').value = ev.repeat;
+  $('evTitle').value = ev.title; $('evPlace').value = ev.place || '';
+  if(ev.sport) $('evSport').value = ev.sport;
+  $('evAdd').textContent = '수정 저장'; $('evCancel').style.display = '';
+  document.querySelector('.schedForm').classList.add('editing');
+  document.querySelector('.schedForm').scrollIntoView({behavior:'smooth', block:'center'});
+  $('evTitle').focus();
+}
+function stopEditEvent(){
+  editingEventId = null;
+  $('evAdd').textContent = '일정 추가'; $('evCancel').style.display = 'none';
+  document.querySelector('.schedForm').classList.remove('editing');
+  $('evTitle').value = ''; $('evPlace').value = '';
+}
+$('evCancel').onclick = stopEditEvent;
 $('evAdd').onclick = async ()=>{
   const row = {
     event_date: $('evDate').value, event_time: $('evTime').value || null, kind: $('evKind').value,
@@ -1888,9 +1915,11 @@ $('evAdd').onclick = async ()=>{
   if(!eventsSportMissing) row.sport = $('evSport').value;
   if(!row.event_date || !row.title){ alert('날짜와 제목을 넣어주세요'); return; }
   $('evAdd').disabled = true;
-  const ok = await q(sb.from('events').insert(row), '일정을 추가하지 못했어요');
+  const ok = editingEventId
+    ? await q(sb.from('events').update(row).eq('id', editingEventId), '일정을 수정하지 못했어요')
+    : await q(sb.from('events').insert(row), '일정을 추가하지 못했어요');
   $('evAdd').disabled = false;
-  if(ok){ $('evTitle').value = ''; $('evPlace').value = ''; await loadEvents(); }
+  if(ok){ stopEditEvent(); await loadEvents(); }
 };
 $('evKind').addEventListener('change', ()=>{
   // 종류를 고르면 제목 기본값 채워주기
