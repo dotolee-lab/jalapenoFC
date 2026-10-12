@@ -97,8 +97,8 @@
   .pfFacts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:14px}
   .pfIntro{margin-top:8px;font-size:15px;color:var(--muted);font-style:italic}
   .feet{display:inline-flex;gap:3px;vertical-align:middle}
-  .foot{width:40px;height:56px}
-  .feet.sm .foot{width:22px;height:31px}
+  .foot{width:24px;height:33px}
+  .feet.sm .foot{width:18px;height:25px}
   .foot .sole{fill:#1f9a45;stroke:#157a33;stroke-width:1.2}
   .foot .dot{fill:#fff;stroke:#157a33;stroke-width:1.2}
   .foot .num{font:900 28px/1 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;fill:#fff;stroke:#157a33;stroke-width:1.4;paint-order:stroke}
@@ -1265,7 +1265,7 @@ function renderProfile(){
         <div class="pfId">
           <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
-          ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}<span class="muted pfFeetLbl">왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}</span></div>` : ''}
+          ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}</div>` : ''}
           ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
           ${p.intro ? `<div class="pfIntro">“${esc(p.intro)}”</div>` : ''}
         </div>
