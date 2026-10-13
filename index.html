@@ -465,7 +465,7 @@
     </div>
     <div class="tablewrap">
     <table>
-      <thead><tr><th>참석</th><th>이름</th><th class="admin-only rc">등급</th><th class="admin-only rc">활동량·체력</th><th class="admin-only rc">패스</th><th class="admin-only rc">드리블</th><th class="admin-only rc">수비</th><th class="admin-only rc">스피드</th><th class="admin-only rc">슈팅</th><th class="admin-only rc">키퍼</th><th class="admin-only rc" title="최근 폼">폼</th><th class="admin-only rc">총점</th><th>포지션</th><th class="public-only">키퍼</th><th class="admin-only"></th></tr></thead>
+      <thead><tr><th>참석</th><th>이름</th><th class="admin-only rc">등급</th><th class="admin-only rc">활동량·체력</th><th class="admin-only rc">패스</th><th class="admin-only rc">드리블</th><th class="admin-only rc">수비</th><th class="admin-only rc">스피드</th><th class="admin-only rc">슈팅</th><th class="admin-only rc">키퍼</th><th class="admin-only rc" title="최근 폼">폼</th><th class="admin-only rc">총점</th><th>포지션</th><th class="admin-only"></th></tr></thead>
       <tbody id="list"><tr><td colspan="15" class="muted">불러오는 중…</td></tr></tbody>
     </table>
     </div>
@@ -710,7 +710,6 @@ function render(){
       <td class="rc formCell">${formHtml(p)}</td>
       <td class="rc"><b>${fmt(score(p))}</b></td>` : ''}
       <td class="posCell">${admin ? POSITIONS.map(x=>`<label><input type="checkbox" data-pos="${x}" ${p.pos.includes(x)?'checked':''}>${x}</label>`).join('') : posBadges(p)}</td>
-      ${admin ? '' : `<td>${p.gk?'GK':''}</td>`}
       ${admin ? `<td><button class="del">삭제</button></td>` : ''}`;
     if(canAttend) tr.querySelector('[data-k=on]').onchange = async e=>{
       p.on = e.target.checked; count();
@@ -721,7 +720,7 @@ function render(){
       const gkBox = tr.querySelector('[data-k=gk]');
       if(gkBox) gkBox.onchange = async e=>{ p.gk=e.target.checked; await q(sb.from('players').update({gk:p.gk}).eq('id',p.id)); };
       const gkSel = tr.querySelector('[data-gk]');
-      // 키퍼 능력: 숫자를 고르면 키퍼 가능(GK 표시), – 면 키퍼 안 함
+      // 키퍼 능력: 숫자를 고르면 키퍼 가능, – 면 키퍼 안 함
       if(gkSel) gkSel.onchange = async ()=>{
         p.s_gk = gkSel.value ? +gkSel.value : null; p.gk = p.s_gk != null; render();
         await saveRating();
@@ -936,7 +935,7 @@ function pickTactic(sel, current){
 function teamsHtml(teams, withScores, tactics = [], editable = false){
   return `<div class="teams">${teams.map((t,i)=>{
     const tac = validTactic(tactics[i]) ? tactics[i] : '';
-    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + ` · 키퍼가능 ${t.filter(p=>p.gk).length}`;
+    const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + (withScores ? ` · 키퍼가능 ${t.filter(p=>p.gk).length}` : '');
     const members = t.slice().sort((a,b)=>ORDER[a.pos[0]]-ORDER[b.pos[0]] || a.pos.length-b.pos.length || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
     const pitch = (tac || editable) ? `<div class="pitch">
         ${tac ? pitchSvg(tac) + `<div class="tacLabel">${tac}</div>` : `<div class="tacEmpty">전술 없음</div>`}
@@ -945,7 +944,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span>${fmt(sum(t))}점</span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}${p.gk?`<span class="badge">GK${withScores && p.s_gk ? ' ' + p.s_gk : ''}</span>`:''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
@@ -1806,7 +1805,7 @@ function renderProfilePicker(){
     return `<button class="pcard" data-pick="${p.id}">
       ${avatar(p.name,'md')}
       <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
-      <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}${p.gk ? '<span class="badge">GK</span>' : ''}</span>
+      <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
       ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
@@ -1842,7 +1841,6 @@ function renderProfile(){
   const meta = [
     p.number != null ? `<span class="pfNum">#${p.number}</span>` : '',
     ...p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`),
-    p.gk ? '<span class="badge">GK</span>' : '',
   ].join('');
   const facts = [
 
