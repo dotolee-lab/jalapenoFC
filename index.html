@@ -4,9 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>할라피뇨FC 팀관리</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cdefs%3E%3CclipPath id=%22ball%22%3E%3Ccircle cx=%2221%22 cy=%2243%22 r=%2214%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%2313281b%22/%3E%3Cpath d=%22M41 13C51 13 56 23 53 36C50 48 41 57 30 59C25 60 22 57 26 54C33 49 37 43 38 35C39 27 34 18 41 13Z%22 fill=%22%232fbf5b%22/%3E%3Cpath d=%22M51 22C53 31 51 41 45 49C40 55 34 58 28 59C38 59 48 51 52 39C54 33 54 27 51 22Z%22 fill=%22%231f9446%22/%3E%3Cpath d=%22M41 18C38 21 38 26 39 31%22 stroke=%22%23a8f0bd%22 stroke-width=%222.6%22 stroke-linecap=%22round%22 fill=%22none%22/%3E%3Cpath d=%22M36 15C37 11 41 10 45 11C47 12 47 14 45 15C42 16 39 16 36 15Z%22 fill=%22%237a5a1e%22/%3E%3Cpath d=%22M42 11C43 7 46 5 50 4%22 stroke=%22%237a5a1e%22 stroke-width=%223%22 stroke-linecap=%22round%22 fill=%22none%22/%3E%3Ccircle cx=%2221%22 cy=%2243%22 r=%2215.2%22 fill=%22%2313281b%22/%3E%3Ccircle cx=%2221%22 cy=%2243%22 r=%2214%22 fill=%22%23ffffff%22/%3E%3Cg clip-path=%22url%28%23ball%29%22%3E%3Cpolygon points=%2221.00,35.00 16.63,31.82 18.30,26.68 23.70,26.68 25.37,31.82%22 fill=%22%2314241a%22/%3E%3Cpolygon points=%2228.61,40.53 30.28,35.38 35.69,35.38 37.36,40.53 32.98,43.71%22 fill=%22%2314241a%22/%3E%3Cpolygon points=%2225.70,49.47 31.11,49.47 32.78,54.62 28.41,57.79 24.03,54.62%22 fill=%22%2314241a%22/%3E%3Cpolygon points=%2216.30,49.47 17.97,54.62 13.59,57.79 9.22,54.62 10.89,49.47%22 fill=%22%2314241a%22/%3E%3Cpolygon points=%2213.39,40.53 9.02,43.71 4.64,40.53 6.31,35.38 11.72,35.38%22 fill=%22%2314241a%22/%3E%3Cg stroke=%22%2314241a%22 stroke-width=%221.2%22 stroke-linecap=%22round%22%3E%3Cline x1=%2221.00%22 y1=%2238.20%22 x2=%2221.00%22 y2=%2234.40%22/%3E%3Cline x1=%2225.57%22 y1=%2241.52%22 x2=%2229.18%22 y2=%2240.34%22/%3E%3Cline x1=%2223.82%22 y1=%2246.88%22 x2=%2226.05%22 y2=%2249.96%22/%3E%3Cline x1=%2218.18%22 y1=%2246.88%22 x2=%2215.95%22 y2=%2249.96%22/%3E%3Cline x1=%2216.43%22 y1=%2241.52%22 x2=%2212.82%22 y2=%2240.34%22/%3E%3C/g%3E%3Cpolygon points=%2221.00,38.20 25.57,41.52 23.82,46.88 18.18,46.88 16.43,41.52%22 fill=%22%2314241a%22/%3E%3Ccircle cx=%2226%22 cy=%2236%22 r=%229%22 fill=%22%23ffffff%22 opacity=%22.18%22/%3E%3C/g%3E%3Ccircle cx=%2221%22 cy=%2243%22 r=%2214%22 fill=%22none%22 stroke=%22%230b1a12%22 stroke-width=%221%22/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#13281b">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="할라피뇨FC">
 <meta name="apple-mobile-web-app-title" content="할라피뇨FC">
 <style>
   :root{--bg:#f5f7f6;--card:#fff;--text:#1d2420;--muted:#6b756f;--line:#e2e7e4;--accent:#1f8a5b;--accent2:#e8f5ee;--danger:#c0392b;
@@ -347,6 +353,7 @@
       </div>
     </div>
     <div class="row app">
+      <button class="ghost small" id="installBtn" style="display:none">📲 앱 설치</button>
       <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
       <button class="ghost small admin-only" id="logoutBtn">로그아웃</button>
     </div>
@@ -2199,6 +2206,27 @@ async function startApp(){
   }
 }
 startApp();
+
+/* ---------- 앱으로 설치 (PWA) ---------- */
+(function(){
+  if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+    window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if(standalone) return;                       // 이미 앱으로 열었으면 버튼 숨김
+  const btn = $('installBtn');
+  let deferred = null;
+  // 안드로이드·PC 크롬/엣지/삼성 인터넷: 바로 설치 창
+  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferred = e; btn.style.display = ''; });
+  window.addEventListener('appinstalled', ()=>{ btn.style.display = 'none'; deferred = null; });
+  // 아이폰·아이패드(사파리): 설치 창이 없어서 방법 안내
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(ios) btn.style.display = '';
+  btn.onclick = async ()=>{
+    if(deferred){ deferred.prompt(); await deferred.userChoice.catch(()=>{}); deferred = null; btn.style.display = 'none'; return; }
+    if(ios) alert('아이폰에서 앱으로 설치하기\n\n1. 사파리 아래쪽(또는 위쪽)의 공유 버튼(□↑)을 눌러요\n2. "홈 화면에 추가"를 눌러요\n3. 오른쪽 위 "추가"를 누르면 끝!\n\n※ 카카오톡 등에서 열었다면 먼저 "Safari로 열기"를 해 주세요.');
+  };
+})();
 </script>
 </body>
 </html>
