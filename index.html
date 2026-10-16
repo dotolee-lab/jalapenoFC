@@ -92,7 +92,7 @@
   .hofFoot{position:relative;font-size:14px;font-weight:600;opacity:.85;margin-top:6px}
   body.shared #mvpBanner{display:none}
   .awards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:6px}
-  @media (max-width:700px){.awards{grid-template-columns:1fr}}
+
   .award{border-radius:16px;padding:16px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:190px}
   .award.gold{background:linear-gradient(135deg,#fff3c4,#ffd86b);color:#3b2a00}
   .award.green{background:linear-gradient(135deg,#ddf6e7,#ade6c4);color:#0c3a21}
@@ -270,7 +270,7 @@
   .tag.m{background:#f5b82e;color:#fff;font-weight:700}
   /* 순위 카드 */
   .lb{display:grid;grid-template-columns:repeat(var(--lbn,4),minmax(0,1fr));gap:14px;margin-bottom:26px}
-  @media (max-width:860px){.lb{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(240px,80%);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}.lbCol{scroll-snap-align:start}}
+
   .lbTitle{font-size:17px;margin:0 0 8px}
   .lbCard{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:20px 16px 0;text-align:center;display:flex;flex-direction:column;min-height:330px}
   .medal{position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:50%;background:#f5b82e;color:#fff;font-weight:800;font-size:14px;display:grid;place-items:center;box-shadow:0 2px 0 #d99a12}
@@ -406,6 +406,63 @@
     body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
     body.shared nav.tabs, body.shared .homeSub{display:none !important}
     body.shared{padding-bottom:0}
+  }
+
+  /* ---------- 휴대폰 기록 탭: 옆 스크롤 없이 ---------- */
+  .awNames,.ls,.wdlIn,.rkIn{display:none}
+  @media (max-width:860px){
+    /* 순위 카드 2×2 */
+    .lb{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:20px}
+    .lbCol:last-child:nth-child(odd){grid-column:1 / -1}
+    .lbTitle{font-size:14px;margin:0 0 6px}
+    .lbCard{min-height:0;padding:12px 10px 0;border-radius:12px}
+    .medal{left:8px;top:8px;width:22px;height:22px;font-size:12px}
+    .lbCard .avatar.big{width:48px;height:48px;font-size:14px}
+    .lbName{margin-top:6px;font-size:14px;font-weight:700}
+    .lbVal{font-size:19px;margin:0 0 6px}
+    .lbList li{gap:6px;padding:6px 0;font-size:13px}
+    .lbList li:nth-child(n+3){display:none}
+    .lbList .avatar,.lbList small{display:none}
+    .lbList .nm,.lbList .v{font-size:13px}
+    .lbList .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .lbEmpty{padding:18px 0;font-size:13px}
+    .more{width:calc(100% + 20px);margin:0 -10px;padding:9px;font-size:13px;border-radius:0 0 12px 12px}
+  }
+  @media (max-width:700px){
+    /* 명예의 전당 한 줄에 3칸 */
+    .awards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .award{min-height:0;padding:12px 6px 10px;gap:6px;border-radius:14px;justify-content:flex-start}
+    .awTitle{font-size:13px;white-space:nowrap}
+    .awPre{display:none}
+    .awWin{gap:0;flex-wrap:nowrap}
+    .awWin .awP + .awP{margin-left:-14px}
+    .awP b{display:none}
+    .awP .avatar.big{width:46px;height:46px;font-size:13px;box-shadow:0 0 0 3px rgba(255,255,255,.7)}
+    .awNames{display:block;font-weight:800;font-size:13px;line-height:1.3;word-break:keep-all}
+    .awVal{font-size:12px;font-weight:600}
+    .awCo{display:none}
+    .awMany{gap:2px}
+    .awMany b{font-size:18px}
+    .awMany span{display:none}
+    .awEmpty{font-size:12px;padding:10px 0}
+  }
+  @media (max-width:560px){
+    /* 기록 표: 순위+이름 한 칸, 짧은 칸 이름, 전적은 승률 아래 */
+    table.stats2{table-layout:fixed;font-size:13.5px}
+    table.stats2 .c-rank{display:none}
+    table.stats2 .c-player{position:static;width:30%;padding-left:6px !important}
+    table.stats2 thead th, table.stats2 td{padding:9px 1px}
+    table.stats2 thead th{font-size:12px;white-space:nowrap}
+    table.stats2 th .arr{display:inline;font-size:8px;margin-left:1px}
+    table.stats2 .lf{display:none}
+    table.stats2 .ls{display:inline}
+    table.stats2 .c-wdl{display:none}
+    table.stats2 .wdlIn{display:block;font-size:10.5px;color:var(--muted);font-weight:500}
+    table.stats2 .rkIn{display:inline-block;width:18px;flex:none;color:var(--muted);font-weight:700;font-size:12px;text-align:center}
+    table.stats2 .pl{gap:4px}
+    table.stats2 .plN{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    table.stats2 .nsBadge{padding:1px 5px;font-size:12px}
+    table.stats2 .c-cfAmt{font-size:12.5px}
   }
 </style>
 </head>
@@ -1351,6 +1408,9 @@ async function shrinkPhoto(file, size = 320){
   } finally { URL.revokeObjectURL(url); }
 }
 const posText = r => (players.find(p=>p.id===r.id)?.pos || []).join('·');
+// 휴대폰에서 쓰는 짧은 칸 이름
+const SHORT_LABEL = {bk:'예약', cl:'내기패', cfAmt:'금액', pts:'공P'};
+const colLabel = (k, label) => SHORT_LABEL[k] ? `<span class="lf">${label}</span><span class="ls">${SHORT_LABEL[k]}</span>` : label;
 const statVal = (r, k) => k === 'rate' ? (r.rate < 0 ? '-' : Math.round(r.rate*100) + '%') : k === 'wdl' ? `${r.w}-${r.d}-${r.l}` : r[k];
 // 같은 값이면 같은 순위 (1, 2, 2, 4 …)
 function withRanks(list, k){
@@ -1411,11 +1471,11 @@ function renderStats(){
   const cfWall = cfList.length ? `<div class="cfWall"><span class="nsHead">☕ 커피 기부왕</span>${cfList.slice(0,8).map(r=>`<span class="nsItem">${nameLink(r.id, r.name)} <b>${r.cf}회</b>${amt && r.cfAmt ? ` · ${won(r.cfAmt)}` : ''}</span>`).join('')}</div>` : '';
   $('statsBox').innerHTML = (statGroup === 'part' ? nsWall : '') + (statGroup === 'coffee' ? cfWall : '') + `<div class="tablewrap"><table class="stats2">
     <thead><tr><th class="c-rank">순위</th><th class="c-player">선수</th>
-      ${statCols().map(([k,label])=>`<th data-k="${k}" class="${k===key?'sorted':''}">${label}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
+      ${statCols().map(([k,label])=>`<th data-k="${k}" class="c-${k} ${k===key?'sorted':''}">${colLabel(k, label)}<span class="arr">${k===key ? (dir<0?'▼':'▲') : '▾'}</span></th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>`<tr>
       <td class="c-rank">${r.rank}</td>
-      <td class="c-player"><span class="pl">${avatar(r.name,'sm')}<span>${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span></span></td>
-      ${statCols().map(([k])=>k==='ns' && r.ns ? `<td><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="lateCell">${r.late}</td>` : k==='cfAmt' ? `<td class="${k===key?'hl':''}">${r.cfAmt ? won(r.cfAmt) : 0}</td>` : `<td class="${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}</td>`).join('')}
+      <td class="c-player"><span class="pl"><span class="rkIn">${r.rank}</span>${avatar(r.name,'sm')}<span class="plN">${nameLink(r.id, r.name)}<small>${esc(posText(r))}</small></span></span></td>
+      ${statCols().map(([k])=>k==='ns' && r.ns ? `<td class="c-ns"><span class="nsBadge">🚫 ${r.ns}</span></td>` : k==='late' && r.late ? `<td class="c-late lateCell">${r.late}</td>` : k==='cfAmt' ? `<td class="c-cfAmt ${k===key?'hl':''}">${r.cfAmt ? `<span class="lf">${won(r.cfAmt)}</span><span class="ls">${r.cfAmt.toLocaleString('ko-KR')}</span>` : 0}</td>` : `<td class="c-${k} ${k===key?'hl':''}">${k==='mvp' && !r.mvp ? 0 : statVal(r,k)}${k==='rate' && r.gp ? `<small class="wdlIn">${r.w}-${r.d}-${r.l}</small>` : ''}</td>`).join('')}
     </tr>`).join('') || `<tr><td colspan="${statCols().length+2}" class="muted" style="text-align:center">${qText ? '검색 결과가 없어요.' : '아직 기록이 없어요.'}</td></tr>`}
     </tbody></table></div>`;
   $('statsBox').querySelectorAll('th[data-k]').forEach(th=>th.onclick = ()=>{
@@ -1844,11 +1904,12 @@ function renderYearAwards(){
     const best = Math.max(0, ...rows.map(r=>r[k]));
     const win = best ? rows.filter(r=>r[k]===best).sort((a,b)=>a.name.localeCompare(b.name,'ko')) : [];
     return `<div class="award ${cls}">
-      <div class="awTitle">${icon} ${label(t)}</div>
+      <div class="awTitle">${icon} <span class="awPre">${label(t).slice(0, -t.length)}</span>${t}</div>
       ${!win.length ? '<div class="awEmpty">아직 기록이 없어요</div>'
         : win.length > 3 ? `<div class="awMany"><b>공동 ${win.length}명</b><span>기록이 갈리면 수상자가 나와요</span></div><div class="awVal">${best}${unit}</div>`
-        : `<div class="awWin">${win.map(w=>`<div class="awP">${avatar(w.name,'big')}<b>${nameLink(w.id, w.name)}</b></div>`).join('')}</div>
-           <div class="awVal">${win.length > 1 ? `공동 · ` : ''}${best}${unit}</div>`}
+        : `<div class="awWin n${win.length}">${win.map(w=>`<div class="awP">${avatar(w.name,'big')}<b>${nameLink(w.id, w.name)}</b></div>`).join('')}</div>
+           <div class="awNames">${win.map(w=>nameLink(w.id, w.name)).join(' · ')}</div>
+           <div class="awVal">${win.length > 1 ? `<span class="awCo">공동 · </span>` : ''}${best}${unit}</div>`}
     </div>`;
   }).join('')}</div>`;
 }
