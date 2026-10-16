@@ -413,7 +413,20 @@
   @media (max-width:860px){
     /* 순위 카드 2×2 */
     .lb{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:20px}
-    .lbCol:last-child:nth-child(odd){grid-column:1 / -1}
+    /* 카드가 3개(커피)면 한 줄에 3칸 */
+    .lb.n3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .lb.n3 .lbTitle{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lb.n3 .lbCard{padding:10px 6px 0}
+    .lb.n3 .medal{left:5px;top:5px;width:19px;height:19px;font-size:11px}
+    .lb.n3 .lbCard .avatar.big{width:40px;height:40px;font-size:12px}
+    .lb.n3 .lbName{font-size:13px}
+    .lb.n3 .lbVal{font-size:15px}
+    .lb.n3 .lbList li,.lb.n3 .lbList .nm,.lb.n3 .lbList .v{font-size:12px}
+    .lb.n3 .lbList .rk{width:12px}
+    .lb.n3 .more{width:calc(100% + 12px);margin:0 -6px;font-size:12px}
+    .lb.n3 .lbList li:nth-child(n+2){display:none}
+    .lb .lbCol{display:flex;flex-direction:column}
+    .lb .lbCard{flex:1}
     .lbTitle{font-size:14px;margin:0 0 6px}
     .lbCard{min-height:0;padding:12px 10px 0;border-radius:12px}
     .medal{left:8px;top:8px;width:22px;height:22px;font-size:12px}
@@ -1426,7 +1439,7 @@ function renderStats(){
   if(!hasCoffee() && statGroup === 'coffee') statGroup = 'game';
   const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).filter(([g])=>g !== 'coffee' || hasCoffee()).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
   const cards = LEADER_CARDS[statGroup]();
-  $('leaderBox').innerHTML = groupBar + `<div class="lb" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
+  $('leaderBox').innerHTML = groupBar + `<div class="lb n${cards.length}" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
     const list = withRanks(all.filter(r=>r[k] > 0).sort((a,b)=>b[k]-a[k] || a.name.localeCompare(b.name,'ko')), k);
     const top = list[0];
     const body = top ? `
