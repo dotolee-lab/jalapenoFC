@@ -368,6 +368,45 @@
     body.tab-admin .side .gearGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
     body.shared .layout{display:block}
   }
+
+  /* ---------- 장비: 한 줄씩 ---------- */
+  .gearGrid{grid-template-columns:1fr !important;gap:8px}
+  .gearRow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px 10px;padding:10px 12px}
+  .gearRow .gearHead{white-space:nowrap;font-size:14px}
+  .gearRow .gearWho{min-height:0;gap:4px}
+  .gearRow .gearSide{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .gearRow .gearWhen{margin:0}
+  .gearRow .gearBtn{padding:5px 10px;font-size:12px;white-space:nowrap}
+  .gearRow .gearChip{font-size:13px}
+  .sched .ev.evExtra{display:none}
+  .sched.open .ev.evExtra{display:grid}
+  .schedMore{margin-top:10px;width:100%}
+  .homeSub{display:none}
+  .tabs i{display:none;font-style:normal}
+  .tabs .short{display:none}
+  .tabs .homeTab{display:none}
+  /* ---------- 휴대폰·태블릿: 아래 탭 바 + 홈 안의 작은 탭 ---------- */
+  @media (max-width:1023px){
+    body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+    nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;margin:0;display:flex;justify-content:space-around;gap:0;overflow:visible;
+      background:var(--card);border-top:1px solid var(--line);border-bottom:0;padding:4px 4px calc(4px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.12)}
+    nav.tabs button{flex:1;display:flex !important;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 4px;border-bottom:0;font-size:11px;font-weight:600;border-radius:10px}
+    body:not(.admin) nav.tabs button.admin-only{display:none !important}
+    nav.tabs i{display:block;font-size:21px;line-height:1.2;filter:grayscale(1);opacity:.65}
+    nav.tabs button.on{color:var(--accent);background:var(--accent2)}
+    nav.tabs button.on i{filter:none;opacity:1}
+    nav.tabs .full{display:none}
+    nav.tabs .short{display:inline}
+    .toTop{bottom:calc(80px + env(safe-area-inset-bottom))}
+    /* 홈 탭에서만 MVP·일정·장비·팀 구성 */
+    body:not(.tab-home) #mvpBanner, body:not(.tab-home) .side, body:not(.tab-home) #publishedCard{display:none !important}
+    body.tab-home .homeSub{display:flex;gap:4px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
+    .homeSub button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px 4px;border-radius:9px}
+    .homeSub button.on{background:var(--accent);color:#fff}
+    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
+    body.shared nav.tabs, body.shared .homeSub{display:none !important}
+    body.shared{padding-bottom:0}
+  }
 </style>
 </head>
 <body>
@@ -396,6 +435,9 @@
   <div id="mvpBanner" class="app"></div>
 
   <div class="layout">
+  <div class="homeSub app" role="tablist" aria-label="홈 메뉴">
+    <button data-sub="sched">📅 일정</button><button data-sub="gear">🎒 장비</button><button data-sub="teams">👥 팀 구성</button>
+  </div>
   <aside class="side app">
   <section class="card app" id="scheduleCard">
     <h2>📅 다가오는 일정</h2>
@@ -430,10 +472,11 @@
   </section>
 
   <nav class="tabs app">
-    <button data-tab="roster" class="on">선수 명단</button>
-    <button data-tab="stats">개인 기록</button>
-    <button data-tab="history">경기 기록</button>
-    <button data-tab="admin" class="admin-only">관리</button>
+    <button data-tab="home" class="homeTab"><i>🏠</i><span>홈</span></button>
+    <button data-tab="roster" class="on"><i>👥</i><span class="full">선수 명단</span><span class="short">명단</span></button>
+    <button data-tab="stats"><i>📊</i><span class="full">개인 기록</span><span class="short">기록</span></button>
+    <button data-tab="history"><i>⚽</i><span class="full">경기 기록</span><span class="short">경기</span></button>
+    <button data-tab="admin" class="admin-only"><i>⚙️</i><span>관리</span></button>
   </nav>
 
   <section class="card notice" id="configNotice" style="display:none">
@@ -1613,20 +1656,38 @@ function keepTabsInView(){
     if(top < hdr) window.scrollBy(0, top - hdr - 12);
     return;
   }
+  if(!isWide()){ if(window.scrollY > 0) window.scrollTo(0, 0); return; }   // 휴대폰: 탭이 아래 고정이라 맨 위로
   if(nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({block:'start'});
 }
-const TABS = ['roster','stats','history','admin'];
+const TABS = ['home','roster','stats','history','admin'];
+const isWide = () => window.matchMedia('(min-width:1024px)').matches;
 function setTab(t){
-  if(!TABS.includes(t) || (t === 'admin' && !isAdmin())) t = 'roster';
+  if(!TABS.includes(t) || (t === 'admin' && !isAdmin())) t = isWide() ? 'roster' : 'home';
+  if(t === 'home' && isWide()) t = 'roster';               // PC는 홈 탭 없이 오른쪽 칸에 항상 보임
   TABS.forEach(x=>document.body.classList.toggle('tab-'+x, x===t));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
   store.set('futsal-tab-v2', t);
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick = ()=>{
   if(b.dataset.tab === 'roster' && document.body.classList.contains('tab-roster') && profileId){ profileId = null; renderProfile(); }
-  setTab(b.dataset.tab);   // 스크롤 위치는 그대로 둠
+  const same = document.body.classList.contains('tab-' + b.dataset.tab);
+  setTab(b.dataset.tab);
+  if(!isWide() && !same) window.scrollTo(0, 0);           // 휴대폰: 아래 탭 바꾸면 맨 위부터
 });
-setTab(store.get('futsal-tab-v2') || 'roster');
+// 휴대폰은 열 때마다 홈부터, PC는 마지막에 보던 탭
+setTab(isWide() ? (store.get('futsal-tab-v2') || 'roster') : 'home');
+window.matchMedia('(min-width:1024px)').addEventListener?.('change', e=>{ if(e.matches && document.body.classList.contains('tab-home')) setTab('roster'); });
+
+/* ----- 홈 안의 작은 탭: 일정 / 장비 / 팀 구성 (휴대폰) ----- */
+const HOME_SUBS = ['sched','gear','teams'];
+function setHomeSub(k){
+  if(!HOME_SUBS.includes(k)) k = 'sched';
+  HOME_SUBS.forEach(x=>document.body.classList.toggle('sub-'+x, x===k));
+  document.querySelectorAll('.homeSub button').forEach(b=>b.classList.toggle('on', b.dataset.sub===k));
+  store.set('futsal-homesub-v1', k);
+}
+document.querySelectorAll('.homeSub button').forEach(b=>b.onclick = ()=> setHomeSub(b.dataset.sub));
+setHomeSub(store.get('futsal-homesub-v1') || 'sched');
 
 /* ---------- 지난 경기 기록 (날짜별 조회) ---------- */
 let histDayId = null;
@@ -2023,6 +2084,7 @@ function nextOccurrence(ev){
   }
   return base;
 }
+let schedOpen = false;
 function renderSchedule(){
   const card = $('scheduleCard'), list = $('schedList');
   const today = todayStr();
@@ -2030,13 +2092,16 @@ function renderSchedule(){
     .filter(e=>e.next >= today)
     .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''))
     .slice(0, 8);
+  const SHOW = 3;                                     // 처음엔 가까운 3개만, 나머지는 더보기
   // 일반 사용자에게는 일정이 있을 때만 보여줌
-  card.classList.toggle('admin-only', !items.length);
+  // PC: 일정이 없으면 일반 사용자에게는 숨김 / 휴대폰 홈: '일정 없음' 안내를 보여줌
+  card.classList.toggle('admin-only', !items.length && isWide());
+  card.classList.toggle('noEvents', !items.length);
   if(eventsMissing){ list.innerHTML = '<p class="muted">일정을 쓰려면 Supabase에서 setup-extras.sql을 먼저 실행해 주세요.</p>'; return; }
-  list.innerHTML = items.length ? `<div class="sched">${items.map(e=>{
+  list.innerHTML = items.length ? `<div class="sched${schedOpen ? ' open' : ''}">${items.map((e, idx)=>{
       const d = new Date(e.next + 'T00:00:00'), dd = daysBetween(today, e.next);
       const badge = dd === 0 ? '<span class="dday today">D-DAY</span>' : dd === 1 ? '<span class="dday soon">내일</span>' : `<span class="dday ${dd <= 3 ? 'soon' : ''}">D-${dd}</span>`;
-      return `<div class="ev k-${e.kind}">
+      return `<div class="ev k-${e.kind}${idx >= SHOW ? ' evExtra' : ''}">
         <div class="evDate"><b>${d.getMonth()+1}/${d.getDate()}</b><span>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</span></div>
         <div class="evBody">
           <div class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
@@ -2050,7 +2115,9 @@ function renderSchedule(){
         <button class="evEdit admin-only" data-edit-ev="${e.id}" title="수정" aria-label="수정">✏️</button>
         <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
       </div>`;
-    }).join('')}</div>` : '<p class="muted">예정된 일정이 없어요. 아래에서 추가해 보세요.</p>';
+    }).join('')}</div>${items.length > SHOW ? `<button class="ghost small schedMore">${schedOpen ? '접기' : `일정 더보기 (${items.length - SHOW})`}</button>` : ''}` : `<p class="muted">예정된 일정이 없어요.${isAdmin() ? ' 아래에서 추가해 보세요.' : ''}</p>`;
+  const more = list.querySelector('.schedMore');
+  if(more) more.onclick = ()=>{ schedOpen = !schedOpen; renderSchedule(); };
   list.querySelectorAll('[data-edit-ev]').forEach(b=>b.onclick = ()=> startEditEvent(+b.dataset.editEv));
   list.querySelectorAll('[data-del-ev]').forEach(b=>b.onclick = async ()=>{
     const ev = events.find(x=>x.id === +b.dataset.delEv);
@@ -2133,10 +2200,10 @@ function renderGear(){
         <div class="row" style="gap:6px;margin-top:8px"><button class="small" data-gear-save="${g.id}">저장</button><button class="ghost small" data-gear-cancel>취소</button></div>
       </div>`;
     }
-    return `<div class="gearItem">
-      <div class="gearHead">${GEAR_ICON[g.id] || '🎒'} <b>${esc(g.label)}</b>${g.holders.length ? `<span class="muted gearWhen">${sinceText(g.updated_at)}</span>` : ''}</div>
+    return `<div class="gearItem gearRow">
+      <div class="gearHead">${GEAR_ICON[g.id] || '🎒'} <b>${esc(g.label)}</b></div>
       <div class="gearWho">${who.length ? who.map(p=>`<span class="gearChip">${avatar(p.name,'sm')}${nameLink(p.id, p.name)}</span>`).join('') : '<span class="muted">아무도 없음</span>'}</div>
-      <button class="ghost small gearBtn" data-gear-edit="${g.id}">내가 받았어요 / 변경</button>
+      <div class="gearSide">${g.holders.length ? `<span class="muted gearWhen">${sinceText(g.updated_at)}</span>` : ''}<button class="ghost small gearBtn" data-gear-edit="${g.id}">받았어요 / 변경</button></div>
     </div>`;
   }).join('')}</div>`;
   box.querySelectorAll('[data-gear-edit]').forEach(b=>b.onclick = ()=>{ gearEditing = b.dataset.gearEdit; renderGear(); });
