@@ -1,8 +1,8 @@
 // 할라피뇨FC 앱 서비스 워커
 // - 화면(index.html)은 항상 새 버전을 먼저 받아오고, 인터넷이 끊겼을 때만 저장본을 보여줘요.
 // - 선수·기록 데이터(Supabase)는 저장하지 않아요. 항상 최신으로 불러와요.
-const CACHE = 'jalapeno-v2';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png'];
+const CACHE = 'jalapeno-v4';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png', './brand-mark.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

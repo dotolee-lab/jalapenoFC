@@ -28,7 +28,7 @@
   #loginCard input{width:100%;flex:none}
   .loginHead{display:flex;justify-content:space-between;align-items:center}
   @media (max-width:560px){#loginCard{left:0;right:0;width:auto;max-width:none}}
-  h1{font-size:22px;margin:0}
+  h1{font-size:22px;margin:0;display:flex;align-items:center;gap:10px}
   h2{font-size:16px;margin:0 0 12px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -331,7 +331,9 @@
   .sportToggle{display:inline-flex;background:var(--head);border:1px solid var(--line);border-radius:999px;padding:3px}
   .sportToggle button{background:none;color:var(--muted);border-radius:999px;padding:5px 14px;font-size:14px;font-weight:800}
   .sportToggle button.on{background:var(--accent);color:#fff}
-  .homeLink{color:inherit;text-decoration:none}
+  .homeLink{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:9px}
+  .brandMark{width:56px;height:56px;flex:none;border-radius:13px;display:block}
+  @media (max-width:560px){.brandMark{width:48px;height:48px;border-radius:11px}}
   .homeLink:hover{opacity:.8}
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
@@ -372,7 +374,7 @@
 <main>
   <header>
     <div class="titleRow">
-      <h1><a href="./" id="homeLink" class="homeLink">⚽ 할라피뇨FC 팀관리</a><span class="mode" id="modeLabel">일반</span></h1>
+      <h1><a href="./" id="homeLink" class="homeLink" aria-label="할라피뇨FC 팀관리 홈" title="할라피뇨FC 팀관리"><img class="brandMark" src="brand-mark.png" alt="할라피뇨FC" width="56" height="56"></a><span class="mode" id="modeLabel">일반</span></h1>
       <div class="sportToggle app" role="tablist" aria-label="종목">
         <button data-sport="futsal">풋살</button><button data-sport="soccer">축구</button>
       </div>
