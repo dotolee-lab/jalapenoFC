@@ -583,7 +583,7 @@
     <div class="row skillNew" id="skillNew"></div>
     <p class="muted">포지션은 여러 개 고를 수 있어요. &nbsp;|&nbsp; 등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량·체력 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0
       <br>능력치(패스·드리블·수비·스피드·슈팅, 1~5점, 비우면 미평가): (평균 − 3) × 0.5 → −1 ~ +1점 &nbsp;|&nbsp; 팀을 나눌 때 능력치별 합계도 팀마다 고르게 맞춰요.
-      <br>키퍼 능력(1~5점, 비우면 키퍼 안 함): 1점 0 · 2점 +0.25 · 3점 +0.5 · 4점 +0.75 · 5점 +1 &nbsp;|&nbsp; 팀마다 가장 잘하는 키퍼 실력도 비슷하게 맞춰요.
+      <br>키퍼 능력(1~5점, 비우면 키퍼 안 함): 1점 0 · 2점 +0.125 · 3점 +0.25 · 4점 +0.375 · 5점 +0.5 &nbsp;|&nbsp; 팀마다 가장 잘하는 키퍼 실력도 비슷하게 맞춰요.
       <br>최근 폼(자동): 최근 3번 참석한 경기일, 4경기 이상일 때만 · 승률 65% 이상 +0.3 / 35% 이하 −0.3 (무승부는 0.5승) · 경기당 공격포인트가 팀 평균의 1.5배 이상 +0.2 / 절반 이하 −0.1
       <br>→ 총점 = 등급 + 활동량·체력 + 능력치 + 키퍼 + 최근 폼</p>
   </section>
@@ -732,8 +732,8 @@ const ACTS = {'좋음':1, '보통':0.5, '나쁨':0};
 // 능력치 5개 (1~5점, null = 미평가)
 const SKILLS = [['s_pass','패스'], ['s_dribble','드리블'], ['s_defense','수비'], ['s_speed','스피드'], ['s_shoot','슈팅']];
 let skillsMissing = false, gkMissing = false, useForm = true, formOf = {};
-// 키퍼 능력 1~5 (null = 키퍼 안 함) → 1점 0 · 2점 +0.25 · 3점 +0.5 · 4점 +0.75 · 5점 +1
-const gkBonus = p => (p.s_gk >= 1 && p.s_gk <= 5) ? (p.s_gk - 1) * 0.25 : 0;
+// 키퍼 능력 1~5 (null = 키퍼 안 함) → 1점 0 · 2점 +0.125 · 3점 +0.25 · 4점 +0.375 · 5점 +0.5
+const gkBonus = p => (p.s_gk >= 1 && p.s_gk <= 5) ? (p.s_gk - 1) * 0.125 : 0;
 const skillAvg = p => { const v = SKILLS.map(([k])=>p[k]).filter(x=>x >= 1 && x <= 5); return v.length ? v.reduce((a,b)=>a+b,0) / v.length : null; };
 const skillBonus = p => { const a = skillAvg(p); return a === null ? 0 : (a - 3) * 0.5; };
 const formBonus = p => useForm ? (p.form || 0) : 0;
