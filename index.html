@@ -242,7 +242,7 @@
   .tabs button{background:none;color:var(--muted);border-radius:0;padding:10px 14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
   .tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
   section[data-pane]{display:none}
-  body.tab-admin section[data-pane="admin"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-roster section[data-pane="roster"]{display:block}
+  body.tab-admin section[data-pane="admin"], body.tab-stats section[data-pane="stats"], body.tab-history section[data-pane="history"], body.tab-roster section[data-pane="roster"], body.tab-rules section[data-pane="rules"]{display:block}
   body.shared .tabs{display:none}
   /* 경기 기록 탭 */
   .histHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -477,6 +477,35 @@
     table.stats2 .nsBadge{padding:1px 5px;font-size:12px}
     table.stats2 .c-cfAmt{font-size:12.5px}
   }
+
+  /* ---------- 회칙 ---------- */
+  .rulesHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+  .rulesHead h2{margin:0}
+  .rChips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .rChip{background:var(--accent2);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;white-space:nowrap}
+  .rFlow{display:flex;align-items:stretch;gap:4px;margin-bottom:14px;overflow-x:auto}
+  .rStep{flex:1;min-width:0;background:var(--head);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+  .rStep b{color:var(--accent);font-size:14px}
+  .rStep span{font-size:12px;color:var(--muted);line-height:1.3;word-break:keep-all}
+  .rArrow{align-self:center;color:var(--muted);font-weight:800}
+  .rSec{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+  .rSec summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center;background:var(--head)}
+  .rSec summary::-webkit-details-marker{display:none}
+  .rSec summary::after{content:'▾';color:var(--muted);transition:transform .15s}
+  .rSec[open] summary::after{transform:rotate(180deg)}
+  .rBody{padding:4px 14px 12px}
+  .rGroup h4{margin:12px 0 4px;font-size:14px;color:var(--accent)}
+  .rGroup ul{margin:0;padding-left:18px}
+  .rGroup li{font-size:14px;line-height:1.6;word-break:keep-all}
+  .rGroup li b{color:var(--hl)}
+  .rWhen{text-align:right;font-size:12px;margin:8px 0 0}
+  .rulesHelp code{background:var(--head);border-radius:5px;padding:1px 5px;font-size:12px}
+  #rulesText{width:100%;box-sizing:border-box;font:14px/1.5 ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);resize:vertical}
+  @media (max-width:1023px){
+    nav.tabs .rulesTab{display:none !important}
+    body.tab-home.sub-rules #rulesCard{display:block !important}
+    .homeSub button{font-size:13px;padding:9px 2px}
+  }
 </style>
 </head>
 <body>
@@ -506,7 +535,7 @@
 
   <div class="layout">
   <div class="homeSub app" role="tablist" aria-label="홈 메뉴">
-    <button data-sub="sched">📅 일정</button><button data-sub="gear">🎒 장비</button><button data-sub="teams">👥 팀 구성</button>
+    <button data-sub="sched">📅 일정</button><button data-sub="gear">🎒 장비</button><button data-sub="teams">👥 팀구성</button><button data-sub="rules">📜 회칙</button>
   </div>
   <aside class="side app">
   <section class="card app" id="scheduleCard">
@@ -546,6 +575,7 @@
     <button data-tab="roster" class="on"><i>👥</i><span class="full">선수 명단</span><span class="short">명단</span></button>
     <button data-tab="stats"><i>📊</i><span class="full">개인 기록</span><span class="short">기록</span></button>
     <button data-tab="history"><i>⚽</i><span class="full">경기 기록</span><span class="short">경기</span></button>
+    <button data-tab="rules" class="rulesTab"><i>📜</i><span>회칙</span></button>
     <button data-tab="admin" class="admin-only"><i>⚙️</i><span>관리</span></button>
   </nav>
 
@@ -665,6 +695,16 @@
     </div>
     <p class="muted">다가오는 경기도 날짜를 미리 추가하고 구장을 넣어두면, 메인 화면 일정에 구장이 자동으로 표시돼요. 팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MVP를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
     <div id="dayEditor"></div>
+  </section>
+
+  <section class="card app" data-pane="rules" id="rulesCard">
+    <div class="rulesHead"><h2>🌶️ 할라피뇨 FC 회칙 및 운영 규정</h2><button class="ghost small admin-only" id="rulesEditBtn">✏️ 수정</button></div>
+    <div id="rulesBox"></div>
+    <div id="rulesEditor" style="display:none">
+      <p class="muted rulesHelp">한 줄씩 적어요 — <code>&gt; 요약 칩</code> · <code>~ 요일|설명</code> (흐름) · <code># 큰 제목</code> · <code>[소제목]</code> · <code>* 항목</code></p>
+      <textarea id="rulesText" rows="22" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:8px"><button id="rulesSave">저장</button><button class="ghost" id="rulesCancel">취소</button><button class="ghost" id="rulesDefault" style="margin-left:auto">처음 내용으로</button></div>
+    </div>
   </section>
 
   <section class="card app" data-pane="roster">
@@ -1264,6 +1304,8 @@ async function loadRecords(){
   if(SPORT === 'soccer' && sportMissing) showErr('축구 기록을 쓰려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.');
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
   useForm = st.error ? true : (st.data.find(x=>x.key==='use_form')?.value !== false);
+  rulesRow = st.error ? null : (st.data.find(x=>x.key==='rules')?.value || null); rulesSettingsMissing = !!st.error;
+  renderRules();
   if($('formToggle')) $('formToggle').checked = useForm;
   computeForms();
   renderStats();
@@ -1732,11 +1774,12 @@ function keepTabsInView(){
   if(!isWide()){ if(window.scrollY > 0) window.scrollTo(0, 0); return; }   // 휴대폰: 탭이 아래 고정이라 맨 위로
   if(nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({block:'start'});
 }
-const TABS = ['home','roster','stats','history','admin'];
+const TABS = ['home','roster','stats','history','rules','admin'];
 const isWide = () => window.matchMedia('(min-width:1024px)').matches;
 function setTab(t){
   if(!TABS.includes(t) || (t === 'admin' && !isAdmin())) t = isWide() ? 'roster' : 'home';
   if(t === 'home' && isWide()) t = 'roster';               // PC는 홈 탭 없이 오른쪽 칸에 항상 보임
+  if(t === 'rules' && !isWide()){ t = 'home'; setHomeSub('rules'); }   // 휴대폰은 홈 안의 '회칙' 칸
   TABS.forEach(x=>document.body.classList.toggle('tab-'+x, x===t));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
   store.set('futsal-tab-v2', t);
@@ -1749,11 +1792,14 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick = ()=>{
 });
 // 휴대폰은 열 때마다 홈부터, PC는 마지막에 보던 탭
 setTab(isWide() ? (store.get('futsal-tab-v2') || 'roster') : 'home');
-window.matchMedia('(min-width:1024px)').addEventListener?.('change', e=>{ if(e.matches && document.body.classList.contains('tab-home')) setTab('roster'); });
+window.matchMedia('(min-width:1024px)').addEventListener?.('change', e=>{
+  if(e.matches && document.body.classList.contains('tab-home')) setTab('roster');
+  if(!e.matches && document.body.classList.contains('tab-rules')) setTab('rules');
+});
 
 /* ----- 홈 안의 작은 탭: 일정 / 장비 / 팀 구성 (휴대폰) ----- */
-const HOME_SUBS = ['sched','gear','teams'];
 function setHomeSub(k){
+  const HOME_SUBS = ['sched','gear','teams','rules'];
   if(!HOME_SUBS.includes(k)) k = 'sched';
   HOME_SUBS.forEach(x=>document.body.classList.toggle('sub-'+x, x===k));
   document.querySelectorAll('.homeSub button').forEach(b=>b.classList.toggle('on', b.dataset.sub===k));
@@ -2244,7 +2290,7 @@ $('evKind').addEventListener('change', ()=>{
 
 /* ---------- 장비 보관 (조끼 / 장비 / 예비 장비) ---------- */
 let gear = [], gearMissing = false, gearEditing = null;
-const GEAR_ICON = {vest:'🎽', gear:'⚽', spare:'📦'};
+const GEAR_ICON = {vest:'🎽', gear:'⚽', spare:'🧳'};
 async function loadGear(){
   if(!sb) return;
   const r = await sb.from('gear').select('id,label,max_holders,holders,sort,updated_at').order('sort');
@@ -2385,6 +2431,103 @@ async function startApp(){
   }
 }
 startApp();
+
+/* ---------- 회칙 ---------- */
+const RULES_DEFAULT = `> 💰 월 회비 2만원
+> 🚫 노쇼 벌금 1만원
+> 🙋 게스트비 5천원
+> 👕 유니폼 7.5만원
+> ⏰ 10분 전 집합
+~ 월|참석 투표 시작
+~ 목|저녁 투표 마감
+~ 금|팀 자동 배정
+~ 경기날|10분 전 집합
+
+# 1. 팀 운영 및 회비 방안
+[경기 일정]
+* 주 1회 주말/오전 풋살 경기 진행 지향
+[월 회비]
+* 월 20,000원 (연 2회, 6개월 단위 2분기 분할 납부)
+* 구장 대관료, 소모품 구매, 팀 이벤트(워크숍, 회식 등) 지원용으로 사용
+[휴면 회원 전환]
+* 개인 사정, 부상 등으로 인한 장기 불참 시 휴면 회원 전환 가능
+
+# 2. 경기 운영 및 규칙
+[참석 투표]
+* 팀 카카오톡 단체 채팅방을 통해 진행
+* 매주 월요일 시작 ~ 목요일 저녁 마감
+[팀 배정]
+* 매주 금요일 할라피뇨 FC 팀관리 어플을 통해 자동 배정
+* 모든 경기 기록은 전용 어플을 통해 누적·관리
+[집합 및 지각]
+* 경기 시작 10분 전 집합을 원칙으로 함
+* 지각 시 팀 내 패널티 부과
+[당일 노쇼]
+* 특별한 사유 없는 당일 무단 불참 시 벌금 10,000원 부과 (팀 회비 통장 입금)
+
+# 3. 게스트 및 신규 회원 운영
+[게스트 초대]
+* 당일 참석 인원 18명 미만일 경우에만 초대 가능
+* 게스트비: 1인당 5,000원
+[신규 회원]
+* 가입 시기: 매월 1일 자 가입 가능
+* 가입 요건: 게스트 활동 3회 이상 이수 및 임원진 동의 필요
+[신규 유니폼 제작]
+* 신규 유니폼 제작 비용: 75,000원 (선택)`;
+let rulesRow = null, rulesSettingsMissing = false, rulesOpen = null;
+const rulesText = () => (rulesRow && typeof rulesRow.text === 'string' && rulesRow.text.trim()) ? rulesRow.text : RULES_DEFAULT;
+function parseRules(text){
+  const out = {chips:[], steps:[], sections:[]};
+  let sec = null, grp = null;
+  text.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    if(l.startsWith('>')) out.chips.push(l.slice(1).trim());
+    else if(l.startsWith('~')){ const [a, b] = l.slice(1).split('|'); out.steps.push([a.trim(), (b || '').trim()]); }
+    else if(l.startsWith('#')){ sec = {title: l.replace(/^#+/, '').trim(), groups: []}; grp = null; out.sections.push(sec); }
+    else {
+      if(!sec){ sec = {title: '', groups: []}; out.sections.push(sec); }
+      const m = l.match(/^\[(.+)\]$/);
+      if(m){ grp = {sub: m[1].trim(), items: []}; sec.groups.push(grp); }
+      else { if(!grp){ grp = {sub: '', items: []}; sec.groups.push(grp); } grp.items.push(l.replace(/^[*\-•]\s*/, '')); }
+    }
+  });
+  return out;
+}
+// 금액(10,000원 등)은 굵게
+const ruleLine = t => esc(t).replace(/(\d{1,3}(?:,\d{3})+원|\d+만\s?원|\d+분 전)/g, '<b>$1</b>');
+function renderRules(){
+  const box = $('rulesBox'); if(!box) return;
+  const r = parseRules(rulesText());
+  if(rulesOpen === null) rulesOpen = r.sections.map((_, i)=>i === 0);
+  const when = rulesRow?.updated_at ? new Date(rulesRow.updated_at) : null;
+  box.innerHTML =
+    (r.chips.length ? `<div class="rChips">${r.chips.map(c=>`<span class="rChip">${esc(c)}</span>`).join('')}</div>` : '') +
+    (r.steps.length ? `<div class="rFlow">${r.steps.map(([a, b])=>`<div class="rStep"><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join('<span class="rArrow">›</span>')}</div>` : '') +
+    r.sections.map((sec, i)=>`<details class="rSec" data-i="${i}" ${rulesOpen[i] ? 'open' : ''}>
+      <summary>${esc(sec.title || '기타')}</summary>
+      <div class="rBody">${sec.groups.map(g=>`<div class="rGroup">${g.sub ? `<h4>${esc(g.sub)}</h4>` : ''}<ul>${g.items.map(it=>`<li>${ruleLine(it)}</li>`).join('')}</ul></div>`).join('')}</div>
+    </details>`).join('') +
+    (when ? `<p class="muted rWhen">${when.getFullYear()}.${String(when.getMonth()+1).padStart(2,'0')}.${String(when.getDate()).padStart(2,'0')} 개정</p>` : '');
+  box.querySelectorAll('details.rSec').forEach(d=>d.addEventListener('toggle', ()=>{ rulesOpen[+d.dataset.i] = d.open; }));
+}
+$('rulesEditBtn').onclick = ()=>{
+  if(rulesSettingsMissing){ alert('회칙을 저장하려면 Supabase에서 11-setup-coffee.sql(설정 표)을 먼저 실행해 주세요.'); return; }
+  $('rulesText').value = rulesText();
+  $('rulesEditor').style.display = ''; $('rulesBox').style.display = 'none'; $('rulesEditBtn').style.display = 'none';
+  $('rulesText').focus();
+};
+const closeRulesEditor = ()=>{ $('rulesEditor').style.display = 'none'; $('rulesBox').style.display = ''; $('rulesEditBtn').style.display = ''; };
+$('rulesCancel').onclick = closeRulesEditor;
+$('rulesDefault').onclick = ()=>{ if(confirm('처음 내용으로 되돌릴까요? (저장을 눌러야 반영돼요)')) $('rulesText').value = RULES_DEFAULT; };
+$('rulesSave').onclick = async ()=>{
+  const text = $('rulesText').value.replace(/\r/g, '').trim();
+  if(!text){ alert('내용을 입력해 주세요'); return; }
+  const value = {text, updated_at: new Date().toISOString()};
+  $('rulesSave').disabled = true;
+  const ok = await q(sb.from('app_settings').upsert({key:'rules', value, updated_at: value.updated_at}), '회칙을 저장하지 못했어요');
+  $('rulesSave').disabled = false;
+  if(ok){ rulesRow = value; rulesOpen = null; closeRulesEditor(); renderRules(); }
+};
+renderRules();
 
 /* ---------- 넓은 화면: 탭을 상단 메뉴로 옮기기 ---------- */
 (function(){
