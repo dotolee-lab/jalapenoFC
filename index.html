@@ -745,7 +745,7 @@
   </section>
 
   <section class="card app admin-only" data-pane="admin" id="officerCard">
-    <h2>👔 운영진 · 회비 계좌</h2>
+    <h2>운영진 · 회비 계좌</h2>
     <div class="offRows">
       <div class="row offRow"><b class="offLbl">회장</b><select id="offPres"></select><input type="tel" id="offPresPhone" placeholder="010-0000-0000" maxlength="20"></div>
       <div class="row offRow"><b class="offLbl">총무</b><select id="offTreas"></select><input type="tel" id="offTreasPhone" placeholder="010-0000-0000" maxlength="20"></div>
@@ -2488,7 +2488,7 @@ const telHref = ph => 'tel:' + String(ph).replace(/[^\d+]/g, '');
 function officersHtml(){
   const list = OFFICER_ROLES.map(([r, t])=>[r, t, officerOf(r)]).filter(([,, o])=>o);
   if(!list.length) return '';
-  return `<div class="rOff"><div class="rOffT">👔 운영진</div><div class="rOffGrid">${list.map(([r, t, o])=>`<div class="rOffCard">
+  return `<div class="rOff"><div class="rOffT">운영진</div><div class="rOffGrid">${list.map(([r, t, o])=>`<div class="rOffCard">
       ${avatar(o.p.name, 'sm')}
       <div class="rOffInfo"><span class="badge offBadge r-${r} rOffRole">${t}</span><b>${nameLink(o.p.id, o.p.name)}</b></div>
       ${o.phone ? `<a class="rOffTel" href="${telHref(o.phone)}">📞 ${esc(o.phone)}</a>` : ''}
@@ -2554,7 +2554,6 @@ const RULES_GUIDE = `# 4. 구장 예약 가이드 (일요일 기준)
 const RULES_DEFAULT = `> 💰 월 회비 2만원
 > 🚫 노쇼 벌금 1만원
 > 🙋 게스트비 5천원
-> 👕 유니폼 7.5만원
 > ⏰ 10분 전 집합
 ~ 월|참석 투표 시작
 ~ 목|저녁 투표 마감
@@ -2598,7 +2597,7 @@ let rulesRow = null, rulesSettingsMissing = false, rulesOpen = null;
 const rulesText = () => {
   if(!(rulesRow && typeof rulesRow.text === 'string' && rulesRow.text.trim())) return RULES_DEFAULT;
   // 예전에 저장한 회칙에 구장 예약 가이드가 없거나 예전 버전(일요일 기준 아님)이면 새 가이드로 (다음 저장 때 같이 저장됨)
-  const t = rulesRow.text;
+  const t = rulesRow.text.replace(/^>\s*👕\s*유니폼 7\.5만원\s*\n?/m, '');   // 유니폼 요약 칩은 삭제됨
   if(!t.includes('구장 예약 가이드')) return t.trim() + '\n\n' + RULES_GUIDE;
   if(!t.includes('일요일 기준') || !t.includes('매주 금요일 낮 12시')) return t.slice(0, t.indexOf('# 4. 구장 예약 가이드')).trim() + '\n\n' + RULES_GUIDE;
   return t;
