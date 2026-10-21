@@ -524,6 +524,12 @@
   .rOffInfo{display:flex;flex-direction:column;line-height:1.3;flex:1;min-width:0}
   .rOffRole{font-size:12px;color:var(--muted);font-weight:700}
   .rOffTel{white-space:nowrap;text-decoration:none;font-weight:700;font-size:14px;color:var(--accent);background:var(--accent2);border-radius:999px;padding:6px 10px}
+  .pcName .offBadge,.pfName .offBadge{margin-left:6px;vertical-align:middle;font-size:12px;position:relative;top:-2px}
+  .pfName .offBadge{font-size:13px}
+  .rAcc{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0 2px;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:var(--accent2)}
+  .rAccT{font-weight:800;font-size:13px}
+  .rAccV{font-size:14px}
+  .rAccCopy{margin-left:auto}
 </style>
 </head>
 <body>
@@ -737,13 +743,14 @@
   </section>
 
   <section class="card app admin-only" data-pane="admin" id="officerCard">
-    <h2>👔 운영진</h2>
+    <h2>👔 운영진 · 회비 계좌</h2>
     <div class="offRows">
       <div class="row offRow"><b class="offLbl">회장</b><select id="offPres"></select><input type="tel" id="offPresPhone" placeholder="010-0000-0000" maxlength="20"></div>
       <div class="row offRow"><b class="offLbl">총무</b><select id="offTreas"></select><input type="tel" id="offTreasPhone" placeholder="010-0000-0000" maxlength="20"></div>
     </div>
-    <div class="row" style="margin-top:10px"><button id="offSave">운영진 저장</button></div>
-    <p class="muted">지정하면 회칙의 운영진 칸, 선수 명단 카드, 프로필에 직함이 표시돼요. 전화번호는 회칙에서 누구나 볼 수 있어요.</p>
+    <div class="row offRow"><b class="offLbl">계좌</b><input type="text" id="accBank" placeholder="은행 (예: 카카오뱅크)" maxlength="20" style="flex:0 1 160px;min-width:120px"><input type="text" id="accNum" placeholder="계좌번호" maxlength="30" style="flex:0 1 200px;min-width:140px"><input type="text" id="accHolder" placeholder="예금주" maxlength="20" style="flex:0 1 120px;min-width:90px"></div>
+    <div class="row" style="margin-top:10px"><button id="offSave">운영진·계좌 저장</button></div>
+    <p class="muted">지정하면 회칙의 운영진 칸, 선수 명단 카드, 프로필에 직함이 표시돼요. 회비 계좌는 회칙의 '월 회비' 아래에 복사 버튼과 함께 나와요. 전화번호·계좌는 회칙에서 누구나 볼 수 있어요.</p>
   </section>
 
   <section class="card app admin-only" data-pane="admin">
@@ -1334,6 +1341,7 @@ async function loadRecords(){
   useForm = st.error ? true : (st.data.find(x=>x.key==='use_form')?.value !== false);
   rulesRow = st.error ? null : (st.data.find(x=>x.key==='rules')?.value || null); rulesSettingsMissing = !!st.error;
   officers = st.error ? {} : (st.data.find(x=>x.key==='officers')?.value || {});
+  duesAccount = st.error ? {} : (st.data.find(x=>x.key==='dues_account')?.value || {});
   renderOfficerForm();
   renderRules();
   if($('formToggle')) $('formToggle').checked = useForm;
@@ -2060,8 +2068,8 @@ function renderProfilePicker(){
     const st = agg[p.id] || {att:0, g:0, a:0};
     return `<button class="pcard" data-pick="${p.id}">
       ${avatar(p.name,'md')}
-      <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
-      <span class="pcMeta">${titleBadges(p.id)}${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
+      <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}${titleBadges(p.id)}</span>
+      <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
       ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
@@ -2095,7 +2103,6 @@ function renderProfile(){
   const mvpDays = days.filter(d=>myRows.some(r=>r.day_id===d.id && r.mvp));
   const age = ageOf(p.birth);
   const meta = [
-    titleBadges(p.id),
     p.number != null ? `<span class="pfNum">#${p.number}</span>` : '',
     ...p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`),
   ].join('');
@@ -2111,7 +2118,7 @@ function renderProfile(){
       <div class="pfTop">
         ${avatar(p.name,'big')}
         <div class="pfId">
-          <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
+          <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}${titleBadges(p.id)}</div>
           <div class="pfMeta">${meta}</div>
           ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}</div>` : ''}
           ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
@@ -2465,7 +2472,14 @@ startApp();
 
 /* ---------- 운영진 (회장·총무) ---------- */
 const OFFICER_ROLES = [['pres','회장','👑'], ['treas','총무','💼']];
-let officers = {};
+let officers = {}, duesAccount = {};
+function accountHtml(){
+  const a = duesAccount || {};
+  if(!a.number) return '';
+  return `<div class="rAcc"><span class="rAccT">🏦 회비 입금계좌</span>
+    <span class="rAccV"><b>${esc(a.bank || '')} ${esc(a.number)}</b>${a.holder ? ` <span class="muted">(예금주 ${esc(a.holder)})</span>` : ''}</span>
+    <button class="ghost small rAccCopy" data-acc="${esc(((a.bank || '') + ' ' + a.number).trim())}">복사</button></div>`;
+}
 const officerOf = role => { const o = officers?.[role]; const pl = o && players.find(p=>p.id === +o.id); return pl ? {p: pl, phone: o.phone || ''} : null; };
 const titleBadges = pid => OFFICER_ROLES.filter(([r])=>officerOf(r)?.p.id === pid).map(([, t, ic])=>`<span class="badge offBadge">${ic} ${t}</span>`).join('');
 const telHref = ph => 'tel:' + String(ph).replace(/[^\d+]/g, '');
@@ -2486,6 +2500,7 @@ function renderOfficerForm(){
     $(sel).innerHTML = `<option value="">- 지정 안 함 -</option>` + sorted.map(p=>`<option value="${p.id}" ${+cur.id === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
     $(ph).value = cur.phone || '';
   });
+  $('accBank').value = duesAccount?.bank || ''; $('accNum').value = duesAccount?.number || ''; $('accHolder').value = duesAccount?.holder || '';
 }
 $('offSave').onclick = async ()=>{
   const val = {};
@@ -2495,10 +2510,13 @@ $('offSave').onclick = async ()=>{
     if(id) val[r] = {id, phone};
   }
   if(val.pres && val.treas && val.pres.id === val.treas.id && !confirm('회장과 총무가 같은 사람이에요. 그대로 저장할까요?')) return;
+  const acc = {bank: $('accBank').value.trim(), number: $('accNum').value.trim(), holder: $('accHolder').value.trim()};
+  if(acc.number && !/^[\d\- ]{6,30}$/.test(acc.number)){ alert('계좌번호는 숫자와 - 만 넣어주세요'); return; }
   $('offSave').disabled = true;
-  const ok = await q(sb.from('app_settings').upsert({key:'officers', value: val, updated_at: new Date().toISOString()}), '운영진을 저장하지 못했어요');
+  const now = new Date().toISOString();
+  const ok = await q(sb.from('app_settings').upsert([{key:'officers', value: val, updated_at: now}, {key:'dues_account', value: acc, updated_at: now}]), '운영진·계좌를 저장하지 못했어요');
   $('offSave').disabled = false;
-  if(ok){ officers = val; renderRules(); renderProfile(); alert('운영진을 저장했어요'); }
+  if(ok){ officers = val; duesAccount = acc; renderRules(); renderProfile(); alert('운영진·계좌를 저장했어요'); }
 };
 
 /* ---------- 회칙 ---------- */
@@ -2628,10 +2646,14 @@ function renderRules(){
     officersHtml() +
     r.sections.map((sec, i)=>`<details class="rSec" data-i="${i}" ${rulesOpen[i] ? 'open' : ''}>
       <summary>${esc(sec.title || '기타')}</summary>
-      <div class="rBody">${sec.groups.map(g=>`<div class="rGroup">${g.sub ? `<h4>${esc(g.sub)}</h4>` : ''}${g.items.length ? `<ul>${g.items.map(it=>`<li>${ruleLine(it)}</li>`).join('')}</ul>` : ''}${g.links.length ? `<div class="rBtns">${g.links.map(([n, u])=>`<a class="rBtn" href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>` : ''}</div>`).join('')}</div>
+      <div class="rBody">${sec.groups.map(g=>`<div class="rGroup">${g.sub ? `<h4>${esc(g.sub)}</h4>` : ''}${g.items.length ? `<ul>${g.items.map(it=>`<li>${ruleLine(it)}</li>`).join('')}</ul>` : ''}${/회비/.test(g.sub) && !/게스트/.test(g.sub) ? accountHtml() : ''}${g.links.length ? `<div class="rBtns">${g.links.map(([n, u])=>`<a class="rBtn" href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>` : ''}</div>`).join('')}</div>
     </details>`).join('') +
     (when ? `<p class="muted rWhen">${when.getFullYear()}.${String(when.getMonth()+1).padStart(2,'0')}.${String(when.getDate()).padStart(2,'0')} 개정</p>` : '');
   box.querySelectorAll('details.rSec').forEach(d=>d.addEventListener('toggle', ()=>{ rulesOpen[+d.dataset.i] = d.open; }));
+  box.querySelectorAll('.rAccCopy').forEach(b=>b.onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(b.dataset.acc); b.textContent = '복사됨 ✓'; setTimeout(()=>b.textContent = '복사', 1500); }
+    catch(e){ prompt('아래 계좌를 복사하세요', b.dataset.acc); }
+  });
 }
 $('rulesEditBtn').onclick = ()=>{
   if(rulesSettingsMissing){ alert('회칙을 저장하려면 Supabase에서 11-setup-coffee.sql(설정 표)을 먼저 실행해 주세요.'); return; }
