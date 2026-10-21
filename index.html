@@ -498,6 +498,7 @@
   .rGroup ul{margin:0;padding-left:18px}
   .rGroup li{font-size:14px;line-height:1.6;word-break:keep-all}
   .rGroup li b{color:var(--hl)}
+  .rLink{color:var(--accent);text-decoration:underline;text-underline-offset:2px;word-break:break-all}
   .rWhen{text-align:right;font-size:12px;margin:8px 0 0}
   .rulesHelp code{background:var(--head);border-radius:5px;padding:1px 5px;font-size:12px}
   #rulesText{width:100%;box-sizing:border-box;font:14px/1.5 ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);resize:vertical}
@@ -506,6 +507,9 @@
     body.tab-home.sub-rules #rulesCard{display:block !important}
     .homeSub button{font-size:13px;padding:9px 2px}
   }
+  .rBtns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px}
+  .rBtn{display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff !important;text-decoration:none;font-weight:700;font-size:14px;padding:9px 14px;border-radius:10px}
+  .rBtn:hover{filter:brightness(1.08)}
 </style>
 </head>
 <body>
@@ -701,7 +705,7 @@
     <div class="rulesHead"><h2>🌶️ 할라피뇨 FC 회칙 및 운영 규정</h2><button class="ghost small admin-only" id="rulesEditBtn">✏️ 수정</button></div>
     <div id="rulesBox"></div>
     <div id="rulesEditor" style="display:none">
-      <p class="muted rulesHelp">한 줄씩 적어요 — <code>&gt; 요약 칩</code> · <code>~ 요일|설명</code> (흐름) · <code># 큰 제목</code> · <code>[소제목]</code> · <code>* 항목</code></p>
+      <p class="muted rulesHelp">한 줄씩 적어요 — <code>&gt; 요약 칩</code> · <code>~ 요일|설명</code> (흐름) · <code># 큰 제목</code> · <code>[소제목]</code> · <code>* 항목</code> · 항목 안에 <code>@{장소 이름}</code>을 쓰면 네이버 지도 링크 · <code>@ 버튼 이름|https://주소</code>는 바로가기 버튼</p>
       <textarea id="rulesText" rows="22" spellcheck="false"></textarea>
       <div class="row" style="margin-top:8px"><button id="rulesSave">저장</button><button class="ghost" id="rulesCancel">취소</button><button class="ghost" id="rulesDefault" style="margin-left:auto">처음 내용으로</button></div>
     </div>
@@ -2433,6 +2437,35 @@ async function startApp(){
 startApp();
 
 /* ---------- 회칙 ---------- */
+// 4. 구장 예약 가이드 (예전에 저장한 회칙에 없으면 자동으로 뒤에 붙음)
+const RULES_GUIDE = `# 4. 구장 예약 가이드 (일요일 기준)
+[공통 예약 방법]
+* 3개 구장 모두 서울특별시 공공서비스예약 홈페이지에서 예약
+* 서울시 통합회원 계정으로 로그인 후 진행 (처음이면 회원가입 + 휴대폰 본인인증 필요)
+* 체육시설 → 풋살장에서 구장 검색 → 일요일 날짜·시간 선택 → 결제 (카드 등 전자결제, 계좌입금 불가)
+* 모두 선착순이라 오픈 시간 전에 미리 로그인해 두기
+* 예약 확인·취소는 마이페이지에서 (취소 시기에 따라 환불 금액이 달라짐)
+@ 📅 공공서비스예약 바로가기|https://yeyak.seoul.go.kr/web/main.do
+[망원유수지 풋살장]
+* 📍 @{망원유수지체육공원 풋살장} (6호선 마포구청역 5번 출구, 주차 불가)
+* 일요일 예약 오픈: 매주 금요일
+* 일요일 이용 시간: 주간 06~18시 / 야간 18~22시, 2시간 단위 (06~08시는 5~8월만 운영)
+* 일요일 요금(2시간): 주간 39,000원 · 야간 42,900원
+* ⚠️ 예외: 평일 공휴일(빨간 날)은 이용일 30일 전 낮 12시에 예약 오픈
+[월드컵 풋살구장]
+* 📍 @{서울월드컵경기장 풋살구장}
+* 일요일 예약 오픈: 매월 첫째 주 금요일 오전 10시에 다음 달 일요일분 한꺼번에 오픈 (공휴일 등으로 바뀌면 따로 공지)
+* 일요일 이용 시간: 06~24시, 2시간 단위
+* 일요일 요금(2시간): 주말 요금 = 평일 주간 48,000원에 30% 할증
+* 주차: 소형차 3시간 3,000원 · 문의 02-2128-2966
+[월드컵난지천공원 풋살장]
+* 📍 @{난지천공원 풋살장} (산악문화체험센터 쪽)
+* 일요일 예약 오픈: 다음 달 주말·공휴일분을 전달 중순에 한꺼번에 오픈 (예: 11월분은 10월 15일(목) 오후 1시)
+* 공고 이름: "○월 [공휴일주말]월드컵난지천공원 풋살장 대여"로 검색
+* 일요일 이용 시간(4타임, 2시간씩): 07:20~09:20 / 09:30~11:30 / 13:20~15:20 / 15:30~17:30
+* 일요일 요금(2시간): 32,500원 (1팀 기준) · 1회에 1팀까지 신청
+* 접수 마감: 이용 전날 밤 12시 · 취소는 이용일 1일 전까지
+* 문의: 서부공원여가센터 02-300-5576`;
 const RULES_DEFAULT = `> 💰 월 회비 2만원
 > 🚫 노쇼 벌금 1만원
 > 🙋 게스트비 5천원
@@ -2473,9 +2506,18 @@ const RULES_DEFAULT = `> 💰 월 회비 2만원
 * 가입 시기: 매월 1일 자 가입 가능
 * 가입 요건: 게스트 활동 3회 이상 이수 및 임원진 동의 필요
 [신규 유니폼 제작]
-* 신규 유니폼 제작 비용: 75,000원 (선택)`;
+* 신규 유니폼 제작 비용: 75,000원 (선택)
+
+` + RULES_GUIDE;
 let rulesRow = null, rulesSettingsMissing = false, rulesOpen = null;
-const rulesText = () => (rulesRow && typeof rulesRow.text === 'string' && rulesRow.text.trim()) ? rulesRow.text : RULES_DEFAULT;
+const rulesText = () => {
+  if(!(rulesRow && typeof rulesRow.text === 'string' && rulesRow.text.trim())) return RULES_DEFAULT;
+  // 예전에 저장한 회칙에 구장 예약 가이드가 없거나 예전 버전(일요일 기준 아님)이면 새 가이드로 (다음 저장 때 같이 저장됨)
+  const t = rulesRow.text;
+  if(!t.includes('구장 예약 가이드')) return t.trim() + '\n\n' + RULES_GUIDE;
+  if(!t.includes('일요일 기준') || !t.includes('32,500원')) return t.slice(0, t.indexOf('# 4. 구장 예약 가이드')).trim() + '\n\n' + RULES_GUIDE;
+  return t;
+};
 function parseRules(text){
   const out = {chips:[], steps:[], sections:[]};
   let sec = null, grp = null;
@@ -2486,14 +2528,30 @@ function parseRules(text){
     else {
       if(!sec){ sec = {title: '', groups: []}; out.sections.push(sec); }
       const m = l.match(/^\[(.+)\]$/);
-      if(m){ grp = {sub: m[1].trim(), items: []}; sec.groups.push(grp); }
-      else { if(!grp){ grp = {sub: '', items: []}; sec.groups.push(grp); } grp.items.push(l.replace(/^[*\-•]\s*/, '')); }
+      if(m){ grp = {sub: m[1].trim(), items: [], links: []}; sec.groups.push(grp); }
+      else {
+        if(!grp){ grp = {sub: '', items: [], links: []}; sec.groups.push(grp); }
+        if(l.startsWith('@ ') || (l.startsWith('@') && !l.startsWith('@{'))){   // @ 버튼 이름|https://주소
+          const [name, url] = l.slice(1).split('|').map(x=>(x || '').trim());
+          if(/^https?:\/\//.test(url)) grp.links.push([name || '바로가기', url]);
+        } else grp.items.push(l.replace(/^[*\-•]\s*/, ''));
+      }
     }
   });
   return out;
 }
 // 금액(10,000원 등)은 굵게
-const ruleLine = t => esc(t).replace(/(\d{1,3}(?:,\d{3})+원|\d+만\s?원|\d+분 전)/g, '<b>$1</b>');
+// @{장소} → 네이버 지도 링크, 사이트 주소 → 링크, 금액(10,000원 등) → 굵게
+function ruleLine(t){
+  return String(t).split(/(@\{[^}]+\})/).map(part=>{
+    const m = part.match(/^@\{([^}]+)\}$/);
+    if(m) return mapLink(m[1].trim());
+    return esc(part)
+      .replace(/(https?:\/\/[^\s<]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:go\.kr|or\.kr|co\.kr|com|net)(?:\/[^\s<]*)?)/gi,
+        u=>`<a class="rLink" href="${/^https?:/i.test(u) ? u : 'https://' + u}" target="_blank" rel="noopener">${u}</a>`)
+      .replace(/(\d{1,3}(?:,\d{3})+원|\d+만\s?원|\d+분 전)/g, '<b>$1</b>');
+  }).join('');
+}
 function renderRules(){
   const box = $('rulesBox'); if(!box) return;
   const r = parseRules(rulesText());
@@ -2504,7 +2562,7 @@ function renderRules(){
     (r.steps.length ? `<div class="rFlow">${r.steps.map(([a, b])=>`<div class="rStep"><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join('<span class="rArrow">›</span>')}</div>` : '') +
     r.sections.map((sec, i)=>`<details class="rSec" data-i="${i}" ${rulesOpen[i] ? 'open' : ''}>
       <summary>${esc(sec.title || '기타')}</summary>
-      <div class="rBody">${sec.groups.map(g=>`<div class="rGroup">${g.sub ? `<h4>${esc(g.sub)}</h4>` : ''}<ul>${g.items.map(it=>`<li>${ruleLine(it)}</li>`).join('')}</ul></div>`).join('')}</div>
+      <div class="rBody">${sec.groups.map(g=>`<div class="rGroup">${g.sub ? `<h4>${esc(g.sub)}</h4>` : ''}${g.items.length ? `<ul>${g.items.map(it=>`<li>${ruleLine(it)}</li>`).join('')}</ul>` : ''}${g.links.length ? `<div class="rBtns">${g.links.map(([n, u])=>`<a class="rBtn" href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join('')}</div>` : ''}</div>`).join('')}</div>
     </details>`).join('') +
     (when ? `<p class="muted rWhen">${when.getFullYear()}.${String(when.getMonth()+1).padStart(2,'0')}.${String(when.getDate()).padStart(2,'0')} 개정</p>` : '');
   box.querySelectorAll('details.rSec').forEach(d=>d.addEventListener('toggle', ()=>{ rulesOpen[+d.dataset.i] = d.open; }));
