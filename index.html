@@ -586,6 +586,12 @@
   .avatar.kit svg{width:100%;height:100%;display:block}
   .kitName{font-family:"Noto Sans KR","Apple SD Gothic Neo",sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:2.5px;paint-order:stroke;letter-spacing:1px}
   .kitNum{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:3.5px;paint-order:stroke;letter-spacing:-1px}
+  .avWrap{position:relative;display:inline-block;line-height:0;flex:none}
+  .avWrap .avTitle{position:absolute;top:-2px;right:-10px;line-height:1.2}
+  .avWrap.big .avTitle{top:2px;right:-6px}
+  .avWrap .avTitle .offBadge{margin:0 !important;font-size:11.5px;padding:2px 8px;box-shadow:0 2px 6px rgba(0,0,0,.18);border:2px solid var(--card)}
+  .avWrap.big .avTitle .offBadge{font-size:13px;padding:3px 10px}
+  @media (max-width:560px){.pfTop .avWrap{margin:0 auto}}
 </style>
 </head>
 <body>
@@ -1556,6 +1562,11 @@ function jerseySvg(name, num){
 document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <pattern id="kitStripe" patternUnits="userSpaceOnUse" width="14" height="14"><rect width="14" height="14" fill="#0b3124"/><rect x="6" width="1.2" height="14" fill="#fff"/><rect x="7.2" width="5.6" height="14" fill="#5a1219"/><rect x="12.8" width="1.2" height="14" fill="#fff"/></pattern>
   <clipPath id="kitClip"><path d="${KIT_PATH}"/></clipPath></defs></svg>`);
+// 프로필 동그라미 오른쪽 위에 직함(회장·총무) 배지
+function avWithTitle(p, size){
+  const t = titleBadges(p.id);
+  return t ? `<span class="avWrap ${size}">${avatar(p.name, size)}<span class="avTitle">${t}</span></span>` : avatar(p.name, size);
+}
 function avatar(name, size){
   const pl = players.find(p=>p.name === name);
   if(pl && pl.photo) return `<span class="avatar ${size} ph"><img src="${photoUrl(pl.photo)}" alt="${esc(name)}" loading="lazy" decoding="async"></span>`;
@@ -2154,8 +2165,8 @@ function renderProfilePicker(){
   $('pfPicker').innerHTML = list.map(p=>{
     const st = agg[p.id] || {att:0, g:0, a:0};
     return `<button class="pcard" data-pick="${p.id}">
-      ${avatar(p.name,'md')}
-      <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
+      ${avWithTitle(p, 'md')}
+      <span class="pcName">${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
       ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
@@ -2202,9 +2213,9 @@ function renderProfile(){
     <button class="ghost small pfBack">← 선수 명단</button>
     <div class="pfCard">
       <div class="pfTop">
-        ${avatar(p.name,'big')}
+        ${avWithTitle(p, 'big')}
         <div class="pfId">
-          <div class="pfName">${titleBadges(p.id)}${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
+          <div class="pfName">${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
           ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}</div>` : ''}
           ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
