@@ -2172,7 +2172,7 @@ function renderProfilePicker(){
   $('pfPicker').innerHTML = list.map(p=>{
     const st = agg[p.id] || {att:0, g:0, a:0};
     return `<button class="pcard" data-pick="${p.id}">
-      <span class="pcNo${p.number != null ? '' : ' empty'}">${p.number != null ? `Number. ${p.number}` : '&nbsp;'}</span>
+      <span class="pcNo${p.number != null ? '' : ' empty'}">${p.number != null ? `No. ${p.number}` : '&nbsp;'}</span>
       ${avatar(p.name, 'md')}
       <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${gearIcons(p.id)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
@@ -2220,7 +2220,7 @@ function renderProfile(){
     <button class="ghost small pfBack">← 선수 명단</button>
     <div class="pfCard">
       <div class="pfTop">
-        <div class="pfAv">${p.number != null ? `<span class="pcNo">Number. ${p.number}</span>` : ''}${avatar(p.name, 'big')}</div>
+        <div class="pfAv">${p.number != null ? `<span class="pcNo">No. ${p.number}</span>` : ''}${avatar(p.name, 'big')}</div>
         <div class="pfId">
           <div class="pfName">${titleBadges(p.id)}${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
