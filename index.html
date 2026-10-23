@@ -528,7 +528,8 @@
   .rOffInfo{display:flex;flex-direction:column;line-height:1.3;flex:1;min-width:0}
   .rOffRole{align-self:flex-start;font-size:11px;margin:0 0 2px 0 !important}
   .rOffTel{white-space:nowrap;text-decoration:none;font-weight:700;font-size:14px;color:var(--accent);background:var(--accent2);border-radius:999px;padding:6px 10px}
-  .pcName .offBadge,.pfName .offBadge{margin-left:6px;vertical-align:middle;font-size:12px;position:relative;top:-2px}
+  .pcName .offBadge,.pfName .offBadge{margin:0 6px 0 0;vertical-align:middle;font-size:12px;position:relative;top:-2px}
+  .nameNum{margin-left:5px;color:var(--hl);font-weight:800;font-size:.82em}
   .pfName .offBadge{font-size:13px}
   .rAcc{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0 2px;padding:10px 12px;border:1px dashed var(--accent);border-radius:10px;background:var(--accent2)}
   .rAccT{font-weight:800;font-size:13px}
@@ -2154,8 +2155,8 @@ function renderProfilePicker(){
     const st = agg[p.id] || {att:0, g:0, a:0};
     return `<button class="pcard" data-pick="${p.id}">
       ${avatar(p.name,'md')}
-      <span class="pcName">${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}${titleBadges(p.id)}</span>
-      <span class="pcMeta">${p.number != null ? `<b>#${p.number}</b>` : ''}${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
+      <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
+      <span class="pcMeta">${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
       ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
@@ -2189,7 +2190,6 @@ function renderProfile(){
   const mvpDays = days.filter(d=>myRows.some(r=>r.day_id===d.id && r.mvp));
   const age = ageOf(p.birth);
   const meta = [
-    p.number != null ? `<span class="pfNum">#${p.number}</span>` : '',
     ...p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`),
   ].join('');
   const facts = [
@@ -2204,7 +2204,7 @@ function renderProfile(){
       <div class="pfTop">
         ${avatar(p.name,'big')}
         <div class="pfId">
-          <div class="pfName">${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}${titleBadges(p.id)}</div>
+          <div class="pfName">${titleBadges(p.id)}${esc(p.name)}${p.number != null ? `<span class="nameNum">#${p.number}</span>` : ''}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
           ${feetHtml(p) ? `<div class="pfFeet"><span class="muted">주발</span>${feetHtml(p)}</div>` : ''}
           ${facts.length ? `<div class="pfFacts">${facts.map(([k,v])=>`<span><span class="muted">${k}</span> ${v}</span>`).join('')}</div>` : ''}
