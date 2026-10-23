@@ -72,10 +72,23 @@
   .vbtn button{padding:13px;border-radius:12px;font-weight:800;font-size:16px;background:var(--card);color:var(--text);border:2px solid var(--line)}
   .vbtn button.on.yes{background:var(--accent);border-color:var(--accent);color:#fff}
   .vbtn button.on.no{background:var(--danger);border-color:var(--danger);color:#fff}
+  .vbtn button.on.maybe{background:#f5b82e;border-color:#f5b82e;color:#3b2a00}
+  .memoBox{display:flex;gap:6px;margin-top:10px}
+  .memoBox input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:14px}
+  .memoBox button{background:var(--accent);color:#fff;border-radius:10px;padding:0 14px;font-weight:800;font-size:14px;white-space:nowrap}
+  .memos{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .memo{background:var(--head);border-radius:12px;padding:8px 12px;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:2px 8px}
+  .memo .ago{justify-self:end;font-size:12px;color:var(--muted)}
+  .delC{background:none;color:var(--muted);font-size:12px;padding:0;text-decoration:underline}
+  .memo.mine{box-shadow:0 0 0 2px var(--accent) inset}
+  .memo b{font-size:14px}
+  .memo p{grid-column:1 / -1;margin:0;font-size:14px;line-height:1.45;word-break:break-all}
+  .st{font-size:11px;font-weight:800;border-radius:6px;padding:0 6px}
+  .s-yes{background:var(--accent2);color:var(--accent)}.s-maybe{background:#fdf0cf;color:#9a6a00}.s-no{background:var(--fw2);color:var(--danger)}
   .vcount{margin-top:12px;font-size:13px;color:var(--muted)}
   .vcount b{color:var(--text)}
   .names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .nm{display:inline-flex;align-items:center;gap:5px;background:var(--head);border-radius:999px;padding:2px 10px 2px 2px;font-size:13px;font-weight:600}
+  .nm{display:inline-flex;align-items:center;gap:5px;background:var(--head);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
   .nm.mine{box-shadow:0 0 0 2px var(--accent) inset}
   .sub{font-size:12px;font-weight:800;color:var(--muted);margin-top:12px}
   .gearRow{display:grid;grid-template-columns:4.8em 1fr auto;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
@@ -120,6 +133,8 @@ const KIT_PATH = 'M38 14 Q60 22 82 14 L104 26 L114 52 L98 58 L94 46 L94 112 L26 
 document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <pattern id="kitStripe" patternUnits="userSpaceOnUse" width="14" height="14"><rect width="14" height="14" fill="#0b3124"/><rect x="6" width="1.2" height="14" fill="#fff"/><rect x="7.2" width="5.6" height="14" fill="#5a1219"/><rect x="12.8" width="1.2" height="14" fill="#fff"/></pattern>
   <clipPath id="kitClip"><path d="${KIT_PATH}"/></clipPath></defs></svg>`);
+// 등번호 표기: 한 자리는 앞에 0 (9 → 09), 0번은 그대로 0
+const noLabel = n => +n === 0 ? '0' : String(n).padStart(2, '0');
 function jerseySvg(name, num){
   const n = num != null && num !== '' ? String(num) : '', nm = String(name || '');
   const nameTxt = nm ? `<text x="60" y="${n ? 37 : 64}" text-anchor="middle" class="kitName" font-size="${n ? 13 : 17}" ${nm.length > 4 ? `textLength="${n ? 58 : 66}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(nm)}</text>` : '';
@@ -152,6 +167,7 @@ function nextOccurrence(ev){
 }
 
 /* ===================== 상태 ===================== */
+let comments = [], commentsMissing = false;
 let sb = null, players = [], gear = [], match = null, votes = [], me = null, token = store.get(TOKEN_KEY), loginMissing = false;
 
 function loadScript(src){ return new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
@@ -185,7 +201,9 @@ async function loadVotes(){
   if(!match){ votes = []; return; }
   const v = await sb.from('attendance_votes').select('player_id,status').eq('event_date', match.next).eq('sport', match.vsport);
   loginMissing = !!(v.error && /relation|does not exist|schema cache/i.test(v.error.message));
-  votes = v.error ? [] : v.data;
+  votes = v.error ? [] : v.data.filter(x=>x.status === 'yes' || x.status === 'no');
+  const c = await sb.from('match_comments').select('id,player_id,body,created_at').eq('event_date', match.next).eq('sport', match.vsport).order('created_at');
+  commentsMissing = !!c.error; comments = c.error ? [] : c.data;
 }
 
 /* ===================== 화면: 로그인 첫 화면 ===================== */
@@ -197,7 +215,7 @@ function renderPicker(){
       <span>본인 프로필을 눌러 로그인하세요</span></div>
     ${loginMissing ? `<div class="errBox">선수 로그인을 쓰려면 Supabase에서 <code>16-setup-player-login.sql</code>을 먼저 실행해 주세요.</div>` : ''}
     <input id="search" class="search" type="search" placeholder="🔍 이름 검색" value="${esc(q)}" autocomplete="off">
-    <div class="grid">${list.map(p=>`<button class="pc" data-pid="${p.id}"><small>${p.number != null ? `No. ${p.number}` : '&nbsp;'}</small>${avatar(p, 'av64')}<b>${esc(p.name)}</b></button>`).join('') || '<p class="muted">검색 결과가 없어요.</p>'}</div>`;
+    <div class="grid">${list.map(p=>`<button class="pc" data-pid="${p.id}"><small>${p.number != null ? `No. ${noLabel(p.number)}` : '&nbsp;'}</small>${avatar(p, 'av64')}<b>${esc(p.name)}</b></button>`).join('') || '<p class="muted">검색 결과가 없어요.</p>'}</div>`;
   const s = $('search'); s.oninput = ()=>{ const pos = s.selectionStart; renderPicker(); const n = $('search'); n.focus(); n.setSelectionRange(pos, pos); };
   document.querySelectorAll('[data-pid]').forEach(b=>b.onclick = ()=> openPin(players.find(p=>p.id === +b.dataset.pid), 'login'));
 }
@@ -263,16 +281,18 @@ async function press(k){
 const fmtDate = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()} (${d.toLocaleDateString('ko-KR',{weekday:'short'})})`; };
 function renderHome(){
   const p = me, myVote = votes.find(v=>v.player_id === p.id)?.status || null;
-  const yes = votes.filter(v=>v.status === 'yes').map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
-  const no  = votes.filter(v=>v.status === 'no').map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
+  const pick = st => votes.filter(v=>v.status === st).map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
+  const yes = pick('yes'), no = pick('no');
   const none = players.length - yes.length - no.length;
-  const chip = x => `<span class="nm ${x.id === p.id ? 'mine' : ''}">${avatar(x, 'av28')}${esc(x.name)}</span>`;
+  const chip = x => `<span class="nm ${x.id === p.id ? 'mine' : ''}">${esc(x.name)}</span>`;
+  const statusOf = pid => votes.find(v=>v.player_id === pid)?.status;
+  const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.round(m/60)}시간 전` : `${Math.round(m/1440)}일 전`; };
   const dd = match ? daysBetween(todayStr(), match.next) : 0;
   $('app').innerHTML = `
     <div class="top"><picture><source srcset="../logo-dark.png" media="(prefers-color-scheme: dark)"><img src="../logo-light.png" alt="JALAPEÑO FC"></picture>
       <div class="who"><button class="chipBtn" id="logout">${esc(p.name)} · 로그아웃</button></div></div>
     ${loginMissing ? `<div class="errBox">참석 투표를 쓰려면 Supabase에서 <code>16-setup-player-login.sql</code>을 먼저 실행해 주세요.</div>` : ''}
-    <div class="card"><div class="me">${avatar(p, 'av44')}<div><b>${esc(p.name)}님, 안녕하세요!</b><br><span>${p.number != null ? `No. ${p.number}` : '등번호 없음'}${p.pos?.length ? ' · ' + p.pos.map(esc).join('·') : ''}</span></div></div></div>
+    <div class="card"><div class="me">${avatar(p, 'av44')}<div><b>${esc(p.name)}님, 안녕하세요!</b><br><span>${p.number != null ? `No. ${noLabel(p.number)}` : '등번호 없음'}${p.pos?.length ? ' · ' + p.pos.map(esc).join('·') : ''}</span></div></div></div>
     <div class="card">
       ${match ? `
         <h4>⚽ ${esc(match.title || '경기')} <span class="muted" style="font-size:13px;font-weight:700">${dd === 0 ? '오늘' : `D-${dd}`}</span></h4>
@@ -280,7 +300,12 @@ function renderHome(){
         <div class="vbtn"><button class="yes ${myVote === 'yes' ? 'on' : ''}" data-v="yes">✅ 참석</button><button class="no ${myVote === 'no' ? 'on' : ''}" data-v="no">불참</button></div>
         <div class="vcount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명 · 미응답 ${none}명 · 목요일 저녁 마감</div>
         ${yes.length ? `<div class="sub">참석 (${yes.length})</div><div class="names">${yes.map(chip).join('')}</div>` : ''}
-        ${no.length ? `<div class="sub">불참 (${no.length})</div><div class="names">${no.map(chip).join('')}</div>` : ''}`
+        ${no.length ? `<div class="sub">불참 (${no.length})</div><div class="names">${no.map(chip).join('')}</div>` : ''}
+        <div class="sub">💬 댓글 ${comments.length ? `(${comments.length})` : ''}</div>
+        ${commentsMissing ? `<p class="muted" style="font-size:13px;margin:6px 0 0">댓글을 쓰려면 Supabase에서 18-setup-match-comments.sql을 먼저 실행해 주세요.</p>` : `
+        <div class="memos">${comments.map(c=>{ const x = players.find(y=>y.id === c.player_id); if(!x) return ''; const st = statusOf(x.id);
+          return `<div class="memo ${x.id === p.id ? 'mine' : ''}"><b>${esc(x.name)}</b>${st ? `<span class="st ${st === 'yes' ? 's-yes' : 's-no'}">${st === 'yes' ? '참석' : '불참'}</span>` : '<span></span>'}<span class="ago">${ago(c.created_at)}${x.id === p.id ? ` · <button class="delC" data-cid="${c.id}">삭제</button>` : ''}</span><p>${esc(c.body)}</p></div>`; }).join('') || '<p class="muted" style="font-size:13px;margin:0">아직 댓글이 없어요. 일정이 애매하면 사유를 남겨 주세요.</p>'}</div>
+        <div class="memoBox"><input id="cIn" maxlength="300" placeholder="댓글 남기기 (예: 출장이라 목요일에 확정할게요)"><button id="cSend">등록</button></div>`}`
       : '<h4>⚽ 다가오는 경기</h4><p class="muted" style="margin:0">예정된 경기 일정이 없어요.</p>'}
     </div>
     <div class="card"><h4 style="margin-bottom:6px">🎒 장비 보관</h4>
@@ -298,9 +323,24 @@ function renderHome(){
   document.querySelectorAll('[data-v]').forEach(b=>b.onclick = async ()=>{
     const v = b.dataset.v === myVote ? 'none' : b.dataset.v;     // 같은 버튼 다시 누르면 취소
     b.disabled = true;
-    const {error} = await sb.rpc('player_vote', {p_token: token, p_date: match.next, p_sport: match.vsport, p_status: v});
-    if(error){ alert('저장하지 못했어요\n' + error.message); if(/로그인/.test(error.message)){ store.del(TOKEN_KEY); token = null; renderPicker(); } return; }
-    await loadVotes(); renderHome(); toast(v === 'yes' ? '참석으로 표시했어요' : v === 'no' ? '불참으로 표시했어요' : '투표를 취소했어요');
+    if(await saveVote(v)) toast(v === 'yes' ? '참석으로 표시했어요' : v === 'no' ? '불참으로 표시했어요' : '투표를 취소했어요');
+  });
+  if($('cSend')){
+    const send = async ()=>{
+      const body = $('cIn').value.trim(); if(!body) return;
+      $('cSend').disabled = true;
+      const {error} = await sb.rpc('player_comment', {p_token: token, p_date: match.next, p_sport: match.vsport, p_body: body});
+      if(error){ alert('댓글을 남기지 못했어요\n' + error.message); $('cSend').disabled = false; return; }
+      await loadVotes(); renderHome(); toast('댓글을 남겼어요');
+    };
+    $('cSend').onclick = send;
+    $('cIn').onkeydown = e=>{ if(e.key === 'Enter' && !e.isComposing) send(); };
+  }
+  document.querySelectorAll('[data-cid]').forEach(b=>b.onclick = async ()=>{
+    if(!confirm('이 댓글을 지울까요?')) return;
+    const {error} = await sb.rpc('player_comment_delete', {p_token: token, p_id: +b.dataset.cid});
+    if(error){ alert('지우지 못했어요\n' + error.message); return; }
+    await loadVotes(); renderHome(); toast('댓글을 지웠어요');
   });
   document.querySelectorAll('[data-gear]').forEach(b=>b.onclick = async ()=>{
     const g = gear.find(x=>x.id === b.dataset.gear); if(!g) return;
@@ -310,6 +350,12 @@ function renderHome(){
     if(error){ alert('저장하지 못했어요\n' + error.message); b.disabled = false; return; }
     g.holders = holders; renderHome(); toast(b.dataset.act === 'in' ? `${g.label} 받았어요` : `${g.label} 반납했어요`);
   });
+}
+
+async function saveVote(status){
+  const {error} = await sb.rpc('player_vote', {p_token: token, p_date: match.next, p_sport: match.vsport, p_status: status});
+  if(error){ alert('저장하지 못했어요\n' + error.message); if(/로그인/.test(error.message)){ store.del(TOKEN_KEY); token = null; renderPicker(); } else renderHome(); return false; }
+  await loadVotes(); renderHome(); return true;
 }
 
 /* ===================== 시작 ===================== */
