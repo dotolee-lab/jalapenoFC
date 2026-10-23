@@ -579,6 +579,12 @@
   .posFilter button.pf-공격.on{background:var(--fw2);border-color:var(--fw);color:var(--fw)}
   .posFilter button.pf-미드.on{background:var(--mf2);border-color:var(--mf);color:var(--mf)}
   .posFilter button.pf-수비.on{background:var(--df2);border-color:var(--df);color:var(--df)}
+
+  /* ---------- 유니폼 등판 프로필 ---------- */
+  .avatar.kit{background:var(--head);overflow:hidden;padding:0;box-shadow:inset 0 0 0 1px var(--line)}
+  .avatar.kit svg{width:100%;height:100%;display:block}
+  .kitName{font-family:"Noto Sans KR","Apple SD Gothic Neo",sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:2.5px;paint-order:stroke;letter-spacing:1px}
+  .kitNum{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:4px;paint-order:stroke;letter-spacing:-2px}
 </style>
 </head>
 <body>
@@ -1533,9 +1539,25 @@ const cardVal = (r, k, unit) => unit === '원' ? won(r[k]) : `${r[k]}${unit}`;
 const shortName = n => { const s = String(n).trim(); return s.length === 3 ? s.slice(1) : s.slice(0, 2); };
 const PHOTO_BUCKET = 'player-photos';
 const photoUrl = path => `${SUPABASE_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(path)}`;
+// 유니폼(시안 2) 등판 그림: 초록·버건디 줄무늬 + 흰 핀스트라이프, 흰 깃·소매 끝
+const KIT_PATH = 'M38 14 Q60 22 82 14 L104 26 L114 52 L98 58 L94 46 L94 112 L26 112 L26 46 L22 58 L6 52 L16 26 Z';
+function jerseySvg(name, num){
+  const n = num != null && num !== '' ? String(num) : '';
+  const nm = String(name || '');
+  const nameTxt = nm ? `<text x="60" y="${n ? 44 : 70}" text-anchor="middle" class="kitName" font-size="${n ? 13 : 17}" ${nm.length > 4 ? `textLength="${n ? 58 : 66}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(nm)}</text>` : '';
+  const numTxt = n ? `<text x="60" y="${nm ? 94 : 88}" text-anchor="middle" class="kitNum" font-size="${nm ? 48 : 58}" ${n.length > 2 ? 'textLength="62" lengthAdjust="spacingAndGlyphs"' : ''}>${esc(n)}</text>` : '';
+  return `<svg viewBox="0 0 120 120" aria-hidden="true"><g clip-path="url(#kitClip)"><rect width="120" height="120" fill="url(#kitStripe)"/><path d="M6 52 L22 58 L23 54 L8 48 Z M114 52 L98 58 L97 54 L112 48 Z" fill="#fff"/></g>
+    <path d="${KIT_PATH}" fill="none" stroke="#0a1f17" stroke-width="1.2"/><path d="M38 14 Q60 24 82 14 Q60 20 38 14Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>${nameTxt}${numTxt}</svg>`;
+}
+// 줄무늬·몸판 모양은 한 번만 정의해서 모든 유니폼이 같이 씀
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <pattern id="kitStripe" patternUnits="userSpaceOnUse" width="14" height="14"><rect width="14" height="14" fill="#0b3124"/><rect x="6" width="1.2" height="14" fill="#fff"/><rect x="7.2" width="5.6" height="14" fill="#5a1219"/><rect x="12.8" width="1.2" height="14" fill="#fff"/></pattern>
+  <clipPath id="kitClip"><path d="${KIT_PATH}"/></clipPath></defs></svg>`);
 function avatar(name, size){
   const pl = players.find(p=>p.name === name);
   if(pl && pl.photo) return `<span class="avatar ${size} ph"><img src="${photoUrl(pl.photo)}" alt="${esc(name)}" loading="lazy" decoding="async"></span>`;
+  // 사진이 없으면 유니폼 등판 (작은 크기는 등번호만, 등번호 없으면 이름 두 글자)
+  if(pl && (size !== 'sm' || pl.number != null)) return `<span class="avatar ${size} kit">${jerseySvg(size === 'sm' ? '' : pl.name, pl.number)}</span>`;
   let h = 0; for(const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360;
   return `<span class="avatar ${size}" style="background:hsl(${h} 65% 55% / .18);color:hsl(${h} 55% 50%)">${esc(shortName(name))}</span>`;
 }
