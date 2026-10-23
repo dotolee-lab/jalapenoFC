@@ -869,7 +869,7 @@ const store = {
 };
 // 네이버 지도 검색 링크 (휴대폰에서는 앱이 있으면 앱으로 열림)
 const naverMapUrl = q => 'https://map.naver.com/p/search/' + encodeURIComponent(String(q).trim());
-const mapLink = name => `<a class="maplink" href="${naverMapUrl(name)}" target="_blank" rel="noopener" title="네이버 지도에서 보기">${esc(name)}<span class="mapIcon">🗺️</span></a>`;
+const mapLink = name => `<a class="maplink" href="${naverMapUrl(name)}" target="_blank" rel="noopener" title="네이버 지도에서 보기">${esc(name)}</a>`;
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function normPos(v){
   const arr = (Array.isArray(v) ? v : String(v||'').split(',')).filter(x=>POSITIONS.includes(x));
