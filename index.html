@@ -1555,8 +1555,8 @@ const PHOTO_BUCKET = 'player-photos';
 const photoUrl = path => `${SUPABASE_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(path)}`;
 // 유니폼(시안 2) 등판 그림: 초록·버건디 줄무늬 + 흰 핀스트라이프, 흰 깃·소매 끝
 const KIT_PATH = 'M38 14 Q60 22 82 14 L104 26 L114 52 L98 58 L94 46 L94 112 L26 112 L26 46 L22 58 L6 52 L16 26 Z';
-// 등번호 표기: 한 자리는 앞에 0 (9 → 09)
-const noLabel = n => String(n).padStart(2, '0');
+// 등번호 표기: 한 자리는 앞에 0 (9 → 09), 0번은 그대로 0
+const noLabel = n => +n === 0 ? '0' : String(n).padStart(2, '0');
 function jerseySvg(name, num){
   const n = num != null && num !== '' ? String(num) : '';
   const nm = String(name || '');
