@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>할라피뇨FC 선수 로그인 (테스트)</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<meta name="theme-color" content="#13281b">
+<style>
+  :root{--bg:#f5f7f6;--card:#fff;--text:#1d2420;--muted:#6b756f;--line:#e2e7e4;--accent:#1f8a5b;--accent2:#e8f5ee;--danger:#c0392b;
+        --fw:#d9534f;--fw2:#fbe9e8;--mf:#2f7fd1;--mf2:#e6f0fb;--df:#c98a12;--df2:#fbf2df;--hl:#2f6fed;--head:#f2f5f9}
+  @media (prefers-color-scheme: dark){:root{--bg:#121614;--card:#1b211e;--text:#e8eeea;--muted:#9aa5a0;--line:#2c3430;--accent:#3dbb82;--accent2:#1f2e27;--danger:#e57366;
+        --fw:#f08a85;--fw2:#3a2423;--mf:#7fb3ec;--mf2:#1f2d3d;--df:#e3b45a;--df2:#352c1a;--hl:#7aa7ff;--head:#18201c}}
+  :root{color-scheme:light dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.5;-webkit-tap-highlight-color:transparent}
+  main{max-width:720px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
+  button{font:inherit;cursor:pointer;border:0}
+  .muted{color:var(--muted)}
+  .testBar{background:#f5b82e;color:#3b2a00;text-align:center;font-size:12px;font-weight:800;padding:5px 10px}
+  .testBar a{color:inherit}
+  /* 머리 */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 14px}
+  .top img{height:24px;display:block}
+  .who{display:flex;align-items:center;gap:6px;font-size:13px}
+  .chipBtn{background:var(--head);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700}
+  /* 로그인 첫 화면 */
+  .hello{text-align:center;margin:10px 0 16px}
+  .hello img{height:30px;margin:0 auto 6px;display:block}
+  .hello span{font-size:14px;color:var(--muted)}
+  .search{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);font-size:15px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+  .pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text);transition:transform .12s,border-color .12s}
+  .pc:active{transform:scale(.97)}
+  .pc:hover{border-color:var(--accent)}
+  .pc small{font-size:12px;font-weight:700;color:var(--muted);min-height:18px}
+  .pc b{font-size:15px}
+  /* 유니폼·사진 동그라미 */
+  .avatar{display:inline-grid;place-items:center;border-radius:50%;overflow:hidden;background:var(--head);box-shadow:inset 0 0 0 1px var(--line);flex:none;font-weight:800}
+  .avatar svg,.avatar img{width:100%;height:100%;display:block;object-fit:cover}
+  .av64{width:64px;height:64px}.av96{width:96px;height:96px}.av44{width:44px;height:44px}.av28{width:28px;height:28px;font-size:10px}
+  .kitName{font-family:"Noto Sans KR","Apple SD Gothic Neo",sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:2.5px;paint-order:stroke;letter-spacing:1px}
+  .kitNum{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;fill:#fff;stroke:#5a1219;stroke-width:3.5px;paint-order:stroke;letter-spacing:-1px}
+  /* 비밀번호 창 */
+  .dim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+  .sheet{background:var(--card);width:100%;max-width:440px;border-radius:22px 22px 0 0;padding:18px 20px calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;animation:up .2s ease-out;position:relative}
+  @media (min-width:600px){.dim{align-items:center}.sheet{border-radius:22px}}
+  .sheet .x{position:absolute;right:14px;top:12px;background:none;color:var(--muted);font-size:22px;padding:4px 8px}
+  .sheet h3{margin:4px 0 0;font-size:18px}
+  .sheet p{margin:0;font-size:13px;color:var(--muted);text-align:center}
+  .dots{display:flex;gap:14px;margin:8px 0 2px}
+  .dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);display:block;transition:background .1s}
+  .dots i.on{background:var(--accent)}
+  .dots.shake{animation:shake .35s}
+  .err{color:var(--danger);font-size:13px;font-weight:700;min-height:20px;text-align:center}
+  .keys{display:grid;grid-template-columns:repeat(3,76px);gap:10px;margin-top:4px}
+  .keys button{height:54px;border-radius:14px;background:var(--head);color:var(--text);font-size:23px;font-weight:700}
+  .keys button:active{background:var(--accent2)}
+  .keys button.t{background:none;font-size:14px;color:var(--muted);font-weight:600}
+  @keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+  @keyframes up{from{transform:translateY(30px);opacity:.4}}
+  @keyframes fade{from{opacity:0}}
+  /* 로그인 후 */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .card h4{margin:0 0 4px;font-size:16px}
+  .me{display:flex;align-items:center;gap:12px}
+  .me b{font-size:16px}
+  .me span{font-size:13px;color:var(--muted)}
+  .when{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .vbtn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .vbtn button{padding:13px;border-radius:12px;font-weight:800;font-size:16px;background:var(--card);color:var(--text);border:2px solid var(--line)}
+  .vbtn button.on.yes{background:var(--accent);border-color:var(--accent);color:#fff}
+  .vbtn button.on.no{background:var(--danger);border-color:var(--danger);color:#fff}
+  .vcount{margin-top:12px;font-size:13px;color:var(--muted)}
+  .vcount b{color:var(--text)}
+  .names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .nm{display:inline-flex;align-items:center;gap:5px;background:var(--head);border-radius:999px;padding:2px 10px 2px 2px;font-size:13px;font-weight:600}
+  .nm.mine{box-shadow:0 0 0 2px var(--accent) inset}
+  .sub{font-size:12px;font-weight:800;color:var(--muted);margin-top:12px}
+  .gearRow{display:grid;grid-template-columns:4.8em 1fr auto;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+  .gearRow:first-of-type{border-top:0}
+  .gearRow .h{font-weight:700;font-size:14px;white-space:nowrap}
+  .gearRow .names{margin:0}
+  .smallBtn{background:var(--accent2);color:var(--accent);border-radius:10px;padding:7px 11px;font-size:13px;font-weight:800;white-space:nowrap}
+  .smallBtn.out{background:var(--head);color:var(--muted)}
+  .smallBtn:disabled{opacity:.5;cursor:default}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  .notice{background:var(--accent2);border:1px dashed var(--accent);border-radius:12px;padding:12px 14px;font-size:13px;margin-bottom:12px}
+  .errBox{background:#e5383b;color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:12px}
+  .errBox code{background:rgba(255,255,255,.2);border-radius:5px;padding:0 5px}
+  .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:.92}
+</style>
+</head>
+<body>
+<div class="testBar">🧪 테스트 페이지예요 · 선수 로그인 · 참석 투표 시험 중 · <a href="../">본 사이트로 가기</a></div>
+<main id="app"><p class="muted" style="text-align:center;margin-top:40px">불러오는 중…</p></main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== 설정 (본 사이트와 같은 DB) ===================== */
+const SUPABASE_URL = 'https://gudwubeutvkhjrsardtc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DD4LX04ysEDt7T0ELcdo8Q_Cl1hSPPE';
+const TOKEN_KEY = 'jfc-player-token';
+const PHOTO_BUCKET = 'player-photos';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+const todayStr = () => new Date().toLocaleDateString('sv-SE');
+const addDays = (str, n) => { const d = new Date(str + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
+const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+const photoUrl = path => `${SUPABASE_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(path)}`;
+const GEAR_ICON = {vest:'🎽', gear:'⚽', spare:'🧳'};
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(()=>t.classList.remove('show'), 1800); }
+
+/* ----- 유니폼 등판 (본 사이트와 같은 그림) ----- */
+const KIT_PATH = 'M38 14 Q60 22 82 14 L104 26 L114 52 L98 58 L94 46 L94 112 L26 112 L26 46 L22 58 L6 52 L16 26 Z';
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <pattern id="kitStripe" patternUnits="userSpaceOnUse" width="14" height="14"><rect width="14" height="14" fill="#0b3124"/><rect x="6" width="1.2" height="14" fill="#fff"/><rect x="7.2" width="5.6" height="14" fill="#5a1219"/><rect x="12.8" width="1.2" height="14" fill="#fff"/></pattern>
+  <clipPath id="kitClip"><path d="${KIT_PATH}"/></clipPath></defs></svg>`);
+function jerseySvg(name, num){
+  const n = num != null && num !== '' ? String(num) : '', nm = String(name || '');
+  const nameTxt = nm ? `<text x="60" y="${n ? 37 : 64}" text-anchor="middle" class="kitName" font-size="${n ? 13 : 17}" ${nm.length > 4 ? `textLength="${n ? 58 : 66}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(nm)}</text>` : '';
+  const fs = nm ? [0, 44, 36, 28][Math.min(n.length, 3)] : [0, 54, 46, 36][Math.min(n.length, 3)];
+  const numTxt = n ? `<text x="60" y="${(nm ? 66 : 64) + fs * 0.36}" text-anchor="middle" class="kitNum" font-size="${fs}">${esc(n)}</text>` : '';
+  return `<svg viewBox="0 0 120 120" aria-hidden="true"><g clip-path="url(#kitClip)"><rect width="120" height="120" fill="url(#kitStripe)"/><path d="M6 52 L22 58 L23 54 L8 48 Z M114 52 L98 58 L97 54 L112 48 Z" fill="#fff"/></g>
+    <path d="${KIT_PATH}" fill="none" stroke="#0a1f17" stroke-width="1.2"/><path d="M38 14 Q60 24 82 14 Q60 20 38 14Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>${nameTxt}${numTxt}</svg>`;
+}
+function avatar(p, cls){
+  if(p.photo) return `<span class="avatar ${cls}"><img src="${photoUrl(p.photo)}" alt="" loading="lazy"></span>`;
+  const small = cls === 'av28';
+  if(small && p.number == null){ return `<span class="avatar ${cls}">${esc(String(p.name).slice(-2))}</span>`; }
+  return `<span class="avatar ${cls}">${jerseySvg(small ? '' : p.name, p.number)}</span>`;
+}
+
+/* ----- 반복 일정 → 다음 날짜 ----- */
+function nextOccurrence(ev){
+  const today = todayStr(), base = ev.event_date;
+  if(!ev.repeat || ev.repeat === 'none' || base >= today) return base;
+  if(ev.repeat === 'weekly') return addDays(base, Math.ceil(daysBetween(base, today) / 7) * 7);
+  const step = ev.repeat === 'halfyear' ? 6 : 1;
+  const [by, bm, bd] = base.split('-').map(Number);
+  for(let k = step; k < 1200; k += step){
+    const total = (bm - 1) + k, y = by + Math.floor(total / 12), m = total % 12 + 1;
+    const last = new Date(y, m, 0).getDate();
+    const cand = `${y}-${String(m).padStart(2,'0')}-${String(Math.min(bd, last)).padStart(2,'0')}`;
+    if(cand >= today) return cand;
+  }
+  return base;
+}
+
+/* ===================== 상태 ===================== */
+let sb = null, players = [], gear = [], match = null, votes = [], me = null, token = store.get(TOKEN_KEY), loginMissing = false;
+
+function loadScript(src){ return new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+async function loadLib(){
+  for(const u of ['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js', 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js']){
+    try{ await loadScript(u); if(window.supabase) return; }catch(e){}
+  }
+  throw new Error('라이브러리를 불러오지 못했어요');
+}
+async function loadData(){
+  let r = await sb.from('players').select('id,name,pos,number,photo').order('name');
+  if(r.error) r = await sb.from('players').select('id,name,pos').order('name');
+  if(r.error) throw r.error;
+  players = r.data.map(p=>({...p, number: p.number ?? null, photo: p.photo ?? null, pos: Array.isArray(p.pos) ? p.pos : String(p.pos || '').split(',').filter(Boolean)}));
+  const g = await sb.from('gear').select('id,label,max_holders,holders,sort').order('sort');
+  gear = g.error ? [] : g.data;
+  // 다음 경기: 오늘 이후 가장 가까운 '경기' 일정
+  const e = await sb.from('events').select('event_date,event_time,kind,title,place,repeat,sport');
+  const today = todayStr();
+  const list = (e.error ? [] : e.data).filter(x=>x.kind === '경기').map(x=>({...x, next: nextOccurrence(x)})).filter(x=>x.next >= today)
+    .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''));
+  match = list[0] || null;
+  if(match){
+    match.vsport = match.sport === 'soccer' ? 'soccer' : 'futsal';
+    const d = await sb.from('match_days').select('venue').eq('played_on', match.next).maybeSingle();
+    if(!d.error && d.data?.venue) match.place = d.data.venue;
+  }
+  await loadVotes();
+}
+async function loadVotes(){
+  if(!match){ votes = []; return; }
+  const v = await sb.from('attendance_votes').select('player_id,status').eq('event_date', match.next).eq('sport', match.vsport);
+  loginMissing = !!(v.error && /relation|does not exist|schema cache/i.test(v.error.message));
+  votes = v.error ? [] : v.data;
+}
+
+/* ===================== 화면: 로그인 첫 화면 ===================== */
+function renderPicker(){
+  const q = ($('search')?.value || '').trim();
+  const list = players.filter(p=>!q || p.name.includes(q));
+  $('app').innerHTML = `
+    <div class="hello"><picture><source srcset="../logo-dark.png" media="(prefers-color-scheme: dark)"><img src="../logo-light.png" alt="JALAPEÑO FC"></picture>
+      <span>본인 프로필을 눌러 로그인하세요</span></div>
+    ${loginMissing ? `<div class="errBox">선수 로그인을 쓰려면 Supabase에서 <code>16-setup-player-login.sql</code>을 먼저 실행해 주세요.</div>` : ''}
+    <input id="search" class="search" type="search" placeholder="🔍 이름 검색" value="${esc(q)}" autocomplete="off">
+    <div class="grid">${list.map(p=>`<button class="pc" data-pid="${p.id}"><small>${p.number != null ? `No. ${p.number}` : '&nbsp;'}</small>${avatar(p, 'av64')}<b>${esc(p.name)}</b></button>`).join('') || '<p class="muted">검색 결과가 없어요.</p>'}</div>`;
+  const s = $('search'); s.oninput = ()=>{ const pos = s.selectionStart; renderPicker(); const n = $('search'); n.focus(); n.setSelectionRange(pos, pos); };
+  document.querySelectorAll('[data-pid]').forEach(b=>b.onclick = ()=> openPin(players.find(p=>p.id === +b.dataset.pid), 'login'));
+}
+
+/* ===================== 비밀번호 창 ===================== */
+// mode: 'login' (로그인) · 'new1' (새 비밀번호) · 'new2' (한 번 더)
+let pin = '', pinMode = 'login', pinPlayer = null, firstNew = '', busy = false, pinCancel = true;
+function openPin(p, mode, canCancel){
+  pinPlayer = p; pinMode = mode; pin = ''; firstNew = ''; busy = false; pinCancel = mode === 'login' || !!canCancel;
+  closePin();
+  document.body.insertAdjacentHTML('beforeend', `<div class="dim" id="pinDim"><div class="sheet">
+    ${pinCancel ? '<button class="x" id="pinClose" aria-label="닫기">×</button>' : ''}
+    ${avatar(p, 'av96')}<h3 id="pinTitle"></h3><p id="pinHint"></p>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div><div class="err" id="pinErr"></div>
+    <div class="keys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}<button class="t" data-k="help">${mode === 'login' ? '비번 찾기' : ''}</button><button data-k="0">0</button><button class="t" data-k="del" aria-label="지우기">⌫</button></div>
+  </div></div>`);
+  if($('pinClose')) $('pinClose').onclick = closePin;
+  $('pinDim').onclick = e=>{ if(e.target.id === 'pinDim' && pinCancel) closePin(); };
+  document.querySelectorAll('.keys [data-k]').forEach(b=>b.onclick = ()=> press(b.dataset.k));
+  setPinText();
+}
+function closePin(){ $('pinDim')?.remove(); }
+function setPinText(err){
+  const T = {
+    login: [`${pinPlayer.name}님이 맞나요?`, '비밀번호 4자리를 입력하세요 · 처음이면 0000'],
+    new1:  ['새 비밀번호 만들기', '앞으로 쓸 4자리를 정해 주세요 (0000 제외)'],
+    new2:  ['한 번 더 입력', '확인을 위해 같은 4자리를 다시 눌러 주세요'],
+  }[pinMode];
+  $('pinTitle').textContent = T[0]; $('pinHint').textContent = T[1];
+  $('pinErr').textContent = err || '';
+  document.querySelectorAll('#dots i').forEach((d, i)=>d.classList.toggle('on', i < pin.length));
+}
+function shake(msg){ pin = ''; setPinText(msg); const d = $('dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); }
+async function press(k){
+  if(busy) return;
+  if(k === 'help'){ if(pinMode === 'login') alert('비밀번호를 잊었다면 운영진에게 초기화를 요청하세요.\n초기화하면 다시 0000으로 로그인할 수 있어요.'); return; }
+  if(k === 'del'){ pin = pin.slice(0, -1); setPinText(); return; }
+  if(pin.length >= 4) return;
+  pin += k; setPinText();
+  if(pin.length < 4) return;
+  busy = true;
+  try{
+    if(pinMode === 'login'){
+      const {data, error} = await sb.rpc('player_login', {p_player: pinPlayer.id, p_pin: pin});
+      if(error){ shake(error.message.replace(/^.*?:\s*/, '')); return; }
+      if(!data.ok){ shake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
+      token = data.token; store.set(TOKEN_KEY, token); me = pinPlayer;
+      if(data.must_change){ pinMode = 'new1'; pinCancel = false; pin = ''; setPinText(); $('pinClose')?.remove(); document.querySelector('.keys [data-k=help]').textContent = ''; return; }
+      closePin(); renderHome(); toast(`${me.name}님, 반가워요!`);
+    } else if(pinMode === 'new1'){
+      if(pin === '0000'){ shake('0000은 쓸 수 없어요'); return; }
+      firstNew = pin; pinMode = 'new2'; pin = ''; setPinText();
+    } else {
+      if(pin !== firstNew){ pinMode = 'new1'; firstNew = ''; shake('두 번 입력한 번호가 달라요. 처음부터 다시 해 주세요'); setPinText('두 번 입력한 번호가 달라요. 처음부터 다시 해 주세요'); return; }
+      const {error} = await sb.rpc('player_set_pin', {p_token: token, p_new: pin});
+      if(error){ pinMode = 'new1'; shake(error.message); return; }
+      closePin(); renderHome(); toast('비밀번호를 저장했어요');
+    }
+  } finally { busy = false; }
+}
+
+/* ===================== 화면: 로그인 후 ===================== */
+const fmtDate = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()} (${d.toLocaleDateString('ko-KR',{weekday:'short'})})`; };
+function renderHome(){
+  const p = me, myVote = votes.find(v=>v.player_id === p.id)?.status || null;
+  const yes = votes.filter(v=>v.status === 'yes').map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
+  const no  = votes.filter(v=>v.status === 'no').map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
+  const none = players.length - yes.length - no.length;
+  const chip = x => `<span class="nm ${x.id === p.id ? 'mine' : ''}">${avatar(x, 'av28')}${esc(x.name)}</span>`;
+  const dd = match ? daysBetween(todayStr(), match.next) : 0;
+  $('app').innerHTML = `
+    <div class="top"><picture><source srcset="../logo-dark.png" media="(prefers-color-scheme: dark)"><img src="../logo-light.png" alt="JALAPEÑO FC"></picture>
+      <div class="who"><button class="chipBtn" id="logout">${esc(p.name)} · 로그아웃</button></div></div>
+    ${loginMissing ? `<div class="errBox">참석 투표를 쓰려면 Supabase에서 <code>16-setup-player-login.sql</code>을 먼저 실행해 주세요.</div>` : ''}
+    <div class="card"><div class="me">${avatar(p, 'av44')}<div><b>${esc(p.name)}님, 안녕하세요!</b><br><span>${p.number != null ? `No. ${p.number}` : '등번호 없음'}${p.pos?.length ? ' · ' + p.pos.map(esc).join('·') : ''}</span></div></div></div>
+    <div class="card">
+      ${match ? `
+        <h4>⚽ ${esc(match.title || '경기')} <span class="muted" style="font-size:13px;font-weight:700">${dd === 0 ? '오늘' : `D-${dd}`}</span></h4>
+        <div class="when">${fmtDate(match.next)}${match.event_time ? ' ' + esc(match.event_time) : ''}${match.place ? ' · ' + esc(match.place) : ''}</div>
+        <div class="vbtn"><button class="yes ${myVote === 'yes' ? 'on' : ''}" data-v="yes">✅ 참석</button><button class="no ${myVote === 'no' ? 'on' : ''}" data-v="no">불참</button></div>
+        <div class="vcount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명 · 미응답 ${none}명 · 목요일 저녁 마감</div>
+        ${yes.length ? `<div class="sub">참석 (${yes.length})</div><div class="names">${yes.map(chip).join('')}</div>` : ''}
+        ${no.length ? `<div class="sub">불참 (${no.length})</div><div class="names">${no.map(chip).join('')}</div>` : ''}`
+      : '<h4>⚽ 다가오는 경기</h4><p class="muted" style="margin:0">예정된 경기 일정이 없어요.</p>'}
+    </div>
+    <div class="card"><h4 style="margin-bottom:6px">🎒 장비 보관</h4>
+      ${gear.length ? gear.map(g=>{
+        const mine = g.holders.includes(p.id), full = !mine && g.holders.length >= g.max_holders;
+        const who = g.holders.map(id=>players.find(x=>x.id === id)).filter(Boolean);
+        return `<div class="gearRow"><span class="h">${GEAR_ICON[g.id] || '🎒'} ${esc(g.label)}</span>
+          <div class="names">${who.length ? who.map(chip).join('') : '<span class="muted" style="font-size:13px">아무도 없음</span>'}</div>
+          ${mine ? `<button class="smallBtn out" data-gear="${g.id}" data-act="out">반납</button>` : `<button class="smallBtn" data-gear="${g.id}" data-act="in" ${full ? 'disabled title="보관 인원이 다 찼어요"' : ''}>${full ? '꽉 참' : '내가 받았어요'}</button>`}
+        </div>`; }).join('') : '<p class="muted" style="margin:0">장비 정보가 없어요.</p>'}
+    </div>
+    <div class="acts"><button class="chipBtn" id="chgPin">🔒 비밀번호 바꾸기</button><a class="chipBtn" href="../" style="text-decoration:none">본 사이트 열기</a></div>`;
+  $('logout').onclick = async ()=>{ if(!confirm('로그아웃할까요?')) return; await sb.rpc('player_logout', {p_token: token}); store.del(TOKEN_KEY); token = null; me = null; renderPicker(); };
+  $('chgPin').onclick = ()=> openPin(me, 'new1', true);
+  document.querySelectorAll('[data-v]').forEach(b=>b.onclick = async ()=>{
+    const v = b.dataset.v === myVote ? 'none' : b.dataset.v;     // 같은 버튼 다시 누르면 취소
+    b.disabled = true;
+    const {error} = await sb.rpc('player_vote', {p_token: token, p_date: match.next, p_sport: match.vsport, p_status: v});
+    if(error){ alert('저장하지 못했어요\n' + error.message); if(/로그인/.test(error.message)){ store.del(TOKEN_KEY); token = null; renderPicker(); } return; }
+    await loadVotes(); renderHome(); toast(v === 'yes' ? '참석으로 표시했어요' : v === 'no' ? '불참으로 표시했어요' : '투표를 취소했어요');
+  });
+  document.querySelectorAll('[data-gear]').forEach(b=>b.onclick = async ()=>{
+    const g = gear.find(x=>x.id === b.dataset.gear); if(!g) return;
+    const holders = b.dataset.act === 'in' ? [...g.holders, me.id] : g.holders.filter(id=>id !== me.id);
+    b.disabled = true;
+    const {error} = await sb.rpc('set_gear', {p_id: g.id, p_holders: holders});
+    if(error){ alert('저장하지 못했어요\n' + error.message); b.disabled = false; return; }
+    g.holders = holders; renderHome(); toast(b.dataset.act === 'in' ? `${g.label} 받았어요` : `${g.label} 반납했어요`);
+  });
+}
+
+/* ===================== 시작 ===================== */
+(async function start(){
+  try{
+    await loadLib();
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:false}});
+    await loadData();
+  }catch(e){
+    $('app').innerHTML = `<div class="errBox">불러오지 못했어요. 네트워크를 확인해 주세요.<br><small>${esc(e.message || e)}</small></div>`; return;
+  }
+  if(token && !loginMissing){
+    const {data} = await sb.rpc('player_me', {p_token: token});
+    const p = data && players.find(x=>x.id === data.player_id);
+    if(p){ me = p; renderHome(); if(data.must_change) openPin(me, 'new1'); return; }
+    store.del(TOKEN_KEY); token = null;
+  }
+  renderPicker();
+})();
+</script>
+</body>
+</html>
