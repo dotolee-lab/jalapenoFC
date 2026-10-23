@@ -592,10 +592,13 @@
   .avWrap .avTitle .offBadge{margin:0 !important;font-size:11.5px;padding:2px 8px;box-shadow:0 2px 6px rgba(0,0,0,.18);border:2px solid var(--card)}
   .avWrap.big .avTitle .offBadge{font-size:13px;padding:3px 10px}
   @media (max-width:560px){.pfTop .avWrap{margin:0 auto}}
-  .pcNo{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0;line-height:1.2;margin-bottom:-2px}
+  .pcNo{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0;line-height:1.2;margin-bottom:6px}   /* gap 6 + 6 = 12px */
+  .pcard .pcStat{margin-top:6px}
+  .pcard .pcMeta{margin-top:-2px}   /* 이름 ↔ 포지션 4px */
   .pcNo.empty{visibility:hidden}
   .pfAv{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
   .pfAv .pcNo{font-size:14px}
+  .nameGear{margin-left:4px;font-size:.85em;letter-spacing:1px}
 </style>
 </head>
 <body>
@@ -2171,9 +2174,8 @@ function renderProfilePicker(){
     return `<button class="pcard" data-pick="${p.id}">
       <span class="pcNo${p.number != null ? '' : ' empty'}">${p.number != null ? `Number. ${p.number}` : '&nbsp;'}</span>
       ${avatar(p.name, 'md')}
-      <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
+      <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${gearIcons(p.id)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
-      ${holdingOf(p.id).length ? `<span class="pcGear">🎒 ${holdingOf(p.id).map(esc).join(', ')}</span>` : ''}
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
@@ -2451,6 +2453,8 @@ const sinceText = iso => {
   return d <= 0 ? '오늘' : d === 1 ? '어제' : `${d}일 전`;
 };
 const holdingOf = pid => gear.filter(g=>g.holders.includes(pid)).map(g=>g.label);
+// 선수 이름 옆에 붙는 보관 장비 아이콘 (장비 보관 칸과 같은 이모지)
+const gearIcons = pid => { const g = gear.filter(x=>x.holders.includes(pid)); return g.length ? `<span class="nameGear" title="${esc(g.map(x=>x.label).join(', '))} 보관 중">${g.map(x=>GEAR_ICON[x.id] || '🎒').join('')}</span>` : ''; };
 function renderGear(){
   const card = $('gearCard'), box = $('gearBox');
   card.classList.toggle('admin-only', gearMissing);
