@@ -86,6 +86,12 @@
   .st{font-size:11px;font-weight:800;border-radius:6px;padding:0 6px}
   .s-yes{background:var(--accent2);color:var(--accent)}.s-maybe{background:#fdf0cf;color:#9a6a00}.s-no{background:var(--fw2);color:var(--danger)}
   .vcount{margin-top:12px;font-size:13px;color:var(--muted)}
+  .deadline{font-size:13px;font-weight:700;color:var(--accent);background:var(--accent2);border-radius:8px;padding:5px 10px;margin:0 0 10px;display:inline-block}
+  .deadline.closed{color:var(--muted);background:var(--head)}
+  .vbtn.locked button{opacity:.55;cursor:not-allowed}
+  .vbtn.locked button.on{opacity:.8}
+  .nm small{font-weight:500;color:var(--muted);margin-left:3px;font-size:11px}
+  .nm.auto{opacity:.75}
   .vcount b{color:var(--text)}
   .names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .nm{display:inline-flex;align-items:center;gap:5px;background:var(--head);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
@@ -151,8 +157,8 @@ function avatar(p, cls){
 }
 
 /* ----- 반복 일정 → 다음 날짜 ----- */
-function nextOccurrence(ev){
-  const today = todayStr(), base = ev.event_date;
+function nextOccurrence(ev, fromDate){
+  const today = fromDate || todayStr(), base = ev.event_date;
   if(!ev.repeat || ev.repeat === 'none' || base >= today) return base;
   if(ev.repeat === 'weekly') return addDays(base, Math.ceil(daysBetween(base, today) / 7) * 7);
   const step = ev.repeat === 'halfyear' ? 6 : 1;
@@ -166,6 +172,21 @@ function nextOccurrence(ev){
   return base;
 }
 
+/* ----- 투표 마감: 경기 날짜 직전 목요일 23:00 (한국 시간) ----- */
+function voteDeadline(dateStr){
+  const d = new Date(dateStr + 'T00:00:00+09:00');
+  const dow = new Date(dateStr + 'T12:00:00+09:00').getUTCDay();   // 0=일 … 4=목
+  const back = ((dow - 4 + 7) % 7) || 7;
+  return new Date(d.getTime() - back * 864e5 + 23 * 3600e3);
+}
+function leftText(ms){
+  const h = Math.floor(ms / 3600e3), d = Math.floor(h / 24);
+  return d >= 1 ? `${d}일 ${h % 24}시간` : h >= 1 ? `${h}시간 ${Math.floor(ms / 60000) % 60}분` : `${Math.max(1, Math.floor(ms / 60000))}분`;
+}
+const voteOpen = dateStr => new Date(voteDeadline(dateStr).getTime() - 4.5 * 864e5);   // 그 주 일요일 11:00
+const fmtOpen = t => { const k = new Date(t.getTime() + 9 * 3600e3); return `${k.getUTCMonth()+1}/${k.getUTCDate()} (일) 11:00`; };
+const fmtDeadline = t => { const k = new Date(t.getTime() + 9 * 3600e3); return `${k.getUTCMonth()+1}/${k.getUTCDate()} (목) 23:00`; };
+
 /* ===================== 상태 ===================== */
 let comments = [], commentsMissing = false;
 let sb = null, players = [], gear = [], match = null, votes = [], me = null, token = store.get(TOKEN_KEY), loginMissing = false;
@@ -178,16 +199,19 @@ async function loadLib(){
   throw new Error('라이브러리를 불러오지 못했어요');
 }
 async function loadData(){
-  let r = await sb.from('players').select('id,name,pos,number,photo').order('name');
+  let r = await sb.from('players').select('id,name,pos,number,photo,vote_exempt').order('name');
+  if(r.error) r = await sb.from('players').select('id,name,pos,number,photo').order('name');
   if(r.error) r = await sb.from('players').select('id,name,pos').order('name');
   if(r.error) throw r.error;
-  players = r.data.map(p=>({...p, number: p.number ?? null, photo: p.photo ?? null, pos: Array.isArray(p.pos) ? p.pos : String(p.pos || '').split(',').filter(Boolean)}));
+  players = r.data.map(p=>({...p, number: p.number ?? null, photo: p.photo ?? null, exempt: !!p.vote_exempt, pos: Array.isArray(p.pos) ? p.pos : String(p.pos || '').split(',').filter(Boolean)}));
   const g = await sb.from('gear').select('id,label,max_holders,holders,sort').order('sort');
   gear = g.error ? [] : g.data;
-  // 다음 경기: 오늘 이후 가장 가까운 '경기' 일정
+  // 투표 대상 경기: 오늘 이후 가장 가까운 '경기' 일정
+  //  (경기 당일 오전 11시가 지나면 그 경기는 끝난 걸로 보고 다음 경기로 넘어감 — 다음 투표도 이때 시작)
   const e = await sb.from('events').select('event_date,event_time,kind,title,place,repeat,sport');
-  const today = todayStr();
-  const list = (e.error ? [] : e.data).filter(x=>x.kind === '경기').map(x=>({...x, next: nextOccurrence(x)})).filter(x=>x.next >= today)
+  const kst = new Date(Date.now() + 9 * 3600e3), today = kst.toISOString().slice(0, 10);
+  const from = kst.getUTCHours() >= 11 ? addDays(today, 1) : today;
+  const list = (e.error ? [] : e.data).filter(x=>x.kind === '경기').map(x=>({...x, next: nextOccurrence(x, from)})).filter(x=>x.next >= from)
     .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''));
   match = list[0] || null;
   if(match){
@@ -282,9 +306,15 @@ const fmtDate = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth
 function renderHome(){
   const p = me, myVote = votes.find(v=>v.player_id === p.id)?.status || null;
   const pick = st => votes.filter(v=>v.status === st).map(v=>players.find(x=>x.id === v.player_id)).filter(Boolean);
-  const yes = pick('yes'), no = pick('no');
-  const none = players.length - yes.length - no.length;
-  const chip = x => `<span class="nm ${x.id === p.id ? 'mine' : ''}">${esc(x.name)}</span>`;
+  const dl = match ? voteDeadline(match.next) : null, closed = dl ? Date.now() > dl.getTime() : false;
+  const op = match ? voteOpen(match.next) : null, notYet = op ? Date.now() < op.getTime() : false;
+  const voted = new Set(votes.map(v=>v.player_id));
+  const yes = pick('yes'), noVoted = pick('no');
+  const waiting = players.filter(x=>!x.exempt && !voted.has(x.id));          // 투표 안 한 사람 (제외 선수 빼고)
+  const no = closed ? [...noVoted, ...waiting] : noVoted;                       // 마감 후엔 자동 불참
+  const none = closed ? 0 : waiting.length;
+  const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
+  const chip = x => `<span class="nm ${x.id === p.id ? 'mine' : ''} ${autoNo.has(x.id) ? 'auto' : ''}">${esc(x.name)}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</span>`;
   const statusOf = pid => votes.find(v=>v.player_id === pid)?.status;
   const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.round(m/60)}시간 전` : `${Math.round(m/1440)}일 전`; };
   const dd = match ? daysBetween(todayStr(), match.next) : 0;
@@ -297,10 +327,14 @@ function renderHome(){
       ${match ? `
         <h4>⚽ ${esc(match.title || '경기')} <span class="muted" style="font-size:13px;font-weight:700">${dd === 0 ? '오늘' : `D-${dd}`}</span></h4>
         <div class="when">${fmtDate(match.next)}${match.event_time ? ' ' + esc(match.event_time) : ''}${match.place ? ' · ' + esc(match.place) : ''}</div>
-        <div class="vbtn"><button class="yes ${myVote === 'yes' ? 'on' : ''}" data-v="yes">✅ 참석</button><button class="no ${myVote === 'no' ? 'on' : ''}" data-v="no">불참</button></div>
-        <div class="vcount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명 · 미응답 ${none}명 · 목요일 저녁 마감</div>
+        <div class="deadline ${closed || notYet ? 'closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - Date.now())} · ${fmtDeadline(dl)}`}</div>
+        <div class="vbtn ${closed || notYet ? 'locked' : ''}"><button class="yes ${(closed ? (myVote || (p.exempt ? null : 'no')) : myVote) === 'yes' ? 'on' : ''}" data-v="yes" ${closed || notYet ? 'disabled' : ''}>✅ 참석</button><button class="no ${(closed ? (myVote || (p.exempt ? null : 'no')) : myVote) === 'no' ? 'on' : ''}" data-v="no" ${closed || notYet ? 'disabled' : ''}>불참</button></div>
+        ${notYet ? `<p class="muted" style="font-size:12px;margin:8px 0 0">투표는 경기 주 일요일 오전 11시에 열려요. 댓글은 지금도 남길 수 있어요.</p>` : ''}
+        ${closed ? `<p class="muted" style="font-size:12px;margin:8px 0 0">마감 후 변경은 운영진에게 말해 주세요. 댓글은 계속 남길 수 있어요.</p>` : ''}
+        <div class="vcount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명${closed ? (autoNo.size ? ` (미응답 ${autoNo.size}명 포함)` : '') : ` · 미응답 ${none}명`}</div>
         ${yes.length ? `<div class="sub">참석 (${yes.length})</div><div class="names">${yes.map(chip).join('')}</div>` : ''}
         ${no.length ? `<div class="sub">불참 (${no.length})</div><div class="names">${no.map(chip).join('')}</div>` : ''}
+        ${!closed && !notYet && waiting.length ? `<div class="sub">아직 투표 안 함 (${waiting.length})</div><div class="names">${waiting.map(chip).join('')}</div>` : ''}
         <div class="sub">💬 댓글 ${comments.length ? `(${comments.length})` : ''}</div>
         ${commentsMissing ? `<p class="muted" style="font-size:13px;margin:6px 0 0">댓글을 쓰려면 Supabase에서 18-setup-match-comments.sql을 먼저 실행해 주세요.</p>` : `
         <div class="memos">${comments.map(c=>{ const x = players.find(y=>y.id === c.player_id); if(!x) return ''; const st = statusOf(x.id);
