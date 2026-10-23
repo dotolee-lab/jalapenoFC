@@ -553,6 +553,30 @@
   .wxH.now{border-color:var(--accent);background:var(--accent2)}
   .wxH small{color:var(--muted);font-size:10.5px;white-space:nowrap}
   .wxH .wxPop{color:#7fb3ff}
+
+  /* ---------- 일정 카드: 줄 수 줄이기 ---------- */
+  .ev{grid-template-columns:48px minmax(0,1fr) !important;gap:4px 10px !important;padding:9px 10px 9px 8px !important}
+  .ev .evBody{min-width:0}
+  .evTop{display:flex;align-items:center;gap:4px;min-width:0}
+  .evTop .evTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .evTop .rep{flex:none;margin-left:2px}
+  .evRight{margin-left:auto;display:flex;align-items:center;gap:0;flex:none;padding-left:6px}
+  .evRight .evEdit,.evRight .del{padding:2px 4px;font-size:13px}
+  .evMeta{word-break:keep-all}
+  .ev .evWx{grid-column:1 / -1;margin-top:2px;padding-top:6px;border-top:1px dashed var(--line)}
+  .wxLine{gap:2px 10px !important}
+  .wxLine span{white-space:nowrap}
+  .wxLine small{color:var(--muted);margin-left:3px;font-size:11.5px}
+  .evDate b{font-size:17px}
+
+  /* ---------- 선수 명단 포지션 필터 ---------- */
+  .posFilter{display:flex;gap:6px;margin:0 0 12px;overflow-x:auto;scrollbar-width:none}
+  .posFilter button{flex:none;background:var(--head);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:700}
+  .posFilter button small{font-weight:600;opacity:.8;margin-left:2px}
+  .posFilter button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .posFilter button.pf-공격.on{background:var(--fw2);border-color:var(--fw);color:var(--fw)}
+  .posFilter button.pf-미드.on{background:var(--mf2);border-color:var(--mf);color:var(--mf)}
+  .posFilter button.pf-수비.on{background:var(--df2);border-color:var(--df);color:var(--df)}
 </style>
 </head>
 <body>
@@ -760,6 +784,7 @@
         <h2>선수 명단 <span class="muted" id="rosterCount" style="font-size:14px;font-weight:500"></span></h2>
         <input type="text" id="pfSearch" class="search" placeholder="🔍 이름 검색" style="max-width:220px">
       </div>
+      <div id="posFilter" class="posFilter" role="tablist" aria-label="포지션"></div>
       <div id="pfPicker" class="pcGrid"><p class="muted">불러오는 중…</p></div>
     </div>
     <div id="pfBox"></div>
@@ -2087,10 +2112,17 @@ document.addEventListener('click', e=>{
 });
 const nameLink = (id, name) => id ? `<a href="#" class="plink" data-pid-link="${id}">${esc(name)}</a>` : esc(name);
 
+let rosterPos = 'all';
 function renderProfilePicker(){
   const qText = $('pfSearch').value.trim();
   const agg = Object.fromEntries(aggregate('all').map(r=>[r.id, r]));
-  const list = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>!qText || p.name.includes(qText));
+  // 포지션 필터: 전체 / 공격 / 미드 / 수비 / 키퍼 (여러 포지션 선수는 해당하는 칸 모두에 나옴)
+  const POS_F = [['all','전체', ()=>true], ['공격','공격', p=>p.pos.includes('공격')], ['미드','미드', p=>p.pos.includes('미드')], ['수비','수비', p=>p.pos.includes('수비')], ['gk','키퍼', p=>p.gk]];
+  if(!POS_F.some(([k])=>k === rosterPos)) rosterPos = 'all';
+  $('posFilter').innerHTML = POS_F.map(([k, label, f])=>`<button class="pf-${k} ${k === rosterPos ? 'on' : ''}" data-posf="${k}">${label} <small>${players.filter(f).length}</small></button>`).join('');
+  $('posFilter').querySelectorAll('[data-posf]').forEach(b=>b.onclick = ()=>{ rosterPos = b.dataset.posf; renderProfilePicker(); });
+  const posFn = POS_F.find(([k])=>k === rosterPos)[2];
+  const list = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>(!qText || p.name.includes(qText)) && posFn(p));
   $('rosterCount').textContent = `${players.length}명`;
   $('pfPicker').innerHTML = list.map(p=>{
     const st = agg[p.id] || {att:0, g:0, a:0};
@@ -2271,6 +2303,9 @@ function nextOccurrence(ev){
   return base;
 }
 let schedOpen = false;
+// 구장 이름 짧게 (지도는 전체 이름으로 검색)
+const shortVenue = n => /망원/.test(n) ? '망원유수지' : /난지/.test(n) ? '난지천' : /월드컵|상암/.test(n) ? '월드컵' : n;
+const shortMapLink = n => mapLink(n);   // 구장 전체 이름 그대로 표시
 function renderSchedule(){
   const card = $('scheduleCard'), list = $('schedList');
   const today = todayStr();
@@ -2290,17 +2325,18 @@ function renderSchedule(){
       return `<div class="ev k-${e.kind}${idx >= SHOW ? ' evExtra' : ''}">
         <div class="evDate"><b>${d.getMonth()+1}/${d.getDate()}</b><span>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</span></div>
         <div class="evBody">
-          <div class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}</div>
+          <div class="evTop">
+            <span class="evTitle">${KIND_ICON[e.kind] || '📌'} ${esc(e.title)}</span>${e.repeat !== 'none' ? `<span class="rep">${REPEAT_LABEL[e.repeat]}</span>` : ''}
+            <span class="evRight">${badge}<button class="evEdit admin-only" data-edit-ev="${e.id}" title="수정" aria-label="수정">✏️</button><button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button></span>
+          </div>
           <div class="evMeta">${(()=>{
             const venue = e.kind === '경기' ? days.find(d=>d.played_on === e.next)?.venue : null;
-            const where = venue ? `📍 ${mapLink(venue)}` : (e.place ? (e.kind === '경기' ? `📍 ${mapLink(e.place)}` : esc(e.place)) : '');
+            const place = venue || e.place;
+            const where = place ? (e.kind === '경기' || venue ? `📍 ${shortMapLink(place)}` : esc(place)) : '';
             return [e.event_time, where].filter(Boolean).join(' · ');
           })()}</div>
-          ${e.kind === '경기' ? wxSlot(e, dd) : ''}
         </div>
-        ${badge}
-        <button class="evEdit admin-only" data-edit-ev="${e.id}" title="수정" aria-label="수정">✏️</button>
-        <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
+        ${e.kind === '경기' ? wxSlot(e, dd) : ''}
       </div>`;
     }).join('')}</div>${items.length > SHOW ? `<button class="ghost small schedMore">${schedOpen ? '접기' : `일정 더보기 (${items.length - SHOW})`}</button>` : ''}` : `<p class="muted">예정된 일정이 없어요.${isAdmin() ? ' 아래에서 추가해 보세요.' : ''}</p>`;
   fillWeather(list);
@@ -2522,7 +2558,7 @@ function wxFetch(lat, lon){
   const base = `latitude=${lat}&longitude=${lon}&timezone=Asia%2FSeoul`;
   const p = Promise.all([
     fetch(`https://api.open-meteo.com/v1/forecast?${base}&forecast_days=8&wind_speed_unit=ms&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m`).then(r=>r.ok ? r.json() : Promise.reject(r.status)),
-    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${base}&forecast_days=7&hourly=pm10,pm2_5`).then(r=>r.ok ? r.json() : null).catch(()=>null),
+    Promise.resolve(null),   // 미세먼지는 표시 안 함
   ]).then(([w, a])=>({w, a}));
   wxCache[key] = {t: Date.now(), p};
   p.catch(()=>{ delete wxCache[key]; });
@@ -2572,12 +2608,8 @@ function fillWeather(root){
       const hours = [-3,-2,-1,0,1,2,3].map(d=>i + d).filter(j=>j >= 0 && j < H.time.length && H.time[j].startsWith(date)).map(row);
       el.classList.toggle('rainy', rainy);
       el.innerHTML = `<button class="wxLine" type="button" title="눌러서 시간대별 예보 보기">
-          ${rainy ? '<b class="wxWarn">☔ 우천 주의</b>' : ''}
-          <span>${ic} ${txt} <b>${Math.round(r.temp)}°</b></span>
-          <span>체감 ${Math.round(r.feel)}°</span>
-          <span>💧 비 ${r.pop ?? '-'}%</span>
-          <span>💨 ${r.wind != null ? r.wind.toFixed(1) : '-'}m/s</span>
-          ${r.dust ? `<span class="dust ${r.dust[1]}">미세먼지 ${r.dust[0]}</span>` : ''}
+          <span title="${txt}">${ic} <b>${Math.round(r.temp)}°</b><small>(체감 ${Math.round(r.feel)}°)</small></span>
+          <span>💧${r.pop ?? '-'}%</span>
           <span class="wxMore">▾</span>
         </button>
         <div class="wxHours">${hours.map(x=>{ const [hi] = wxIcon(x.code, x.h); return `<div class="wxH ${x.h === r.h ? 'now' : ''}"><small>${x.h}시</small><span>${hi}</span><b>${Math.round(x.temp)}°</b><small class="wxPop">${x.pop ?? '-'}%</small></div>`; }).join('')}</div>`;
