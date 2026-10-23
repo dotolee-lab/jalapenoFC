@@ -535,6 +535,24 @@
   .tScore{font-size:14px;font-weight:600}
   .tScore b{font-size:16px}
   .tScore small{color:var(--muted);font-weight:500}
+
+  /* ---------- 경기 날씨 ---------- */
+  .evBody{min-width:0}
+  .evWx{margin-top:6px;font-size:12.5px;min-width:0}
+  .wxLine{all:unset;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;color:var(--text);line-height:1.5}
+  .wxLine b{font-size:14px}
+  .wxMore{color:var(--muted);font-size:11px;transition:transform .15s}
+  .evWx.open .wxMore{transform:rotate(180deg)}
+  .wxWarn{color:#fff;background:#3b82f6;border-radius:6px;padding:0 6px;font-size:12px !important}
+  .evWx.rainy .wxLine{color:#7fb3ff}
+  .dust{border-radius:999px;padding:0 7px;font-weight:700;font-size:11.5px}
+  .dust.d0{background:#1d4ed822;color:#3b82f6}.dust.d1{background:#16a34a22;color:#22a55a}.dust.d2{background:#f59e0b22;color:#d98a00}.dust.d3{background:#ef444422;color:#e5484d}
+  .wxHours{display:none;gap:4px;margin-top:6px;overflow-x:auto}
+  .evWx.open .wxHours{display:flex}
+  .wxH{flex:1 0 40px;min-width:40px;display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--head);border:1px solid var(--line);border-radius:8px;padding:4px 2px}
+  .wxH.now{border-color:var(--accent);background:var(--accent2)}
+  .wxH small{color:var(--muted);font-size:10.5px;white-space:nowrap}
+  .wxH .wxPop{color:#7fb3ff}
 </style>
 </head>
 <body>
@@ -2278,12 +2296,14 @@ function renderSchedule(){
             const where = venue ? `📍 ${mapLink(venue)}` : (e.place ? (e.kind === '경기' ? `📍 ${mapLink(e.place)}` : esc(e.place)) : '');
             return [e.event_time, where].filter(Boolean).join(' · ');
           })()}</div>
+          ${e.kind === '경기' ? wxSlot(e, dd) : ''}
         </div>
         ${badge}
         <button class="evEdit admin-only" data-edit-ev="${e.id}" title="수정" aria-label="수정">✏️</button>
         <button class="del admin-only" data-del-ev="${e.id}" aria-label="삭제">×</button>
       </div>`;
     }).join('')}</div>${items.length > SHOW ? `<button class="ghost small schedMore">${schedOpen ? '접기' : `일정 더보기 (${items.length - SHOW})`}</button>` : ''}` : `<p class="muted">예정된 일정이 없어요.${isAdmin() ? ' 아래에서 추가해 보세요.' : ''}</p>`;
+  fillWeather(list);
   const more = list.querySelector('.schedMore');
   if(more) more.onclick = ()=>{ schedOpen = !schedOpen; renderSchedule(); };
   list.querySelectorAll('[data-edit-ev]').forEach(b=>b.onclick = ()=> startEditEvent(+b.dataset.editEv));
@@ -2479,6 +2499,94 @@ async function startApp(){
   }
 }
 startApp();
+
+/* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
+// 구장 좌표 (이름에 들어간 단어로 찾음, 못 찾으면 망원유수지)
+const VENUE_COORDS = [
+  [/난지/, [37.5737, 126.8869]],
+  [/월드컵|상암/, [37.5683, 126.8972]],
+  [/망원/, [37.5565, 126.8975]],
+];
+const coordsFor = name => (VENUE_COORDS.find(([re])=>re.test(name || '')) || VENUE_COORDS[2])[1];
+const WX_DAYS = 7;   // 경기 7일 전부터 표시
+function wxSlot(e, dd){
+  if(dd > WX_DAYS) return `<div class="evWx muted">🌤️ 날씨는 경기 ${WX_DAYS}일 전부터 보여요</div>`;
+  const venue = days.find(d=>d.played_on === e.next)?.venue || e.place || '';
+  const [lat, lon] = coordsFor(venue);
+  return `<div class="evWx" data-lat="${lat}" data-lon="${lon}" data-date="${e.next}" data-time="${e.event_time || '10:00'}"><span class="muted">날씨 불러오는 중…</span></div>`;
+}
+const wxCache = {};
+function wxFetch(lat, lon){
+  const key = lat + ',' + lon;
+  if(wxCache[key] && Date.now() - wxCache[key].t < 30 * 60 * 1000) return wxCache[key].p;
+  const base = `latitude=${lat}&longitude=${lon}&timezone=Asia%2FSeoul`;
+  const p = Promise.all([
+    fetch(`https://api.open-meteo.com/v1/forecast?${base}&forecast_days=8&wind_speed_unit=ms&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m`).then(r=>r.ok ? r.json() : Promise.reject(r.status)),
+    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${base}&forecast_days=7&hourly=pm10,pm2_5`).then(r=>r.ok ? r.json() : null).catch(()=>null),
+  ]).then(([w, a])=>({w, a}));
+  wxCache[key] = {t: Date.now(), p};
+  p.catch(()=>{ delete wxCache[key]; });
+  return p;
+}
+function wxIcon(code, hour){
+  const night = hour < 6 || hour >= 19;
+  if(code === 0) return [night ? '🌙' : '☀️', '맑음'];
+  if(code === 1) return [night ? '🌙' : '🌤️', '대체로 맑음'];
+  if(code === 2) return ['⛅', '구름 조금'];
+  if(code === 3) return ['☁️', '흐림'];
+  if(code === 45 || code === 48) return ['🌫️', '안개'];
+  if(code >= 51 && code <= 57) return ['🌦️', '이슬비'];
+  if(code >= 61 && code <= 67) return ['🌧️', '비'];
+  if(code >= 71 && code <= 77) return ['🌨️', '눈'];
+  if(code >= 80 && code <= 82) return ['🌧️', '소나기'];
+  if(code === 85 || code === 86) return ['🌨️', '눈 소나기'];
+  if(code >= 95) return ['⛈️', '뇌우'];
+  return ['🌡️', ''];
+}
+// 미세먼지: 환경부 기준 (PM10 30/80/150, PM2.5 15/35/75) 중 나쁜 쪽
+function dustLevel(pm10, pm25){
+  const lv = (v, cut) => v == null ? -1 : v <= cut[0] ? 0 : v <= cut[1] ? 1 : v <= cut[2] ? 2 : 3;
+  const l = Math.max(lv(pm10, [30, 80, 150]), lv(pm25, [15, 35, 75]));
+  return l < 0 ? null : [['좋음','d0'], ['보통','d1'], ['나쁨','d2'], ['매우나쁨','d3']][l];
+}
+function fillWeather(root){
+  root.querySelectorAll('.evWx[data-lat]').forEach(async el=>{
+    const {lat, lon, date, time} = el.dataset;
+    const [hh, mm] = time.split(':').map(Number);
+    const hour = Math.min(23, hh + (mm >= 30 ? 1 : 0));
+    try{
+      const {w, a} = await wxFetch(lat, lon);
+      const H = w.hourly, at = t => H.time.indexOf(`${date}T${String(t).padStart(2,'0')}:00`);
+      const i = at(hour);
+      if(i < 0){ el.innerHTML = '<span class="muted">🌤️ 아직 예보가 없어요</span>'; return; }
+      const row = j => {
+        const ai = a ? a.hourly.time.indexOf(H.time[j]) : -1;
+        return {
+          h: +H.time[j].slice(11, 13), code: H.weather_code[j], temp: H.temperature_2m[j], feel: H.apparent_temperature[j],
+          pop: H.precipitation_probability[j], mm: H.precipitation[j], wind: H.wind_speed_10m[j],
+          dust: ai >= 0 ? dustLevel(a.hourly.pm10[ai], a.hourly.pm2_5[ai]) : null,
+        };
+      };
+      const r = row(i), [ic, txt] = wxIcon(r.code, r.h);
+      const rainy = (r.pop ?? 0) >= 60;
+      const hours = [-3,-2,-1,0,1,2,3].map(d=>i + d).filter(j=>j >= 0 && j < H.time.length && H.time[j].startsWith(date)).map(row);
+      el.classList.toggle('rainy', rainy);
+      el.innerHTML = `<button class="wxLine" type="button" title="눌러서 시간대별 예보 보기">
+          ${rainy ? '<b class="wxWarn">☔ 우천 주의</b>' : ''}
+          <span>${ic} ${txt} <b>${Math.round(r.temp)}°</b></span>
+          <span>체감 ${Math.round(r.feel)}°</span>
+          <span>💧 비 ${r.pop ?? '-'}%</span>
+          <span>💨 ${r.wind != null ? r.wind.toFixed(1) : '-'}m/s</span>
+          ${r.dust ? `<span class="dust ${r.dust[1]}">미세먼지 ${r.dust[0]}</span>` : ''}
+          <span class="wxMore">▾</span>
+        </button>
+        <div class="wxHours">${hours.map(x=>{ const [hi] = wxIcon(x.code, x.h); return `<div class="wxH ${x.h === r.h ? 'now' : ''}"><small>${x.h}시</small><span>${hi}</span><b>${Math.round(x.temp)}°</b><small class="wxPop">${x.pop ?? '-'}%</small></div>`; }).join('')}</div>`;
+      el.querySelector('.wxLine').onclick = ()=> el.classList.toggle('open');
+    }catch(err){
+      el.innerHTML = '<span class="muted">🌤️ 날씨를 불러오지 못했어요</span>';
+    }
+  });
+}
 
 /* ---------- 운영진 (회장·총무) ---------- */
 const OFFICER_ROLES = [['pres','회장','👑'], ['treas','총무','💼']];
