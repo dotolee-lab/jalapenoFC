@@ -599,6 +599,10 @@
   .pfAv{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
   .pfAv .pcNo{font-size:14px}
   .nameGear{margin-left:4px;font-size:.85em;letter-spacing:1px}
+  .exemptGrid{display:flex;flex-wrap:wrap;gap:6px}
+  .exItem{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;font-size:14px;cursor:pointer;background:var(--card)}
+  .exItem.on{background:var(--head);color:var(--muted);text-decoration:line-through}
+  .exSum{width:100%;margin:6px 0 0;font-size:13px}
 </style>
 </head>
 <body>
@@ -812,6 +816,12 @@
     <div id="pfBox"></div>
   </section>
 
+  <section class="card app admin-only" data-pane="admin" id="exemptCard">
+    <h2>🗳️ 참석 투표 제외</h2>
+    <p class="muted" style="margin-top:-6px">체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 게스트나 휴면 회원을 체크해 두세요. (지금은 테스트 페이지에서만 쓰여요)</p>
+    <div id="exemptBox" class="exemptGrid"><p class="muted">불러오는 중…</p></div>
+  </section>
+
   <section class="card app admin-only" data-pane="admin" id="officerCard">
     <h2>운영진 · 회비 계좌</h2>
     <div class="offRows">
@@ -953,6 +963,7 @@ async function loadAll(){
     form: formOf[p.id]?.v || 0, formInfo: formOf[p.id] || null,
   }));
   renderSkillNew();
+  if(isAdmin()) loadExempt();
   render();
   loadRecords();
   loadEvents();
@@ -2665,6 +2676,22 @@ function fillWeather(root){
     }catch(err){
       el.innerHTML = '<span class="muted">🌤️ 날씨를 불러오지 못했어요</span>';
     }
+  });
+}
+
+/* ---------- 참석 투표 제외 (게스트·휴면) ---------- */
+async function loadExempt(){
+  const box = $('exemptBox'); if(!box || !sb) return;
+  const r = await sb.from('players').select('id,vote_exempt');
+  if(r.error){ box.innerHTML = '<p class="muted">쓰려면 Supabase에서 19-setup-vote-deadline.sql을 먼저 실행해 주세요.</p>'; return; }
+  const ex = new Set(r.data.filter(x=>x.vote_exempt).map(x=>x.id));
+  const sorted = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  box.innerHTML = sorted.map(p=>`<label class="exItem ${ex.has(p.id) ? 'on' : ''}"><input type="checkbox" data-ex="${p.id}" ${ex.has(p.id) ? 'checked' : ''}> ${esc(p.name)}</label>`).join('')
+    + `<p class="muted exSum">제외 ${ex.size}명 · 투표 대상 ${players.length - ex.size}명</p>`;
+  box.querySelectorAll('[data-ex]').forEach(cb=>cb.onchange = async ()=>{
+    cb.disabled = true;
+    const ok = await q(sb.from('players').update({vote_exempt: cb.checked}).eq('id', +cb.dataset.ex), '저장하지 못했어요');
+    if(ok) loadExempt(); else cb.disabled = false;
   });
 }
 
