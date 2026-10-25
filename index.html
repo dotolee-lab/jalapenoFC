@@ -226,6 +226,8 @@
   @media (max-width:560px){.pfFeet{justify-content:center}}
   .pfBday{margin-top:14px;background:linear-gradient(135deg,#ffe27d,#f5b82e);color:#3b2a00;border-radius:12px;padding:10px 14px;font-weight:700;text-align:center}
   .pfEdit{margin-top:14px;padding:12px;border:1px dashed var(--line);border-radius:12px}
+  .pfEditHead{margin:0 0 10px;font-weight:800;font-size:14px}
+  .pfEditHead .muted{font-weight:500;font-size:12px;margin-left:6px}
   .pfTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
   @media (max-width:560px){.pfTiles{grid-template-columns:repeat(2,minmax(0,1fr))}.pfTop{flex-direction:column;text-align:center}.pfTop .avatar.big{margin:0 auto}.pfMeta,.pfFacts{justify-content:center}}
   .pfTiles>div{background:var(--head);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px}
@@ -2324,6 +2326,16 @@ function feetHtml(p, size){
   const main = side => top > 0 && (side==='L' ? l : r) === top;
   return `<span class="feet ${size||''}" title="왼발 ${p.footL ?? '-'} · 오른발 ${p.footR ?? '-'}">${footIcon(p.footL,'L',main('L'))}${footIcon(p.footR,'R',main('R'))}</span>`;
 }
+// 관리자는 모든 선수, 로그인한 선수는 본인 프로필만 고칠 수 있음
+const canEditProfile = p => isAdmin() || (typeof myPlayer === 'function' && myPlayer()?.id === p.id);
+const blobToB64 = blob => new Promise((ok, no)=>{ const r = new FileReader(); r.onload = ()=>ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(blob); });
+async function selfPhoto(body){
+  const {data, error} = await sb.functions.invoke('player-photo', {body: {token: plToken, ...body}});
+  if(!error) return data;
+  let msg = error.message || String(error);
+  try{ const j = await error.context.json(); if(j?.msg) msg = j.msg; }catch(e){ msg = 'Supabase에 player-photo 함수가 아직 없어요. 운영진에게 알려 주세요.'; }
+  return {ok: false, msg};
+}
 function renderAllAfterPhoto(){
   renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderYearAwards();
 }
@@ -2422,7 +2434,8 @@ function renderProfile(){
       </div>
       ${isBirthday(p.birth) ? `<div class="pfBday">🎉 오늘은 ${esc(p.name)} 님의 생일이에요! 생일 축하해요 🎂</div>` : ''}
 
-      <div class="admin-only pfEdit">
+      ${canEditProfile(p) ? `<div class="pfEdit">
+        ${!isAdmin() ? '<p class="pfEditHead">✏️ 내 프로필 고치기 <span class="muted">포지션은 운영진이 정해요</span></p>' : ''}
         ${profileColumnsMissing ? '<p class="muted">등번호·주발 점수·한마디·생년월일을 저장하려면 Supabase에서 setup-profile.sql을 먼저 실행해 주세요.</p>' : `
         <div class="row">
           <label class="chk">등번호 <input type="number" class="num" id="pfNumIn" min="0" max="99" value="${p.number ?? ''}"></label>
@@ -2441,7 +2454,7 @@ function renderProfile(){
           ${p.photo ? '<button class="ghost" id="pfPhotoDel">사진 삭제</button>' : ''}
           <span class="muted" id="pfPhotoMsg">정사각형으로 잘라서 작게 줄여 저장돼요</span>`}
         </div>`}
-      </div>
+      </div>` : ''}
 
       <h3 class="sub">통산 기록</h3>
       <div class="pfTiles">${tiles.map(([k,v,rk,cls])=>`<div class="${cls||''}"><span class="muted">${k}</span><b>${cls==='ns' ? '🚫 ' : ''}${v}</b>${rk}</div>`).join('')}</div>
@@ -2471,8 +2484,13 @@ function renderProfile(){
       photoBtn.disabled = true; $('pfPhotoMsg').textContent = '줄이는 중…';
       try{
         const blob = await shrinkPhoto(file);
-        const path = `p${p.id}-${Date.now()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
         $('pfPhotoMsg').textContent = `올리는 중… (${Math.round(blob.size/1024)}KB)`;
+        if(!isAdmin()){                                  // 선수 본인: player-photo 함수로
+          const r = await selfPhoto({image: await blobToB64(blob), type: blob.type});
+          if(!r.ok) throw new Error(r.msg);
+          p.photo = r.photo; renderAllAfterPhoto(); plToast('사진을 바꿨어요'); return;
+        }
+        const path = `p${p.id}-${Date.now()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
         const up = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, {contentType: blob.type, cacheControl: '31536000', upsert: false});
         if(up.error) throw up.error;
         if(await q(sb.from('players').update({photo: path}).eq('id', p.id), '사진 정보를 저장하지 못했어요')){
@@ -2485,6 +2503,11 @@ function renderProfile(){
   const photoDel = $('pfPhotoDel');
   if(photoDel) photoDel.onclick = async ()=>{
     if(!confirm('사진을 삭제할까요?')) return;
+    if(!isAdmin()){
+      const r = await selfPhoto({remove: true});
+      if(!r.ok){ alert('사진을 지우지 못했어요\n' + r.msg); return; }
+      p.photo = null; renderAllAfterPhoto(); return;
+    }
     if(await q(sb.from('players').update({photo: null}).eq('id', p.id), '사진을 삭제하지 못했어요')){
       await sb.storage.from(PHOTO_BUCKET).remove([p.photo]);
       p.photo = null; renderAllAfterPhoto();
@@ -2497,7 +2520,13 @@ function renderProfile(){
     const fv = id => $(id).value === '' ? null : +$(id).value;
     const row = { number, foot_left: fv('pfFootL'), foot_right: fv('pfFootR'), birth: $('pfBirthIn').value || null, intro: $('pfIntroIn').value.trim() || null };
     save.disabled = true;
-    const ok = await q(sb.from('players').update(row).eq('id', p.id), '프로필을 저장하지 못했어요');
+    let ok;
+    if(isAdmin()) ok = await q(sb.from('players').update(row).eq('id', p.id), '프로필을 저장하지 못했어요');
+    else {
+      const {error} = await sb.rpc('player_update_profile', {p_token: plToken, p_number: row.number, p_foot_left: row.foot_left, p_foot_right: row.foot_right, p_birth: row.birth, p_intro: row.intro});
+      if(error){ alert(/player_update_profile|function/i.test(error.message) ? '프로필을 고치려면 Supabase에서 24-setup-player-profile.sql을 먼저 실행해 주세요.' : '프로필을 저장하지 못했어요\n' + rpcMsg(error)); }
+      else { ok = true; if(row.intro) row.intro = row.intro.trim(); plToast('프로필을 저장했어요'); }
+    }
     save.disabled = false;
     if(ok){ Object.assign(p, row, {footL: row.foot_left, footR: row.foot_right}); renderProfile(); }
   };
@@ -2943,7 +2972,7 @@ function renderPlBtn(){
   b.innerHTML = me ? `${avatar(me.name, 'sm')}${esc(me.name)}` : '🙋 선수 로그인';
   b.onclick = me ? openMyMenu : openPicker;
 }
-function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); if(gate) regate(); }
+function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); renderProfile(); if(gate) regate(); }
 // 관리자 로그아웃 등으로 일반 상태가 되면 로그인 화면
 function regate(){ if(typeof maybeGate === 'function' && sb && players.length) maybeGate(); }
 // 첫 화면 로그인: 로그인 안 된 채로 들어오면 선수 고르기를 먼저 보여줌
@@ -2962,7 +2991,7 @@ async function initPlayer(authChecked){
   const {data, error} = await sb.rpc('player_me', {p_token: plToken});
   if(error) return;                                   // 함수가 아직 없거나 연결 문제: 저장된 로그인은 그대로 둠
   if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(false); maybeGate(authChecked); return; }
-  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear();
+  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear(); renderProfile();
   if(data.must_change) openPin(myPlayer(), 'new1');
 }
 
@@ -3032,7 +3061,7 @@ async function pinPress(k){
       if(error){ pinShake(rpcMsg(error)); return; }
       if(!data.ok){ pinShake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
       plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id; plGate = false;
-      renderPlBtn(); renderVote(); renderGear();
+      renderPlBtn(); renderVote(); renderGear(); renderProfile();
       if(data.must_change){ openPin(pinPlayer, 'new1'); return; }
       closeSheet(); plToast(`${pinPlayer.name}님, 반가워요!`);
     } else if(pinMode === 'new1'){
@@ -3051,7 +3080,7 @@ async function pinPress(k){
 function openMyMenu(){
   const me = myPlayer(); if(!me) return;
   openSheet(`${avatar(me.name, 'md')}<h3>${esc(me.name)}님</h3><p class="plHint">${me.number != null ? `No. ${noLabel(me.number)}` : '등번호 없음'}${me.pos?.length ? ' · ' + me.pos.map(esc).join('·') : ''}</p>
-    <div class="plMenu"><button class="ghost" id="plMyProfile">👤 내 프로필 보기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>`);
+    <div class="plMenu"><button class="ghost" id="plMyProfile">👤 내 프로필 보기 · 고치기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>`);
   $('plMyProfile').onclick = ()=>{ closeSheet(); setTab('roster'); profileId = me.id; renderProfile(); window.scrollTo(0, 0); };
   $('plChg').onclick = ()=> openPin(me, 'new1', true);
   $('plOut').onclick = async ()=>{
