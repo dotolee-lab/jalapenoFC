@@ -811,7 +811,7 @@
   <div class="mainCol">
   <section class="card app" id="publishedCard">
     <h2>최근 공개된 팀 구성</h2>
-    <div id="published"><p class="muted">팀 구성은 매주 금요일에 공개돼요.</p></div>
+    <div id="published"><p class="muted">팀 구성은 매주 금요일 오후 6시에 공개돼요.</p></div>
   </section>
 
   <nav class="tabs app">
@@ -1147,7 +1147,7 @@ async function loadAll(){
   loadGear();
   const t = await sb.from('team_results').select('teams,created_at').eq('id', RESULT_ID()).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
-  else { publishedRow = null; $('published').innerHTML = `<p class="muted">${SPORT === 'soccer' ? '축구 팀 구성이 공개되면 여기에 보여요.' : '팀 구성은 매주 금요일에 공개돼요.'}</p>`; }
+  else { publishedRow = null; $('published').innerHTML = `<p class="muted">${SPORT === 'soccer' ? '축구 팀 구성이 공개되면 여기에 보여요.' : '팀 구성은 매주 금요일 오후 6시에 공개돼요.'}</p>`; }
 }
 
 /* ---------- 관리자 로그인 (Supabase Auth) ---------- */
@@ -1478,7 +1478,7 @@ function renderPublished(row){
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일 오후 6시에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
@@ -2229,8 +2229,8 @@ function renderHistory(){
       <div><span class="muted">구장 예약</span><b>${(days.find(x=>x.id===histDayId)?.bookers || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ') || '-'}</b></div>
       <div><span class="muted">최다 득점</span><b>${scorers.length ? scorers.join(', ') + ` (${topG}골)` : '-'}</b></div>
     </div>
-    <h3 class="sub">경기 결과</h3>${matchesHtml}
     ${tableHtml ? `<h3 class="sub">팀 순위</h3>${tableHtml}` : ''}
+    <h3 class="sub">경기 결과</h3>${matchesHtml}
     <h3 class="sub">팀별 선수 기록</h3>${rostersHtml}`;
   const mm = $('histBox').querySelector('.matchMore');
   if(mm) mm.onclick = ()=>{ matchesOpen = !matchesOpen; renderHistory(); };
