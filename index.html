@@ -385,6 +385,9 @@
   .sched .ev.evExtra{display:none}
   .sched.open .ev.evExtra{display:grid}
   .schedMore{margin-top:10px;width:100%}
+  .matches .match.mExtra{display:none}
+  .matches.open .match.mExtra{display:grid}
+  .matchMore{margin-top:8px;width:100%}
   .homeSub{display:none}
   .tabs i{display:none;font-style:normal}
   .tabs .short{display:none}
@@ -2145,6 +2148,7 @@ const fmtDay = str => {
   return d.toLocaleDateString('ko-KR', {year: sameYear ? undefined : 'numeric', month:'long', day:'numeric', weekday:'short'});
 };
 const pastDays = () => days.filter(d=>d.played_on <= todayStr());   // 미래 경기일(미리 잡아둔 구장)은 제외
+let matchesOpen = false;
 function renderHistory(){
   const days = pastDays();
   const sel = $('histDay');
@@ -2181,13 +2185,14 @@ function renderHistory(){
   const topG = Math.max(0, ...rows.map(r=>r.goals));
   const scorers = topG ? rows.filter(r=>r.goals===topG).map(r=>esc(r.name)) : [];
 
-  const matchesHtml = dayGames.length ? `<div class="matches">${dayGames.map((g,i)=>{
+  const M_SHOW = 3;                                    // 처음엔 3경기만, 나머지는 펼치기
+  const matchesHtml = dayGames.length ? `<div class="matches${matchesOpen ? ' open' : ''}">${dayGames.map((g,i)=>{
       const hw = g.home_score > g.away_score, aw = g.away_score > g.home_score;
-      return `<div class="match"><span class="mno">${i+1}경기</span>
+      return `<div class="match${i >= M_SHOW ? ' mExtra' : ''}"><span class="mno">${i+1}경기</span>
         <span class="mt ${hw?'win':''}">${g.home}팀</span>
         <span class="sc"><b class="${hw?'win':''}">${g.home_score}</b> : <b class="${aw?'win':''}">${g.away_score}</b></span>
         <span class="mt ${aw?'win':''}">${g.away}팀</span></div>`;
-    }).join('')}</div>` : '<p class="muted">입력된 경기 결과가 없어요.</p>';
+    }).join('')}</div>${dayGames.length > M_SHOW ? `<button class="ghost small matchMore">${matchesOpen ? '접기 ▲' : `경기 결과 더보기 (${dayGames.length - M_SHOW}경기 더) ▼`}</button>` : ''}` : '<p class="muted">입력된 경기 결과가 없어요.</p>';
 
   const tableHtml = dayGames.length ? `<div class="tablewrap"><table class="stdg">
       <thead><tr><th>순위</th><th>팀</th><th>경기</th><th>승</th><th>무</th><th>패</th><th>득점</th><th>실점</th><th>승점</th></tr></thead>
@@ -2227,10 +2232,12 @@ function renderHistory(){
     <h3 class="sub">경기 결과</h3>${matchesHtml}
     ${tableHtml ? `<h3 class="sub">팀 순위</h3>${tableHtml}` : ''}
     <h3 class="sub">팀별 선수 기록</h3>${rostersHtml}`;
+  const mm = $('histBox').querySelector('.matchMore');
+  if(mm) mm.onclick = ()=>{ matchesOpen = !matchesOpen; renderHistory(); };
 }
-$('histDay').addEventListener('change', ()=>{ histDayId = +$('histDay').value; renderHistory(); });
-$('histPrev').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; renderHistory(); } };
-$('histNext').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; renderHistory(); } };
+$('histDay').addEventListener('change', ()=>{ histDayId = +$('histDay').value; matchesOpen = false; renderHistory(); });
+$('histPrev').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; matchesOpen = false; renderHistory(); } };
+$('histNext').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; matchesOpen = false; renderHistory(); } };
 
 
 /* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
