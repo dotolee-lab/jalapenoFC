@@ -270,6 +270,7 @@
   .tag.m{background:#f5b82e;color:#fff;font-weight:700}
   /* 순위 카드 */
   .lb{display:grid;grid-template-columns:repeat(var(--lbn,4),minmax(0,1fr));gap:14px;margin-bottom:26px}
+  @media (min-width:861px){.lb.n1,.lb.n2{grid-template-columns:repeat(var(--lbn),minmax(0,240px));justify-content:center}}
 
   .lbTitle{font-size:17px;margin:0 0 8px}
   .lbCard{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:20px 16px 0;text-align:center;display:flex;flex-direction:column;min-height:330px}
@@ -727,6 +728,17 @@
   .gradeBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
   .gradeBar b{margin-right:auto}
   .gradeBar input{flex:0 1 160px;min-width:120px}
+
+  /* ---------- 자동 팀 구성 ---------- */
+  .autoHead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .autoInfo{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;background:var(--head);border-radius:12px;padding:12px 14px;font-size:14px}
+  .autoInfo dt{color:var(--muted);font-weight:700;font-size:13px}
+  .autoInfo dd{margin:0}
+  .autoInfo .ok{color:var(--accent);font-weight:700}.autoInfo .bad{color:var(--danger);font-weight:700}
+  .autoTeams{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}
+  .autoTeams > div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .autoTeams b{display:block;margin-bottom:6px}
+  .autoTeams span{display:inline-block;background:var(--head);border-radius:999px;padding:2px 9px;margin:0 4px 4px 0;font-size:13px}
 </style>
 </head>
 <body>
@@ -898,6 +910,18 @@
       <button class="ghost" id="shareBtn">공유 링크 복사</button>
       <span class="muted">공개하면 누구나 이 페이지에서 볼 수 있어요. 공개·링크 모두 이름·포지션·키퍼만 담겨요.</span>
     </div>
+  </section>
+
+  <section class="card app admin-only" data-pane="admin" id="autoCard">
+    <div class="autoHead"><h2 style="margin:0">🤖 자동 팀 구성</h2><label class="chk switch"><input type="checkbox" id="autoOn" checked> <b>매주 자동으로</b></label></div>
+    <p class="muted" style="margin:8px 0 12px">매주 <b>금요일 오후 6시</b>에 이번 경기 <b>참석</b> 투표 인원으로 팀을 나눠 바로 공개해요. <b>9명 이하</b>면 만들지 않고, <b>10~14명은 2팀</b>, <b>15명 이상은 3팀</b>이에요.
+      목요일 마감 뒤 운영진이 고친 투표도 반영되고, 그 사이 관리자가 직접 공개했으면 건너뛰어요. 공개하면 출석·팀도 경기 기록에 들어가요. (풋살만)</p>
+    <div id="autoBox"><p class="muted">불러오는 중…</p></div>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost" id="autoDry">🧪 지금 인원으로 미리 나눠보기</button>
+      <button id="autoRun">지금 실행해서 공개</button>
+    </div>
+    <div id="autoResult"></div>
   </section>
 
   <section class="card app admin-only" data-pane="history" id="logCard">
@@ -1111,7 +1135,7 @@ async function loadAll(){
   }));
   renderSkillNew();
   if(isAdmin() && gradePwSet !== false && !gradeOpen) document.body.classList.add('gradeLocked');   // 확인 전엔 일단 가려둠
-  if(isAdmin()){ loadExempt(); checkGradeLock(); }
+  if(isAdmin()){ loadExempt(); checkGradeLock(); loadAuto(); }
   render();
   loadRecords();
   loadEvents();
@@ -1779,7 +1803,7 @@ function renderStats(){
   if(!hasCoffee() && statGroup === 'coffee') statGroup = 'game';
   const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).filter(([g])=>g !== 'coffee' || hasCoffee()).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
   const cards = LEADER_CARDS[statGroup]();
-  $('leaderBox').innerHTML = groupBar + `<div class="lb n${cards.length}" style="--lbn:${Math.max(3, cards.length)}">${cards.map(([k, title, unit, sortKey])=>{
+  $('leaderBox').innerHTML = groupBar + `<div class="lb n${cards.length}" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
     const list = withRanks(all.filter(r=>r[k] > 0).sort((a,b)=>b[k]-a[k] || a.name.localeCompare(b.name,'ko')), k);
     const top = list[0];
     const body = top ? `
@@ -2828,7 +2852,7 @@ async function loadVotes(){
   voteMissing = !!(nv.error && /relation|does not exist|schema cache/i.test(nv.error.message));
   votes = nv.error ? [] : nv.data.filter(x=>x.status === 'yes' || x.status === 'no');
   commentsMissing = !!nc.error; vComments = nc.error ? [] : nc.data;
-  renderVote();
+  renderVote(); if(isAdmin()) renderAuto();
 }
 
 function renderVote(){
@@ -3272,6 +3296,75 @@ function applyGradeLock(){
     $('gpChg').onclick = ()=>{ gradeForm = 'change'; applyGradeLock(); };
   }
 }
+
+
+/* ===================== 자동 팀 구성 (관리 탭) ===================== */
+// 실제 실행은 Supabase의 auto-teams 함수가 금요일 18:00에 함 — 여기서는 켜기/끄기, 마지막 결과, 미리 나눠보기
+const AUTO_MIN = 10, autoCount = n => n <= 14 ? 2 : 3;
+let autoSetting = {on: true}, autoLast = null;
+function nextAutoRun(){
+  const k = new Date(Date.now() + 9 * 3600e3);                       // 한국 시간 기준
+  const dow = k.getUTCDay(), past = dow === 5 && k.getUTCHours() >= 18;
+  const add = ((5 - dow + 7) % 7) || (past ? 7 : 0);
+  const d = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() + add));
+  return `${d.getUTCMonth()+1}/${d.getUTCDate()} (금) 18:00`;
+}
+async function loadAuto(){
+  if(!sb || !isAdmin()) return;
+  const r = await sb.from('app_settings').select('key,value').in('key', ['auto_teams', 'auto_teams_last']);
+  const get = k => (r.data || []).find(x=>x.key === k)?.value;
+  autoSetting = get('auto_teams') || {on: true}; autoLast = get('auto_teams_last') || null;
+  renderAuto();
+}
+function renderAuto(){
+  const box = $('autoBox'); if(!box) return;
+  $('autoOn').checked = autoSetting.on !== false;
+  if(SPORT === 'soccer'){ box.innerHTML = '<p class="muted" style="margin:0">자동 팀 구성은 풋살만 돼요. 풋살로 바꾸면 보여요.</p>'; $('autoDry').disabled = $('autoRun').disabled = true; return; }
+  $('autoDry').disabled = $('autoRun').disabled = false;
+  const yes = votes.filter(v=>v.status === 'yes' && players.some(p=>p.id === v.player_id)).length;
+  const plan = !vMatch ? '<span class="muted">예정된 경기 일정이 없어요</span>'
+    : yes < AUTO_MIN ? `지금 참석 <b>${yes}명</b> → <span class="bad">${AUTO_MIN}명이 안 돼서 지금이면 안 만들어요</span>`
+    : `지금 참석 <b>${yes}명</b> → <b>${autoCount(yes)}팀</b>으로 나눌 예정`;
+  const md = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()} (${d.toLocaleDateString('ko-KR',{weekday:'short'})})`; };
+  const last = autoLast ? (()=>{ const t = new Date(autoLast.at);
+    return `<span class="${autoLast.ok === false ? 'bad' : 'ok'}">${autoLast.ok === false ? '⚠️' : autoLast.skipped ? '⏭️' : '✅'} ${esc(autoLast.msg || '')}</span><br><span class="muted" style="font-size:12px">${t.toLocaleString('ko-KR',{month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})} · ${autoLast.by === 'auto' ? '자동 실행' : '관리자 실행'}${autoLast.date ? ` · ${md(autoLast.date)} 경기` : ''}</span>`; })() : '<span class="muted">아직 실행한 적 없어요</span>';
+  box.innerHTML = `<dl class="autoInfo">
+    <dt>다음 실행</dt><dd>${autoSetting.on === false ? '<span class="bad">꺼져 있어요</span>' : `<b>${nextAutoRun()}</b>`}</dd>
+    <dt>대상 경기</dt><dd>${vMatch ? `${md(vMatch.next)}${vMatch.event_time ? ' ' + esc(vMatch.event_time) : ''} ${esc(vMatch.title || '')}` : '-'}</dd>
+    <dt>예상</dt><dd>${plan}</dd>
+    <dt>마지막 결과</dt><dd>${last}</dd></dl>`;
+}
+async function callAuto(body){
+  const {data, error} = await sb.functions.invoke('auto-teams', {body: {sport: 'futsal', ...body}});
+  if(!error) return data;
+  let msg = error.message || String(error);
+  try{ const j = await error.context.json(); if(j?.msg) msg = j.msg; }catch(e){
+    if(/404|not found|Failed to send/i.test(msg) || error.context?.status === 404) msg = 'Supabase에 auto-teams 함수가 아직 없어요. 안내대로 Edge Function을 먼저 올려 주세요.';
+  }
+  return {ok: false, msg};
+}
+function autoTeamsHtml(r){
+  if(!r?.teams) return '';
+  return `<div class="autoTeams">${r.teams.map(t=>`<div><b>${t.team}팀 (${t.players.length}명)</b>${t.players.map(p=>`<span>${esc(p.name)} <small class="muted">${esc(String(p.pos).split(',')[0])}</small></span>`).join('')}</div>`).join('')}</div>`;
+}
+$('autoOn').onchange = async e=>{
+  const on = e.target.checked;
+  if(await q(sb.from('app_settings').upsert({key: 'auto_teams', value: {on}, updated_at: new Date().toISOString()}), '설정을 저장하지 못했어요')){
+    autoSetting = {on}; renderAuto(); plToast(on ? '자동 팀 구성을 켰어요' : '자동 팀 구성을 껐어요');
+  }
+};
+$('autoDry').onclick = async ()=>{
+  const b = $('autoDry'); b.disabled = true; $('autoResult').innerHTML = '<p class="muted">나누는 중…</p>';
+  const r = await callAuto({dry: true}); b.disabled = false;
+  $('autoResult').innerHTML = `<p style="margin:12px 0 0;font-weight:700" class="${r.ok ? '' : 'muted'}">${esc(r.msg || '')}</p>${autoTeamsHtml(r)}${r.teams ? '<p class="muted" style="font-size:12px;margin:6px 0 0">미리 보기라 공개되지 않았어요. 누를 때마다 조금씩 다르게 나와요.</p>' : ''}`;
+};
+$('autoRun').onclick = async ()=>{
+  if(!confirm('지금 참석 투표 인원으로 팀을 나눠 바로 공개할까요?\n지금 공개된 팀 구성은 바뀌어요.')) return;
+  const b = $('autoRun'); b.disabled = true; $('autoResult').innerHTML = '<p class="muted">나누는 중…</p>';
+  const r = await callAuto({force: true}); b.disabled = false;
+  $('autoResult').innerHTML = `<p style="margin:12px 0 0;font-weight:700">${esc(r.msg || '')}</p>${autoTeamsHtml(r)}`;
+  if(r.ok) await loadAll();
+};
 
 /* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
 // 구장 좌표 (이름에 들어간 단어로 찾음, 못 찾으면 망원유수지)
