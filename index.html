@@ -631,6 +631,11 @@
   .plPc small{font-size:12px;font-weight:700;color:var(--muted);min-height:18px}
   .plPc b{font-size:14px;font-weight:700}
   .plPc .avatar.md{width:60px;height:60px;font-size:16px}
+  .plDim.gate{background:var(--bg);animation:none}
+  .plSheet.gate{max-width:none;height:100%;max-height:none;border-radius:0;animation:none;padding-top:calc(20px + env(safe-area-inset-top))}
+  @media (min-width:600px){.plDim.gate{background:rgba(0,0,0,.55)}.plSheet.gate{max-width:640px;height:auto;max-height:90vh;border-radius:22px}}
+  .plGateLogo{text-align:center;margin:6px 0 2px}
+  .plGateLogo img{height:28px;display:inline-block}
   .plMenu{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:8px}
   .plMenu button{width:100%;padding:12px}
   @keyframes plShake{0%,100%{transform:none}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
@@ -2695,18 +2700,20 @@ async function startApp(){
   try{ await loadSupabaseLib(); }
   catch(e){ showErr('서버 연결 준비에 실패했어요. 와이파이/데이터 연결을 확인하고 다시 시도해 주세요.', e.message); return; }
   if(!sb) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  loadAll().then(initPlayer);   // 로그인 확인을 기다리지 않고 바로 불러오기 (선수 로그인은 명단을 받은 뒤 확인)
+  let authDone; const authChecked = new Promise(r=>authDone = r);
+  loadAll().then(()=>initPlayer(authChecked));   // 로그인 확인을 기다리지 않고 바로 불러오기 (선수 로그인은 명단을 받은 뒤 확인)
   try{
     const { data } = await withTimeout(sb.auth.getSession(), 6000);
     const was = !!session; session = data.session; applyMode();
     if(!!session !== was) loadAll();
   }catch(e){ /* 로그인 확인 실패해도 일반 화면은 그대로 */ }
+  authDone();
   if(!authWatching){
     authWatching = true;
     sb.auth.onAuthStateChange((_event, s)=>{
       const changed = !!s !== !!session;
       session = s; applyMode();
-      if(changed){ lastTeams = null; lastTactics = []; $('result').innerHTML=''; $('shareRow').style.display='none'; loadAll(); }
+      if(changed){ lastTeams = null; lastTactics = []; $('result').innerHTML=''; $('shareRow').style.display='none'; loadAll().then(()=>{ if(!s) regate(); }); }
     });
   }
 }
@@ -2854,22 +2861,34 @@ function renderPlBtn(){
   b.innerHTML = me ? `${avatar(me.name, 'sm')}${esc(me.name)}` : '🙋 선수 로그인';
   b.onclick = me ? openMyMenu : openPicker;
 }
-function plSignedOut(){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); }
-async function initPlayer(){
+function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); if(gate) regate(); }
+// 관리자 로그아웃 등으로 일반 상태가 되면 로그인 화면
+function regate(){ if(typeof maybeGate === 'function' && sb && players.length) maybeGate(); }
+// 첫 화면 로그인: 로그인 안 된 채로 들어오면 선수 고르기를 먼저 보여줌
+//  (공유 링크·관리자 로그인 상태는 제외 — 로그인해야 사이트를 볼 수 있음)
+let plGate = false;
+async function maybeGate(authChecked){
+  if(authChecked) await authChecked;
+  if(myPlayer() || isAdmin() || document.body.classList.contains('shared') || !players.length || voteMissing) return;
+  if($('plDim')) return;
+  plGate = true; openPicker();
+}
+async function initPlayer(authChecked){
   renderPlBtn();
-  if(!plToken || !sb) return;
+  if(!sb) return;
+  if(!plToken){ maybeGate(authChecked); return; }
   const {data, error} = await sb.rpc('player_me', {p_token: plToken});
   if(error) return;                                   // 함수가 아직 없거나 연결 문제: 저장된 로그인은 그대로 둠
-  if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(); return; }
+  if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(false); maybeGate(authChecked); return; }
   mePid = data.player_id; renderPlBtn(); renderVote(); renderGear();
   if(data.must_change) openPin(myPlayer(), 'new1');
 }
 
 /* ----- 시트 (아래에서 올라오는 창) ----- */
 function closeSheet(){ $('plDim')?.remove(); }
-function openSheet(html, {wide = false, canClose = true} = {}){
+function openSheet(html, {wide = false, canClose = true, gate = false} = {}){
   closeSheet();
-  document.body.insertAdjacentHTML('beforeend', `<div class="plDim" id="plDim"><div class="plSheet${wide ? ' wide' : ''}" role="dialog" aria-modal="true">${canClose ? '<button class="plX" id="plX" aria-label="닫기">×</button>' : ''}${html}</div></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div class="plDim${gate ? ' gate' : ''}" id="plDim"><div class="plSheet${wide ? ' wide' : ''}${gate ? ' gate' : ''}" role="dialog" aria-modal="true">${canClose ? '<button class="plX" id="plX" aria-label="닫기">×</button>' : ''}${html}</div></div>`);
   if(canClose){ $('plX').onclick = closeSheet; $('plDim').onclick = e=>{ if(e.target.id === 'plDim') closeSheet(); }; }
 }
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && $('plX')) closeSheet(); });
@@ -2877,8 +2896,9 @@ document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && $('plX')) clo
 // 1) 선수 고르기
 function openPicker(){
   if(voteMissing){ alert('선수 로그인을 쓰려면 Supabase에서 16-setup-player-login.sql을 먼저 실행해 주세요.'); return; }
-  openSheet(`<h3>본인 프로필을 눌러 로그인하세요</h3><p class="plHint">처음이면 비밀번호 0000 → 바로 새 비밀번호를 정해요</p>
-    <input id="plSearch" class="plSearch" type="search" placeholder="🔍 이름 검색" autocomplete="off"><div class="plGrid" id="plGrid"></div>`, {wide: true});
+  openSheet(`${plGate ? '<div class="plGateLogo"><picture><source srcset="logo-dark.png" media="(prefers-color-scheme: dark)"><img src="logo-light.png" alt="JALAPEÑO FC"></picture></div>' : ''}<h3>본인 프로필을 눌러 로그인하세요</h3><p class="plHint">처음이면 비밀번호 0000 → 바로 새 비밀번호를 정해요</p>
+    <input id="plSearch" class="plSearch" type="search" placeholder="🔍 이름 검색" autocomplete="off"><div class="plGrid" id="plGrid"></div>
+`, {wide: true, canClose: !plGate, gate: plGate});
   const draw = ()=>{
     const qv = $('plSearch').value.trim();
     const list = players.filter(p=>!qv || p.name.includes(qv)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
@@ -2896,7 +2916,7 @@ function openPin(p, mode, canCancel){
   openSheet(`${avatar(p.name, 'md')}<h3 id="pinTitle"></h3><p class="plHint" id="pinHint"></p>
     <div class="plDots" id="pinDots"><i></i><i></i><i></i><i></i></div><div class="plErr" id="pinErr"></div>
     <div class="plKeys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}<button class="t" data-k="help" id="pinHelp">${mode === 'login' ? '비번 찾기' : ''}</button><button data-k="0">0</button><button class="t" data-k="del" aria-label="지우기">⌫</button></div>
-    ${mode === 'login' ? '<button class="ghost small" id="pinBack" style="margin-top:6px">← 다른 선수 고르기</button>' : ''}`, {canClose: mode === 'login' || !!canCancel});
+    ${mode === 'login' ? '<button class="ghost small" id="pinBack" style="margin-top:6px">← 다른 선수 고르기</button>' : ''}`, {canClose: (mode === 'login' && !plGate) || !!canCancel});
   document.querySelectorAll('.plKeys [data-k]').forEach(b=>b.onclick = ()=> pinPress(b.dataset.k));
   if($('pinBack')) $('pinBack').onclick = openPicker;
   setPinText();
@@ -2929,7 +2949,7 @@ async function pinPress(k){
       const {data, error} = await sb.rpc('player_login', {p_player: pinPlayer.id, p_pin: pin});
       if(error){ pinShake(rpcMsg(error)); return; }
       if(!data.ok){ pinShake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
-      plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id;
+      plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id; plGate = false;
       renderPlBtn(); renderVote(); renderGear();
       if(data.must_change){ openPin(pinPlayer, 'new1'); return; }
       closeSheet(); plToast(`${pinPlayer.name}님, 반가워요!`);
@@ -2955,7 +2975,7 @@ function openMyMenu(){
   $('plOut').onclick = async ()=>{
     if(!confirm('로그아웃할까요?')) return;
     await sb.rpc('player_logout', {p_token: plToken});
-    closeSheet(); plSignedOut(); plToast('로그아웃했어요');
+    closeSheet(); plSignedOut();
   };
 }
 
