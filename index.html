@@ -405,7 +405,7 @@
     body.tab-home .homeSub{display:flex;gap:4px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
     .homeSub button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px 4px;border-radius:9px}
     .homeSub button.on{background:var(--accent);color:#fff}
-    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
+    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-sched) #voteCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
     body.shared nav.tabs, body.shared .homeSub{display:none !important}
     body.shared{padding-bottom:0}
   }
@@ -603,6 +603,78 @@
   .exItem{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 9px;font-size:14px;cursor:pointer;background:var(--card)}
   .exItem.on{background:var(--head);color:var(--muted);text-decoration:line-through}
   .exSum{width:100%;margin:6px 0 0;font-size:13px}
+
+  /* ---------- 선수 로그인 · 참석 투표 ---------- */
+  .plBtn{font-weight:800}
+  .plBtn.me{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 3px;border-radius:999px}
+  .plBtn.me .avatar.sm{width:24px;height:24px;font-size:9px}
+  .plDim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:flex;align-items:flex-end;justify-content:center;animation:plFade .15s}
+  .plSheet{background:var(--card);color:var(--text);width:100%;max-width:440px;border-radius:22px 22px 0 0;padding:18px 20px calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;animation:plUp .2s ease-out;position:relative;max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
+  .plSheet.wide{max-width:560px;align-items:stretch}
+  @media (min-width:600px){.plDim{align-items:center}.plSheet{border-radius:22px}}
+  .plSheet .plX{position:absolute;right:8px;top:6px;background:none;color:var(--muted);font-size:24px;padding:4px 10px;line-height:1}
+  .plSheet h3{margin:4px 0 0;font-size:18px;text-align:center}
+  .plHint{margin:0;font-size:13px;color:var(--muted);text-align:center}
+  .plDots{display:flex;gap:14px;margin:8px 0 2px}
+  .plDots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);display:block;transition:background .1s}
+  .plDots i.on{background:var(--accent)}
+  .plDots.shake{animation:plShake .35s}
+  .plErr{color:var(--danger);font-size:13px;font-weight:700;min-height:20px;text-align:center}
+  .plKeys{display:grid;grid-template-columns:repeat(3,76px);gap:10px;margin-top:4px}
+  .plKeys button{height:54px;border-radius:14px;background:var(--head);color:var(--text);font-size:23px;font-weight:700;padding:0}
+  .plKeys button:active{background:var(--accent2)}
+  .plKeys button.t{background:none;font-size:14px;color:var(--muted);font-weight:600}
+  .plSearch{width:100%;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:15px}
+  .plGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+  .plPc{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .plPc:hover{border-color:var(--accent)}
+  .plPc small{font-size:12px;font-weight:700;color:var(--muted);min-height:18px}
+  .plPc b{font-size:14px;font-weight:700}
+  .plPc .avatar.md{width:60px;height:60px;font-size:16px}
+  .plMenu{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:8px}
+  .plMenu button{width:100%;padding:12px}
+  @keyframes plShake{0%,100%{transform:none}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+  @keyframes plUp{from{transform:translateY(30px);opacity:.4}}
+  @keyframes plFade{from{opacity:0}}
+  .vtHead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .vtHead b{font-size:16px}
+  .vtWhen{font-size:13px;color:var(--muted);margin:2px 0 10px}
+  .vtDl{font-size:13px;font-weight:700;color:var(--accent);background:var(--accent2);border-radius:8px;padding:5px 10px;margin:0 0 10px;display:inline-block}
+  .vtDl.closed{color:var(--muted);background:var(--head)}
+  .vtBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .vtBtns button{padding:12px;border-radius:12px;font-weight:800;font-size:16px;background:var(--card);color:var(--text);border:2px solid var(--line)}
+  .vtBtns button.on.yes{background:var(--accent);border-color:var(--accent);color:#fff}
+  .vtBtns button.on.no{background:var(--danger);border-color:var(--danger);color:#fff}
+  .vtBtns.locked button{opacity:.55;cursor:not-allowed}
+  .vtBtns.locked button.on{opacity:.8}
+  .vtLogin{width:100%;padding:12px;font-weight:800;font-size:15px;border-radius:12px}
+  .vtNote{font-size:12px;margin:8px 0 0}
+  .vtCount{margin-top:12px;font-size:13px;color:var(--muted)}
+  .vtCount b{color:var(--text)}
+  .vtSub{font-size:12px;font-weight:800;color:var(--muted);margin-top:12px}
+  .vtNames{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .vtNm{display:inline-flex;align-items:center;gap:4px;background:var(--head);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
+  .vtNm.mine{box-shadow:0 0 0 2px var(--accent) inset}
+  .vtNm.auto{opacity:.75}
+  .vtNm small{font-weight:500;color:var(--muted);font-size:11px}
+  .vtMemos{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .vtMemo{background:var(--head);border-radius:12px;padding:8px 12px;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:2px 8px}
+  .vtMemo.mine{box-shadow:0 0 0 2px var(--accent) inset}
+  .vtMemo b{font-size:14px}
+  .vtMemo .ago{justify-self:end;font-size:12px;color:var(--muted)}
+  .vtMemo p{grid-column:1 / -1;margin:0;font-size:14px;line-height:1.45;word-break:break-all}
+  .vtMemo .delC{background:none;color:var(--muted);font-size:12px;padding:0;text-decoration:underline}
+  .vtSt{font-size:11px;font-weight:800;border-radius:6px;padding:0 6px}
+  .vtSt.yes{background:var(--accent2);color:var(--accent)}.vtSt.no{background:var(--fw2);color:var(--danger)}
+  .vtBox{display:flex;gap:6px;margin-top:8px}
+  .vtBox input{flex:1;min-width:0}
+  .vtBox button{white-space:nowrap}
+  .vtAdmin{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .vtAdmin select{flex:1;min-width:120px}
+  .plToast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  .plToast.show{opacity:.92}
+  .pinRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .pinRow select{flex:1;min-width:140px}
 </style>
 </head>
 <body>
@@ -616,6 +688,7 @@
     </div>
     <div class="row app">
       <button class="ghost small" id="installBtn" style="display:none">📲 앱 설치</button>
+      <button class="small plBtn" id="plBtn">🙋 선수 로그인</button>
       <button class="ghost small guest-only" id="loginBtn">관리자 로그인</button>
       <button class="ghost small admin-only" id="logoutBtn">로그아웃</button>
     </div>
@@ -635,6 +708,11 @@
     <button data-sub="sched">📅 일정</button><button data-sub="gear">🎒 장비</button><button data-sub="teams">👥 팀구성</button><button data-sub="rules">📜 회칙</button>
   </div>
   <aside class="side app">
+  <section class="card app" id="voteCard">
+    <h2>🗳️ 참석 투표</h2>
+    <div id="voteBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
   <section class="card app" id="scheduleCard">
     <h2>📅 다가오는 일정</h2>
     <div id="schedList"><p class="muted">불러오는 중…</p></div>
@@ -737,6 +815,7 @@
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h2 style="margin:0">출석 · 등급 관리 <span class="muted" id="count"></span></h2>
       <div class="row admin-only">
+        <button class="ghost" id="allVote" title="다음 경기에 '참석'으로 투표한 사람만 참석으로 바꿔요">🗳️ 투표대로</button>
         <button class="ghost" id="allOn">전체 참석</button>
         <button class="ghost" id="allOff">전체 해제</button>
       </div>
@@ -817,9 +896,15 @@
   </section>
 
   <section class="card app admin-only" data-pane="admin" id="exemptCard">
-    <h2>🗳️ 참석 투표 제외</h2>
-    <p class="muted" style="margin-top:-6px">체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 게스트나 휴면 회원을 체크해 두세요. (지금은 테스트 페이지에서만 쓰여요)</p>
+    <h2>🗳️ 참석 투표 · 선수 로그인</h2>
+    <p class="muted" style="margin-top:-6px"><b>투표 제외</b> — 체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 게스트나 휴면 회원을 체크해 두세요.</p>
     <div id="exemptBox" class="exemptGrid"><p class="muted">불러오는 중…</p></div>
+    <div class="pinRow">
+      <b style="font-size:14px">🔑 비밀번호 초기화</b>
+      <select id="pinResetSel"></select>
+      <button class="ghost" id="pinResetBtn">0000으로 초기화</button>
+      <p class="muted" style="width:100%;margin:2px 0 0;font-size:13px">비밀번호를 잊은 선수를 고르고 초기화하면 다시 0000으로 로그인한 뒤 새 비밀번호를 정해요. 그 선수의 기존 로그인은 모두 풀려요.</p>
+    </div>
   </section>
 
   <section class="card app admin-only" data-pane="admin" id="officerCard">
@@ -898,6 +983,7 @@ const $ = id => document.getElementById(id);
 const store = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} },
 };
 // 네이버 지도 검색 링크 (휴대폰에서는 앱이 있으면 앱으로 열림)
 const naverMapUrl = q => 'https://map.naver.com/p/search/' + encodeURIComponent(String(q).trim());
@@ -1437,7 +1523,7 @@ async function loadRecords(){
   renderMvpBanner();
   renderYearAwards();
   renderProfile();
-  renderSchedule();
+  renderSchedule(); renderVote();
   if(publishedRow) renderPublished(publishedRow);
   if(isAdmin()){ renderRecordEditor(); render(); }
 }
@@ -2345,6 +2431,7 @@ async function loadEvents(){
   eventsMissing = !!r.error;
   events = r.error ? [] : r.data;
   renderSchedule();
+  syncVote();
 }
 const addDays = (str, n) => { const d = new Date(str + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
 const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
@@ -2362,8 +2449,8 @@ function occursOn(ev, date){
 }
 const schedVenueOn = date => events.find(e=>e.kind === '경기' && e.place && (!e.sport || e.sport === 'both' || e.sport === SPORT) && occursOn(e, date))?.place || null;
 // 반복 일정은 오늘 이후 가장 가까운 날짜로
-function nextOccurrence(ev){
-  const today = todayStr(), base = ev.event_date;
+function nextOccurrence(ev, fromDate){
+  const today = fromDate || todayStr(), base = ev.event_date;
   if(ev.repeat === 'none' || base >= today) return base;
   if(ev.repeat === 'weekly') return addDays(base, Math.ceil(daysBetween(base, today) / 7) * 7);
   // 매월·6개월마다: 시작일에서 1개월·6개월씩 더해가며 오늘 이후 첫 날짜 (그 달에 없는 날이면 말일)
@@ -2504,10 +2591,22 @@ function renderGear(){
     return `<div class="gearItem gearRow">
       <div class="gearHead">${GEAR_ICON[g.id] || '🎒'} <b>${esc(g.label)}</b></div>
       <div class="gearWho">${who.length ? who.map(p=>`<span class="gearChip">${avatar(p.name,'sm')}${nameLink(p.id, p.name)}</span>`).join('') : '<span class="muted">아무도 없음</span>'}</div>
-      <div class="gearSide">${g.holders.length ? `<span class="muted gearWhen">${sinceText(g.updated_at)}</span>` : ''}<button class="ghost small gearBtn" data-gear-edit="${g.id}">받았어요 / 변경</button></div>
+      <div class="gearSide">${g.holders.length ? `<span class="muted gearWhen">${sinceText(g.updated_at)}</span>` : ''}${(()=>{
+        const me = myPlayer();
+        if(!me) return `<button class="ghost small gearBtn" data-gear-edit="${g.id}">받았어요 / 변경</button>`;
+        const mine = g.holders.includes(me.id), full = !mine && g.holders.length >= g.max_holders;
+        return `<button class="${mine ? 'ghost ' : ''}small gearBtn" data-gear-me="${g.id}" data-act="${mine ? 'out' : 'in'}" ${full ? 'disabled title="보관 인원이 다 찼어요"' : ''}>${mine ? '반납' : full ? '꽉 참' : '내가 받았어요'}</button><button class="del small gearBtn" data-gear-edit="${g.id}" style="color:var(--muted);padding:0 2px;font-size:12px">변경</button>`;
+      })()}</div>
     </div>`;
   }).join('')}</div>`;
   box.querySelectorAll('[data-gear-edit]').forEach(b=>b.onclick = ()=>{ gearEditing = b.dataset.gearEdit; renderGear(); });
+  box.querySelectorAll('[data-gear-me]').forEach(b=>b.onclick = async ()=>{
+    const g = gear.find(x=>x.id === b.dataset.gearMe), me = myPlayer(); if(!g || !me) return;
+    const holders = b.dataset.act === 'in' ? [...g.holders, me.id] : g.holders.filter(id=>id !== me.id);
+    b.disabled = true;
+    if(await q(sb.rpc('set_gear', {p_id: g.id, p_holders: holders}), '보관자를 저장하지 못했어요')){ await loadGear(); plToast(b.dataset.act === 'in' ? `${g.label} 받았어요` : `${g.label} 반납했어요`); }
+    else b.disabled = false;
+  });
   box.querySelectorAll('[data-gear-cancel]').forEach(b=>b.onclick = ()=>{ gearEditing = null; renderGear(); });
   box.querySelectorAll('[data-gear-save]').forEach(b=>b.onclick = async ()=>{
     const id = b.dataset.gearSave;
@@ -2596,7 +2695,7 @@ async function startApp(){
   try{ await loadSupabaseLib(); }
   catch(e){ showErr('서버 연결 준비에 실패했어요. 와이파이/데이터 연결을 확인하고 다시 시도해 주세요.', e.message); return; }
   if(!sb) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  loadAll();   // 로그인 확인을 기다리지 않고 바로 불러오기
+  loadAll().then(initPlayer);   // 로그인 확인을 기다리지 않고 바로 불러오기 (선수 로그인은 명단을 받은 뒤 확인)
   try{
     const { data } = await withTimeout(sb.auth.getSession(), 6000);
     const was = !!session; session = data.session; applyMode();
@@ -2612,6 +2711,275 @@ async function startApp(){
   }
 }
 startApp();
+
+/* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
+const PL_TOKEN_KEY = 'jfc-player-token';
+let plToken = store.get(PL_TOKEN_KEY), mePid = null;
+let vMatch = null, vKey = null, votes = [], vComments = [], exemptIds = new Set(), voteMissing = false, commentsMissing = false, voteSeq = 0;
+const myPlayer = () => mePid ? players.find(p=>p.id === mePid) || null : null;
+function plToast(msg){
+  let t = $('plToast'); if(!t){ document.body.insertAdjacentHTML('beforeend', '<div class="plToast" id="plToast"></div>'); t = $('plToast'); }
+  t.textContent = msg; t.classList.add('show'); clearTimeout(plToast.t); plToast.t = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+const rpcMsg = e => String(e?.message || e || '').replace(/^.*?:\s*(?=[가-힣])/, '');
+
+/* ----- 투표 기간: 경기 주 일요일 11:00 ~ 경기 직전 목요일 23:00 (한국 시간) ----- */
+function voteDeadline(dateStr){
+  const d = new Date(dateStr + 'T00:00:00+09:00');
+  const dow = new Date(dateStr + 'T12:00:00+09:00').getUTCDay();   // 0=일 … 4=목
+  const back = ((dow - 4 + 7) % 7) || 7;
+  return new Date(d.getTime() - back * 864e5 + 23 * 3600e3);
+}
+const voteOpen = dateStr => new Date(voteDeadline(dateStr).getTime() - 4.5 * 864e5);
+const kstMD = t => { const k = new Date(t.getTime() + 9 * 3600e3); return `${k.getUTCMonth()+1}/${k.getUTCDate()}`; };
+const fmtOpen = t => `${kstMD(t)} (일) 11:00`, fmtDeadline = t => `${kstMD(t)} (목) 23:00`;
+function leftText(ms){
+  const h = Math.floor(ms / 3600e3), d = Math.floor(h / 24);
+  return d >= 1 ? `${d}일 ${h % 24}시간` : h >= 1 ? `${h}시간 ${Math.floor(ms / 60000) % 60}분` : `${Math.max(1, Math.floor(ms / 60000))}분`;
+}
+const agoText = t => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.round(m/60)}시간 전` : `${Math.round(m/1440)}일 전`; };
+
+// 투표 대상 경기: 가장 가까운 '경기' 일정 (경기 당일 오전 11시가 지나면 다음 경기로 — 다음 투표도 이때 시작)
+function pickMatch(){
+  const kst = new Date(Date.now() + 9 * 3600e3), today = kst.toISOString().slice(0, 10);
+  const from = kst.getUTCHours() >= 11 ? addDays(today, 1) : today;
+  return events.filter(e=>e.kind === '경기' && (!e.sport || e.sport === 'both' || e.sport === SPORT))
+    .map(e=>({...e, next: nextOccurrence(e, from)})).filter(e=>e.next >= from)
+    .sort((a,b)=>a.next.localeCompare(b.next) || (a.event_time || '').localeCompare(b.event_time || ''))[0] || null;
+}
+function syncVote(){
+  vMatch = pickMatch();
+  const key = vMatch ? vMatch.next + '|' + SPORT : SPORT;
+  if(key !== vKey){ vKey = key; loadVotes(); } else renderVote();
+}
+async function loadVotes(){
+  if(!sb) return;
+  const seq = ++voteSeq, m = vMatch;
+  const ex = await sb.from('players').select('id,vote_exempt');
+  const nv = m ? await sb.from('attendance_votes').select('player_id,status').eq('event_date', m.next).eq('sport', SPORT) : {data: []};
+  const nc = m ? await sb.from('match_comments').select('id,player_id,body,created_at').eq('event_date', m.next).eq('sport', SPORT).order('created_at') : {data: []};
+  if(seq !== voteSeq) return;                     // 그 사이 종목을 바꿨으면 버림
+  exemptIds = new Set(ex.error ? [] : ex.data.filter(x=>x.vote_exempt).map(x=>x.id));
+  voteMissing = !!(nv.error && /relation|does not exist|schema cache/i.test(nv.error.message));
+  votes = nv.error ? [] : nv.data.filter(x=>x.status === 'yes' || x.status === 'no');
+  commentsMissing = !!nc.error; vComments = nc.error ? [] : nc.data;
+  renderVote();
+}
+
+function renderVote(){
+  const card = $('voteCard'), box = $('voteBox'); if(!card || !box) return;
+  card.classList.toggle('admin-only', voteMissing);
+  if(voteMissing){ box.innerHTML = '<p class="muted">참석 투표를 쓰려면 Supabase에서 16 · 18 · 19 · 20번 SQL을 먼저 실행해 주세요.</p>'; return; }
+  const me = myPlayer(), m = vMatch;
+  const loginBtn = me ? '' : '<button class="vtLogin" id="vtLogin">🙋 로그인하고 투표하기</button>';
+  if(!m){ box.innerHTML = `<p class="muted" style="margin:0 0 10px">예정된 경기 일정이 없어요.</p>${me ? '' : loginBtn}`; bindVote(); return; }
+  const dl = voteDeadline(m.next), op = voteOpen(m.next), now = Date.now();
+  const closed = now > dl.getTime(), notYet = now < op.getTime(), locked = closed || notYet;
+  const inRoster = id => players.some(p=>p.id === id);
+  const statusOf = pid => votes.find(v=>v.player_id === pid)?.status || null;
+  const myVote = me ? statusOf(me.id) : null;
+  const shownMine = closed && me && !myVote && !exemptIds.has(me.id) ? 'no' : myVote;
+  const byName = (a,b)=>a.name.localeCompare(b.name,'ko');
+  const pick = st => votes.filter(v=>v.status === st && inRoster(v.player_id)).map(v=>players.find(x=>x.id === v.player_id)).sort(byName);
+  const voted = new Set(votes.map(v=>v.player_id));
+  const waiting = players.filter(x=>!exemptIds.has(x.id) && !voted.has(x.id)).sort(byName);
+  const yes = pick('yes'), no = closed ? [...pick('no'), ...waiting] : pick('no');
+  const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
+  const chip = x => `<span class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}">${esc(x.name)}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</span>`;
+  const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
+  const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
+  box.innerHTML = `
+    <div class="vtHead"><b>⚽ ${esc(m.title || '경기')}</b><span class="muted" style="font-size:13px;font-weight:700">${dd <= 0 ? '오늘' : dd === 1 ? '내일' : `D-${dd}`}</span></div>
+    <div class="vtWhen">${d.getMonth()+1}/${d.getDate()} (${d.toLocaleDateString('ko-KR',{weekday:'short'})})${m.event_time ? ' ' + esc(m.event_time) : ''}${venue ? ' · 📍 ' + mapLink(venue) : ''}</div>
+    <div class="vtDl${locked ? ' closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - now)} · ${fmtDeadline(dl)}`}</div>
+    ${me ? `<div class="vtBtns${locked ? ' locked' : ''}"><button class="yes${shownMine === 'yes' ? ' on' : ''}" data-v="yes" ${locked ? 'disabled' : ''}>✅ 참석</button><button class="no${shownMine === 'no' ? ' on' : ''}" data-v="no" ${locked ? 'disabled' : ''}>불참</button></div>` : loginBtn}
+    ${notYet ? '<p class="muted vtNote">투표는 경기 주 일요일 오전 11시에 열려요. 댓글은 지금도 남길 수 있어요.</p>' : ''}
+    ${closed ? '<p class="muted vtNote">마감 후 변경은 운영진에게 말해 주세요. 댓글은 계속 남길 수 있어요.</p>' : ''}
+    <div class="vtCount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명${closed ? (autoNo.size ? ` (미응답 ${autoNo.size}명 포함)` : '') : ` · 미응답 ${waiting.length}명`}</div>
+    ${yes.length ? `<div class="vtSub">참석 (${yes.length})</div><div class="vtNames">${yes.map(chip).join('')}</div>` : ''}
+    ${no.length ? `<div class="vtSub">불참 (${no.length})</div><div class="vtNames">${no.map(chip).join('')}</div>` : ''}
+    ${!locked && waiting.length ? `<div class="vtSub">아직 투표 안 함 (${waiting.length})</div><div class="vtNames">${waiting.map(chip).join('')}</div>` : ''}
+    <div class="vtSub">💬 댓글${vComments.length ? ` (${vComments.length})` : ''}</div>
+    ${commentsMissing ? '<p class="muted" style="font-size:13px;margin:6px 0 0">댓글을 쓰려면 Supabase에서 18-setup-match-comments.sql을 먼저 실행해 주세요.</p>' : `
+    <div class="vtMemos">${vComments.map(c=>{ const x = players.find(y=>y.id === c.player_id); if(!x) return ''; const st = statusOf(x.id), mine = me && x.id === me.id;
+      return `<div class="vtMemo${mine ? ' mine' : ''}"><b>${esc(x.name)}</b>${st ? `<span class="vtSt ${st}">${st === 'yes' ? '참석' : '불참'}</span>` : '<span></span>'}<span class="ago">${agoText(c.created_at)}${mine ? ` · <button class="delC" data-cid="${c.id}">삭제</button>` : ''}</span><p>${esc(c.body)}</p></div>`; }).join('') || '<p class="muted" style="font-size:13px;margin:0">아직 댓글이 없어요. 일정이 애매하면 사유를 남겨 주세요.</p>'}</div>
+    ${me ? '<div class="vtBox"><input type="text" id="vtCIn" maxlength="300" placeholder="댓글 남기기 (예: 출장이라 목요일에 확정할게요)"><button id="vtCSend">등록</button></div>' : '<p class="muted" style="font-size:12px;margin:6px 0 0">로그인하면 댓글을 남길 수 있어요.</p>'}`}
+    <div class="vtAdmin admin-only">
+      <b style="font-size:13px;width:100%">🛠️ 운영진 수정 <span class="muted" style="font-weight:500">(마감 후에도 바꿀 수 있어요)</span></b>
+      <select id="vtAdmSel"><option value="">선수 고르기…</option>${players.slice().sort(byName).map(p=>{ const st = statusOf(p.id); return `<option value="${p.id}">${esc(p.name)}${st ? ` (${st === 'yes' ? '참석' : '불참'})` : ''}</option>`; }).join('')}</select>
+      <button class="small" data-adm="yes">참석</button><button class="ghost small" data-adm="no">불참</button><button class="del small" data-adm="none">투표 지우기</button>
+    </div>`;
+  bindVote();
+}
+function bindVote(){
+  const box = $('voteBox');
+  if($('vtLogin')) $('vtLogin').onclick = openPicker;
+  box.querySelectorAll('[data-v]').forEach(b=>b.onclick = async ()=>{
+    const me = myPlayer(); if(!me || !vMatch) return;
+    const cur = votes.find(v=>v.player_id === me.id)?.status;
+    const v = b.dataset.v === cur ? 'none' : b.dataset.v;   // 같은 버튼 다시 누르면 취소
+    b.disabled = true;
+    const {error} = await sb.rpc('player_vote', {p_token: plToken, p_date: vMatch.next, p_sport: SPORT, p_status: v});
+    if(error){ alert('저장하지 못했어요\n' + rpcMsg(error)); if(/로그인/.test(error.message)) plSignedOut(); await loadVotes(); return; }
+    await loadVotes(); plToast(v === 'yes' ? '참석으로 표시했어요' : v === 'no' ? '불참으로 표시했어요' : '투표를 취소했어요');
+  });
+  const send = async ()=>{
+    const body = $('vtCIn').value.trim(); if(!body) return;
+    $('vtCSend').disabled = true;
+    const {error} = await sb.rpc('player_comment', {p_token: plToken, p_date: vMatch.next, p_sport: SPORT, p_body: body});
+    if(error){ alert('댓글을 남기지 못했어요\n' + rpcMsg(error)); $('vtCSend').disabled = false; if(/로그인/.test(error.message)) plSignedOut(); return; }
+    await loadVotes(); plToast('댓글을 남겼어요');
+  };
+  if($('vtCSend')){ $('vtCSend').onclick = send; $('vtCIn').onkeydown = e=>{ if(e.key === 'Enter' && !e.isComposing) send(); }; }
+  box.querySelectorAll('[data-cid]').forEach(b=>b.onclick = async ()=>{
+    if(!confirm('이 댓글을 지울까요?')) return;
+    const {error} = await sb.rpc('player_comment_delete', {p_token: plToken, p_id: +b.dataset.cid});
+    if(error){ alert('지우지 못했어요\n' + rpcMsg(error)); return; }
+    await loadVotes(); plToast('댓글을 지웠어요');
+  });
+  box.querySelectorAll('[data-adm]').forEach(b=>b.onclick = async ()=>{
+    const pid = +$('vtAdmSel').value; if(!pid){ alert('선수를 골라 주세요'); return; }
+    b.disabled = true;
+    const {error} = await sb.rpc('admin_set_vote', {p_player: pid, p_date: vMatch.next, p_sport: SPORT, p_status: b.dataset.adm});
+    if(error){ alert(/admin_set_vote|function/i.test(error.message) ? '운영진 수정을 쓰려면 Supabase에서 21-setup-admin-vote.sql을 먼저 실행해 주세요.' : '저장하지 못했어요\n' + rpcMsg(error)); b.disabled = false; return; }
+    const name = players.find(p=>p.id === pid)?.name;
+    await loadVotes(); plToast(`${name} → ${b.dataset.adm === 'yes' ? '참석' : b.dataset.adm === 'no' ? '불참' : '투표 지움'}`);
+  });
+}
+
+/* ----- 헤더 버튼 ----- */
+function renderPlBtn(){
+  const b = $('plBtn'), me = myPlayer(); if(!b) return;
+  b.classList.toggle('me', !!me); b.classList.toggle('ghost', !!me);
+  b.innerHTML = me ? `${avatar(me.name, 'sm')}${esc(me.name)}` : '🙋 선수 로그인';
+  b.onclick = me ? openMyMenu : openPicker;
+}
+function plSignedOut(){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); }
+async function initPlayer(){
+  renderPlBtn();
+  if(!plToken || !sb) return;
+  const {data, error} = await sb.rpc('player_me', {p_token: plToken});
+  if(error) return;                                   // 함수가 아직 없거나 연결 문제: 저장된 로그인은 그대로 둠
+  if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(); return; }
+  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear();
+  if(data.must_change) openPin(myPlayer(), 'new1');
+}
+
+/* ----- 시트 (아래에서 올라오는 창) ----- */
+function closeSheet(){ $('plDim')?.remove(); }
+function openSheet(html, {wide = false, canClose = true} = {}){
+  closeSheet();
+  document.body.insertAdjacentHTML('beforeend', `<div class="plDim" id="plDim"><div class="plSheet${wide ? ' wide' : ''}" role="dialog" aria-modal="true">${canClose ? '<button class="plX" id="plX" aria-label="닫기">×</button>' : ''}${html}</div></div>`);
+  if(canClose){ $('plX').onclick = closeSheet; $('plDim').onclick = e=>{ if(e.target.id === 'plDim') closeSheet(); }; }
+}
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && $('plX')) closeSheet(); });
+
+// 1) 선수 고르기
+function openPicker(){
+  if(voteMissing){ alert('선수 로그인을 쓰려면 Supabase에서 16-setup-player-login.sql을 먼저 실행해 주세요.'); return; }
+  openSheet(`<h3>본인 프로필을 눌러 로그인하세요</h3><p class="plHint">처음이면 비밀번호 0000 → 바로 새 비밀번호를 정해요</p>
+    <input id="plSearch" class="plSearch" type="search" placeholder="🔍 이름 검색" autocomplete="off"><div class="plGrid" id="plGrid"></div>`, {wide: true});
+  const draw = ()=>{
+    const qv = $('plSearch').value.trim();
+    const list = players.filter(p=>!qv || p.name.includes(qv)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+    $('plGrid').innerHTML = list.map(p=>`<button class="plPc" data-plp="${p.id}"><small>${p.number != null ? `No. ${noLabel(p.number)}` : '&nbsp;'}</small>${avatar(p.name, 'md')}<b>${esc(p.name)}</b></button>`).join('') || '<p class="muted">검색 결과가 없어요.</p>';
+    $('plGrid').querySelectorAll('[data-plp]').forEach(b=>b.onclick = ()=> openPin(players.find(p=>p.id === +b.dataset.plp), 'login'));
+  };
+  $('plSearch').oninput = draw; draw();
+}
+
+// 2) 비밀번호 창 — mode: 'login' · 'new1'(새 비밀번호) · 'new2'(한 번 더)
+let pin = '', pinMode = 'login', pinPlayer = null, firstNew = '', pinBusy = false;
+function openPin(p, mode, canCancel){
+  if(!p) return;
+  pinPlayer = p; pinMode = mode; pin = ''; firstNew = ''; pinBusy = false;
+  openSheet(`${avatar(p.name, 'md')}<h3 id="pinTitle"></h3><p class="plHint" id="pinHint"></p>
+    <div class="plDots" id="pinDots"><i></i><i></i><i></i><i></i></div><div class="plErr" id="pinErr"></div>
+    <div class="plKeys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}<button class="t" data-k="help" id="pinHelp">${mode === 'login' ? '비번 찾기' : ''}</button><button data-k="0">0</button><button class="t" data-k="del" aria-label="지우기">⌫</button></div>
+    ${mode === 'login' ? '<button class="ghost small" id="pinBack" style="margin-top:6px">← 다른 선수 고르기</button>' : ''}`, {canClose: mode === 'login' || !!canCancel});
+  document.querySelectorAll('.plKeys [data-k]').forEach(b=>b.onclick = ()=> pinPress(b.dataset.k));
+  if($('pinBack')) $('pinBack').onclick = openPicker;
+  setPinText();
+}
+function setPinText(err){
+  const T = {
+    login: [`${pinPlayer.name}님이 맞나요?`, '비밀번호 4자리를 입력하세요 · 처음이면 0000'],
+    new1:  ['새 비밀번호 만들기', '앞으로 쓸 4자리를 정해 주세요 (0000 제외)'],
+    new2:  ['한 번 더 입력', '확인을 위해 같은 4자리를 다시 눌러 주세요'],
+  }[pinMode];
+  $('pinTitle').textContent = T[0]; $('pinHint').textContent = T[1];
+  $('pinErr').textContent = err || '';
+  document.querySelectorAll('#pinDots i').forEach((d, i)=>d.classList.toggle('on', i < pin.length));
+}
+function pinShake(msg){ pin = ''; setPinText(msg); const d = $('pinDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); }
+document.addEventListener('keydown', e=>{   // PC: 숫자 키보드로도 입력
+  if(!$('pinDots')) return;
+  if(/^\d$/.test(e.key)) pinPress(e.key); else if(e.key === 'Backspace') pinPress('del');
+});
+async function pinPress(k){
+  if(pinBusy) return;
+  if(k === 'help'){ if(pinMode === 'login') alert('비밀번호를 잊었다면 운영진에게 초기화를 요청하세요.\n초기화하면 다시 0000으로 로그인할 수 있어요.'); return; }
+  if(k === 'del'){ pin = pin.slice(0, -1); setPinText(); return; }
+  if(pin.length >= 4) return;
+  pin += k; setPinText();
+  if(pin.length < 4) return;
+  pinBusy = true;
+  try{
+    if(pinMode === 'login'){
+      const {data, error} = await sb.rpc('player_login', {p_player: pinPlayer.id, p_pin: pin});
+      if(error){ pinShake(rpcMsg(error)); return; }
+      if(!data.ok){ pinShake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
+      plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id;
+      renderPlBtn(); renderVote(); renderGear();
+      if(data.must_change){ openPin(pinPlayer, 'new1'); return; }
+      closeSheet(); plToast(`${pinPlayer.name}님, 반가워요!`);
+    } else if(pinMode === 'new1'){
+      if(pin === '0000'){ pinShake('0000은 쓸 수 없어요'); return; }
+      firstNew = pin; pinMode = 'new2'; pin = ''; setPinText();
+    } else {
+      if(pin !== firstNew){ pinMode = 'new1'; firstNew = ''; pinShake('두 번 입력한 번호가 달라요. 처음부터 다시 해 주세요'); return; }
+      const {error} = await sb.rpc('player_set_pin', {p_token: plToken, p_new: pin});
+      if(error){ pinMode = 'new1'; pinShake(rpcMsg(error)); return; }
+      closeSheet(); plToast('비밀번호를 저장했어요');
+    }
+  } finally { pinBusy = false; }
+}
+
+// 3) 내 메뉴
+function openMyMenu(){
+  const me = myPlayer(); if(!me) return;
+  openSheet(`${avatar(me.name, 'md')}<h3>${esc(me.name)}님</h3><p class="plHint">${me.number != null ? `No. ${noLabel(me.number)}` : '등번호 없음'}${me.pos?.length ? ' · ' + me.pos.map(esc).join('·') : ''}</p>
+    <div class="plMenu"><button class="ghost" id="plMyProfile">👤 내 프로필 보기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>`);
+  $('plMyProfile').onclick = ()=>{ closeSheet(); setTab('roster'); profileId = me.id; renderProfile(); window.scrollTo(0, 0); };
+  $('plChg').onclick = ()=> openPin(me, 'new1', true);
+  $('plOut').onclick = async ()=>{
+    if(!confirm('로그아웃할까요?')) return;
+    await sb.rpc('player_logout', {p_token: plToken});
+    closeSheet(); plSignedOut(); plToast('로그아웃했어요');
+  };
+}
+
+/* ----- 관리: 비밀번호 초기화 · 투표대로 출석 ----- */
+$('pinResetBtn').onclick = async ()=>{
+  const pid = +$('pinResetSel').value, p = players.find(x=>x.id === pid);
+  if(!p){ alert('선수를 골라 주세요'); return; }
+  if(!confirm(`${p.name} 선수의 비밀번호를 0000으로 초기화할까요?`)) return;
+  const {error} = await sb.rpc('admin_reset_pin', {p_player: pid});
+  if(error){ alert('초기화하지 못했어요\n' + rpcMsg(error)); return; }
+  $('pinResetSel').value = ''; plToast(`${p.name} 비밀번호를 초기화했어요`);
+};
+$('allVote').onclick = async ()=>{
+  if(!vMatch){ alert('투표할 경기 일정이 없어요'); return; }
+  const yes = votes.filter(v=>v.status === 'yes').map(v=>v.player_id).filter(id=>players.some(p=>p.id === id));
+  if(!yes.length){ alert('아직 참석으로 투표한 사람이 없어요'); return; }
+  const d = new Date(vMatch.next + 'T00:00:00');
+  if(!confirm(`${d.getMonth()+1}/${d.getDate()} 경기에 참석 투표한 ${yes.length}명만 참석으로 바꿀까요?\n(나머지는 참석 해제)`)) return;
+  if(!await q(sb.from('players').update({attending:false}).gte('id', 0))) return;
+  if(!await q(sb.from('players').update({attending:true}).in('id', yes))) return;
+  players.forEach(p=>p.on = yes.includes(p.id)); render(); plToast(`참석 ${yes.length}명으로 맞췄어요`);
+};
+// 마감 시간이 지나면 화면도 바뀌게 1분마다 다시 그림
+setInterval(()=>{ if(sb && !document.hidden) syncVote(); }, 60000);
 
 /* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
 // 구장 좌표 (이름에 들어간 단어로 찾음, 못 찾으면 망원유수지)
@@ -2706,10 +3074,12 @@ async function loadExempt(){
   const sorted = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   box.innerHTML = sorted.map(p=>`<label class="exItem ${ex.has(p.id) ? 'on' : ''}"><input type="checkbox" data-ex="${p.id}" ${ex.has(p.id) ? 'checked' : ''}> ${esc(p.name)}</label>`).join('')
     + `<p class="muted exSum">제외 ${ex.size}명 · 투표 대상 ${players.length - ex.size}명</p>`;
+  const ps = $('pinResetSel');
+  if(ps) ps.innerHTML = '<option value="">선수 고르기…</option>' + sorted.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   box.querySelectorAll('[data-ex]').forEach(cb=>cb.onchange = async ()=>{
     cb.disabled = true;
     const ok = await q(sb.from('players').update({vote_exempt: cb.checked}).eq('id', +cb.dataset.ex), '저장하지 못했어요');
-    if(ok) loadExempt(); else cb.disabled = false;
+    if(ok){ loadExempt(); loadVotes(); } else cb.disabled = false;
   });
 }
 
