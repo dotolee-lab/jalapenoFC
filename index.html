@@ -1690,7 +1690,7 @@ function aggregate(period){
 const STAT_GROUPS = {
   game:   {label:'⚽ 경기',      def:'g',   cols:()=>[['g','득점'], ['a','도움'], ['pts','공격P'], ['gp','경기'], ['wdl','전적'], ['rate','승률']]},
   part:   {label:'📅 출석·매너', def:'att', cols:()=>[['att','출석'], ['mvp','MVP'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼']]},
-  coffee: {label:'☕ 커피',      def:'cf',  cols:()=>[['cf','커피'], ['cl','내기 패'], ...(showAmounts() ? [['cfAmt','커피 금액']] : [])]},
+  coffee: {label:'☕ 커피',      def:'cf',  cols:()=>[['cf','커피'], ...(showAmounts() ? [['cfAmt','커피 금액']] : [])]},
 };
 let statGroup = (()=>{ const g = store.get('futsal-statgroup-v1'); return STAT_GROUPS[g] ? g : 'game'; })();
 const statCols = () => STAT_GROUPS[statGroup].cols();
@@ -1698,7 +1698,7 @@ const statCols = () => STAT_GROUPS[statGroup].cols();
 const LEADER_CARDS = {
   game:   ()=>[['g','득점','골'], ['a','도움','개'], ['mvp','MVP','회'], ['w','🔥 승리 요정','승','wdl']],
   part:   ()=>[['att','출석','회'], ['late','지각','회'], ['bk','구장 예약','회'], ['streak','🔥 연속 출석','연속','att']],
-  coffee: ()=>[['cf','커피 기부왕','회'], ...(showAmounts() ? [['cfAmt','커피 금액','원']] : []), ['cl','내기 불운왕','회']],
+  coffee: ()=>[['cf','커피 기부왕','회'], ...(showAmounts() ? [['cfAmt','커피 금액','원']] : [])],
 };
 // 지금까지 이어지고 있는 연속 출석 (최근 경기일부터 거꾸로, 빠진 날에서 멈춤)
 function attendanceStreaks(){
@@ -1779,7 +1779,7 @@ function renderStats(){
   if(!hasCoffee() && statGroup === 'coffee') statGroup = 'game';
   const groupBar = `<div class="statGroups">${Object.entries(STAT_GROUPS).filter(([g])=>g !== 'coffee' || hasCoffee()).map(([g, v])=>`<button class="sg ${g===statGroup?'on':''}" data-sg="${g}">${v.label}</button>`).join('')}</div>`;
   const cards = LEADER_CARDS[statGroup]();
-  $('leaderBox').innerHTML = groupBar + `<div class="lb n${cards.length}" style="--lbn:${cards.length}">${cards.map(([k, title, unit, sortKey])=>{
+  $('leaderBox').innerHTML = groupBar + `<div class="lb n${cards.length}" style="--lbn:${Math.max(3, cards.length)}">${cards.map(([k, title, unit, sortKey])=>{
     const list = withRanks(all.filter(r=>r[k] > 0).sort((a,b)=>b[k]-a[k] || a.name.localeCompare(b.name,'ko')), k);
     const top = list[0];
     const body = top ? `
@@ -2364,7 +2364,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ...(hasCoffee() ? [['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : ''], ['내기 패', `${me.cl}회`, '']] : []),
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ...(hasCoffee() ? [['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : '']] : []),
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
