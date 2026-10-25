@@ -682,6 +682,51 @@
   .plToast.show{opacity:.92}
   .pinRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
   .pinRow select{flex:1;min-width:140px}
+
+  /* ---------- 경기 기록일지 ---------- */
+  .lgTop{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+  .lgTabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}
+  .lgTabs button{background:var(--head);color:var(--muted);padding:7px 12px;font-size:13px;font-weight:700;white-space:nowrap;flex:none}
+  .lgTabs button.on{background:var(--text);color:var(--card)}
+  .lgTabs button.add{background:none;border:1px dashed var(--line)}
+  .lgBoard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;background:var(--head);border-radius:14px;padding:12px 10px;text-align:center}
+  .lgBoard select{font-weight:800;text-align:center;max-width:100%}
+  .lgSc{font-size:36px;font-weight:900;letter-spacing:2px;font-family:"Arial Black",sans-serif;line-height:1.1}
+  .lgSub{font-size:12px;font-weight:800;color:var(--muted);margin:14px 0 6px}
+  .lgEv{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+  .lgEv:first-child{border-top:0}
+  .lgT{font-size:11px;font-weight:800;border-radius:6px;padding:1px 0;text-align:center;color:#fff}
+  .lgT.t-A{background:var(--fw)}.lgT.t-B{background:var(--mf)}.lgT.t-C{background:var(--df)}
+  .lgEv small{color:var(--muted)}
+  .lgSeg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .lgSeg button{padding:10px;font-weight:800;background:var(--card);border:2px solid var(--line);color:var(--text)}
+  .lgSeg button.on.t-A{background:var(--fw);border-color:var(--fw);color:#fff}
+  .lgSeg button.on.t-B{background:var(--mf);border-color:var(--mf);color:#fff}
+  .lgSeg button.on.t-C{background:var(--df);border-color:var(--df);color:#fff}
+  .lgChips{display:flex;flex-wrap:wrap;gap:6px}
+  .lgChip{background:var(--head);color:var(--text);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600;border:2px solid transparent}
+  .lgChip.on{background:var(--accent2);border-color:var(--accent);color:var(--accent);font-weight:800}
+  .lgChip.muted{color:var(--muted)}
+  .lgChip.og{color:var(--danger)}
+  .lgChip:disabled{opacity:.35}
+  .lgBig{width:100%;padding:13px;font-weight:800;font-size:16px;margin-top:12px;border-radius:12px}
+  .lgRes{display:flex;flex-direction:column;gap:6px}
+  .lgRes > div{display:grid;grid-template-columns:44px 1fr 64px 1fr;align-items:center;gap:6px;background:var(--head);border-radius:10px;padding:7px 10px;font-size:14px}
+  .lgRes .n{font-size:12px;color:var(--muted);font-weight:700}
+  .lgRes .h{text-align:right;font-weight:700}.lgRes .a{font-weight:700}
+  .lgRes .w{color:var(--accent);font-weight:900}
+  .lgRes .s{font-weight:900;font-size:16px;text-align:center}
+  .lgTbl{width:100%;border-collapse:collapse;font-size:14px}
+  .lgTbl th,.lgTbl td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line)}
+  .lgTbl th{font-size:12px;color:var(--muted);font-weight:700}
+  .lgTbl td:first-child,.lgTbl th:first-child{text-align:left}
+  .lgSum{margin-top:18px;padding-top:14px;border-top:2px solid var(--line)}
+  .lgFoot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}
+  /* ---------- 등급 잠금 ---------- */
+  body.gradeLocked .rc, body.gradeLocked .gradeOnly{display:none !important}
+  .gradeBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+  .gradeBar b{margin-right:auto}
+  .gradeBar input{flex:0 1 160px;min-width:120px}
 </style>
 </head>
 <body>
@@ -779,10 +824,10 @@
     <h2>선수 등록</h2>
     <div class="row">
       <input type="text" id="name" placeholder="이름">
-      <select id="grade">
+      <select id="grade" class="gradeOnly">
         <option value="5">S</option><option value="4">A</option><option value="3" selected>B</option><option value="2">C</option><option value="1">D</option>
       </select>
-      <select id="act">
+      <select id="act" class="gradeOnly">
         <option value="좋음">활동량 좋음</option><option value="보통" selected>활동량 보통</option><option value="나쁨">활동량 나쁨</option>
       </select>
       <span class="row" style="gap:10px">
@@ -792,8 +837,8 @@
       </span>
       <button id="add">추가</button>
     </div>
-    <div class="row skillNew" id="skillNew"></div>
-    <p class="muted">포지션은 여러 개 고를 수 있어요. &nbsp;|&nbsp; 등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량·체력 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0
+    <div class="row skillNew gradeOnly" id="skillNew"></div>
+    <p class="muted gradeOnly">포지션은 여러 개 고를 수 있어요. &nbsp;|&nbsp; 등급 점수: S=5 · A=4 · B=3 · C=2 · D=1 &nbsp;|&nbsp; 활동량·체력 가산점: 좋음 +1 · 보통 +0.5 · 나쁨 0
       <br>능력치(패스·드리블·수비·스피드·슈팅, 1~5점, 비우면 미평가): (평균 − 3) × 0.5 → −1 ~ +1점 &nbsp;|&nbsp; 팀을 나눌 때 능력치별 합계도 팀마다 고르게 맞춰요.
       <br>키퍼 능력(1~5점, 비우면 키퍼 안 함): 1점 0 · 2점 +0.125 · 3점 +0.25 · 4점 +0.375 · 5점 +0.5 &nbsp;|&nbsp; 팀마다 가장 잘하는 키퍼 실력도 비슷하게 맞춰요.
       <br>최근 폼(자동): 최근 3번 참석한 경기일, 4경기 이상일 때만 · 승률 65% 이상 +0.3 / 35% 이하 −0.3 (무승부는 0.5승) · 경기당 공격포인트가 팀 평균의 1.5배 이상 +0.2 / 절반 이하 −0.1
@@ -827,6 +872,7 @@
         <button class="ghost" id="allOff">전체 해제</button>
       </div>
     </div>
+    <div id="gradeBar" class="gradeBar" style="display:none"></div>
     <div class="tablewrap">
     <table>
       <thead><tr><th>참석</th><th>이름</th><th class="admin-only rc">등급</th><th class="admin-only rc">활동량·체력</th><th class="admin-only rc">패스</th><th class="admin-only rc">드리블</th><th class="admin-only rc">수비</th><th class="admin-only rc">스피드</th><th class="admin-only rc">슈팅</th><th class="admin-only rc">키퍼</th><th class="admin-only rc" title="최근 폼">폼</th><th class="admin-only rc">총점</th><th>포지션</th><th class="admin-only"></th></tr></thead>
@@ -852,6 +898,14 @@
       <button class="ghost" id="shareBtn">공유 링크 복사</button>
       <span class="muted">공개하면 누구나 이 페이지에서 볼 수 있어요. 공개·링크 모두 이름·포지션·키퍼만 담겨요.</span>
     </div>
+  </section>
+
+  <section class="card app admin-only" data-pane="history" id="logCard">
+    <div class="histHead">
+      <h2>📝 경기 기록일지</h2>
+      <input type="date" id="logDate">
+    </div>
+    <div id="logBox"><p class="muted">불러오는 중…</p></div>
   </section>
 
   <section class="card app" data-pane="history">
@@ -928,10 +982,10 @@
   <section class="card app admin-only" data-pane="admin">
     <h2>관리</h2>
     <div class="row">
-      <button class="ghost" id="exp">명단 내보내기</button>
+      <button class="ghost gradeOnly" id="exp">명단 내보내기</button>
       <button class="ghost" id="imp">명단 불러오기</button>
       <button class="ghost" id="migrate" style="display:none">이 브라우저의 예전 명단 올리기</button>
-      <button id="backupBtn">전체 백업 파일 받기</button>
+      <button id="backupBtn" class="gradeOnly">전체 백업 파일 받기</button>
     </div>
     <div class="settingRow">
       <label class="chk switch"><input type="checkbox" id="cfShowToggle" checked> <b>☕ 커피 금액 공개</b></label>
@@ -1056,7 +1110,8 @@ async function loadAll(){
     form: formOf[p.id]?.v || 0, formInfo: formOf[p.id] || null,
   }));
   renderSkillNew();
-  if(isAdmin()) loadExempt();
+  if(isAdmin() && gradePwSet !== false && !gradeOpen) document.body.classList.add('gradeLocked');   // 확인 전엔 일단 가려둠
+  if(isAdmin()){ loadExempt(); checkGradeLock(); }
   render();
   loadRecords();
   loadEvents();
@@ -1069,6 +1124,7 @@ async function loadAll(){
 /* ---------- 관리자 로그인 (Supabase Auth) ---------- */
 function applyMode(){
   document.body.classList.toggle('admin', isAdmin());
+  if(!isAdmin()) document.body.classList.remove('gradeLocked');
   $('modeLabel').textContent = isAdmin() ? '관리자' : '일반';
   if(typeof setTab === 'function' && !isAdmin() && document.body.classList.contains('tab-admin')) setTab('roster');
   $('migrate').style.display = (isAdmin() && store.get('futsal-players-v1')) ? '' : 'none';
@@ -1348,17 +1404,17 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
         ${tac ? pitchSvg(tac) + `<div class="tacLabel">${tac}</div>` : `<div class="tacEmpty">전술 없음</div>`}
         ${editable ? tacticSelect(i, tac) : ''}
       </div>` : '';
-    return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
+    return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore gradeOnly">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge">${GRADES[p.grade]}</span><span class="badge">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
 }
 function showTeams(teams){
   $('result').innerHTML = teamsHtml(teams, true, lastTactics, true) +
-    `<p class="summary">팀 평균 차이: 최대 <b>${spread(teams).toFixed(2)}점</b> · 전체 평균 ${(teams.flat().reduce((a,p)=>a+score(p),0) / Math.max(1, teams.flat().length)).toFixed(2)}점${new Set(teams.map(t=>t.length)).size > 1 ? ' · 인원 많은 팀은 교체 이점만큼 평균을 살짝 낮게 맞춰요' : ''}</p>`;
+    `<p class="summary gradeOnly">팀 평균 차이: 최대 <b>${spread(teams).toFixed(2)}점</b> · 전체 평균 ${(teams.flat().reduce((a,p)=>a+score(p),0) / Math.max(1, teams.flat().length)).toFixed(2)}점${new Set(teams.map(t=>t.length)).size > 1 ? ' · 인원 많은 팀은 교체 이점만큼 평균을 살짝 낮게 맞춰요' : ''}</p>`;
   $('result').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = ()=>{
     const i = +sel.dataset.team;
     const v = pickTactic(sel, lastTactics[i]);
@@ -1532,7 +1588,7 @@ async function loadRecords(){
   renderProfile();
   renderSchedule(); renderVote();
   if(publishedRow) renderPublished(publishedRow);
-  if(isAdmin()){ renderRecordEditor(); render(); }
+  if(isAdmin()){ renderRecordEditor(); render(); renderLog(); }
 }
 
 // 선수 한 명의 그날 승/무/패: 그날 소속 팀이 치른 경기 결과로 계산
@@ -3002,6 +3058,220 @@ $('allVote').onclick = async ()=>{
 };
 // 마감 시간이 지나면 화면도 바뀌게 1분마다 다시 그림
 setInterval(()=>{ if(sb && !document.hidden) syncVote(); }, 60000);
+
+/* ===================== 경기 기록일지 (관리자) ===================== */
+// 경기 중에 골·어시를 눌러 적어두고, 끝나면 '경기 기록에 등록'으로 경기 결과·개인 기록을 한 번에 저장
+// 적는 동안의 내용은 이 기기에 저장돼서 새로고침해도 남아 있음
+let logDate = todayStr(), LOG = null, logPick = {t: null, s: null, a: null};
+const logKey = () => `jfc-log-${SPORT}-${logDate}`;
+function logSave(){ if(LOG) store.set(logKey(), JSON.stringify(LOG)); }
+function logLoad(){ try{ const v = JSON.parse(store.get(logKey()) || 'null'); return v && Array.isArray(v.games) ? v : null; }catch(e){ return null; } }
+const lgName = id => players.find(p=>p.id === id)?.name || '?';
+const lgCount = (g, t) => g.goals.filter(x=>x.t === t).length;
+
+// 그날 팀: 경기 기록(출석·팀)에 있으면 그걸, 없으면 마지막으로 공개한 팀 구성
+function logTeams(){
+  const out = {};
+  const day = days.find(d=>d.played_on === logDate);
+  if(day) stats.filter(r=>r.day_id === day.id && r.team).forEach(r=>{ const p = players.find(x=>x.id === r.player_id); if(p) (out[r.team] ||= []).push(p); });
+  let from = 'day';
+  if(Object.keys(out).length < 2 && publishedRow){
+    Object.keys(out).forEach(k=>delete out[k]); from = 'published';
+    unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(([name])=>{ const p = players.find(x=>x.name === String(name)); if(p) (out[TEAM_LETTERS[i]] ||= []).push(p); }));
+  }
+  Object.values(out).forEach(a=>a.sort((x,y)=>x.name.localeCompare(y.name,'ko')));
+  return {teams: out, from};
+}
+function nextPair(letters, last){
+  if(letters.length < 3 || !last) return [letters[0], letters[1]];
+  // 3팀: 방금 쉰 팀이 들어가고, 이긴 팀(비기면 먼저 뛴 팀)이 남음
+  const rest = letters.find(x=>x !== last.home && x !== last.away);
+  const h = lgCount(last, last.home), a = lgCount(last, last.away);
+  const stay = h > a ? last.home : a > h ? last.away : last.away;
+  return [stay, rest];
+}
+
+function renderLog(){
+  const box = $('logBox'); if(!box || !isAdmin()) return;
+  $('logDate').value = logDate;
+  const {teams: T, from} = logTeams(), letters = Object.keys(T).sort();
+  if(letters.length < 2){
+    box.innerHTML = '<p class="muted">이 날짜의 팀이 없어요. 팀 구성을 공개하거나, 아래 "경기 기록 입력"에서 출석과 팀을 먼저 넣어 주세요.</p>'; return;
+  }
+  if(!LOG || LOG.key !== logKey()) LOG = logLoad() || {games: [], cur: 0, mvp: null};
+  LOG.key = logKey();
+  if(!LOG.games.length){ LOG.games.push({home: letters[0], away: letters[1], goals: []}); LOG.cur = 0; }
+  LOG.cur = Math.min(LOG.cur, LOG.games.length - 1);
+  const g = LOG.games[LOG.cur];
+  if(![g.home, g.away].includes(logPick.t)) logPick = {t: g.home, s: null, a: null};
+  const mates = T[logPick.t] || [];
+  const teamSel = (k, v) => `<select data-lg-side="${k}">${letters.map(x=>`<option ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`;
+  const total = LOG.games.reduce((n, x)=>n + x.goals.length, 0);
+
+  // 정리용 계산
+  const res = {}; letters.forEach(t=>res[t] = {w:0, d:0, l:0, gf:0, ga:0});
+  LOG.games.forEach(x=>{ if(x.home === x.away) return; const h = lgCount(x, x.home), a = lgCount(x, x.away);
+    res[x.home].gf += h; res[x.home].ga += a; res[x.away].gf += a; res[x.away].ga += h;
+    if(h > a){ res[x.home].w++; res[x.away].l++; } else if(h < a){ res[x.away].w++; res[x.home].l++; } else { res[x.home].d++; res[x.away].d++; } });
+  const pts = {}; LOG.games.forEach(x=>x.goals.forEach(e=>{ if(e.s){ (pts[e.s] ||= {g:0, a:0}).g++; } if(e.a){ (pts[e.a] ||= {g:0, a:0}).a++; } }));
+  const teamOf = pid => letters.find(t=>T[t].some(p=>p.id === pid)) || '';
+  const scorers = Object.entries(pts).map(([id, v])=>({id: +id, ...v})).sort((a,b)=>(b.g + b.a) - (a.g + a.a) || b.g - a.g || lgName(a.id).localeCompare(lgName(b.id),'ko'));
+  const everyone = letters.flatMap(t=>T[t]);
+
+  box.innerHTML = `
+    <div class="lgTop"><span>${fmtDay(logDate)} · ${from === 'day' ? '출석한 팀' : '공개한 팀 구성'} 기준 · ${letters.map(t=>`${t}팀 ${T[t].length}명`).join(' · ')}</span></div>
+    <div class="lgTabs">${LOG.games.map((x, i)=>`<button data-lg-tab="${i}" class="${i === LOG.cur ? 'on' : ''}">${i + 1}경기 ${x.home}:${x.away}${x.goals.length ? ` (${lgCount(x, x.home)}-${lgCount(x, x.away)})` : ''}</button>`).join('')}<button class="add" id="lgAddGame">＋ 다음 경기</button></div>
+    <div class="lgBoard">
+      <div>${teamSel('home', g.home)}</div>
+      <div class="lgSc">${lgCount(g, g.home)} : ${lgCount(g, g.away)}</div>
+      <div>${teamSel('away', g.away)}</div>
+    </div>
+    ${g.home === g.away ? '<p class="muted" style="color:var(--danger)">같은 팀끼리는 경기할 수 없어요. 팀을 바꿔 주세요.</p>' : ''}
+    <div class="lgSub">⚽ ${LOG.cur + 1}경기 골 기록</div>
+    <div>${g.goals.map((e, i)=>`<div class="lgEv"><span class="lgT t-${e.t}">${e.t}</span><span>${e.s ? `<b>${esc(lgName(e.s))}</b>` : '<b style="color:var(--danger)">상대 자책골</b>'} <small>· ${e.a ? '어시 ' + esc(lgName(e.a)) : '어시 없음'}</small></span><button class="del" data-lg-del="${i}" aria-label="지우기">×</button></div>`).join('') || '<p class="muted" style="margin:0;font-size:13px">아직 골이 없어요.</p>'}</div>
+
+    <div class="lgSub">＋ 골 추가 — 어느 팀?</div>
+    <div class="lgSeg">${[g.home, g.away].map(t=>`<button class="t-${t} ${logPick.t === t ? 'on' : ''}" data-lg-team="${t}">${t}팀 골</button>`).join('')}</div>
+    <div class="lgSub">넣은 사람 (${logPick.t}팀)</div>
+    <div class="lgChips">${mates.map(p=>`<button class="lgChip ${logPick.s === p.id ? 'on' : ''}" data-lg-s="${p.id}">${esc(p.name)}</button>`).join('')}<button class="lgChip og ${logPick.s === 0 ? 'on' : ''}" data-lg-s="0">상대 자책골</button></div>
+    <div class="lgSub">어시스트 (선택)</div>
+    <div class="lgChips"><button class="lgChip muted ${!logPick.a ? 'on' : ''}" data-lg-a="">없음</button>${mates.map(p=>`<button class="lgChip ${logPick.a === p.id ? 'on' : ''}" data-lg-a="${p.id}" ${logPick.s === p.id ? 'disabled' : ''}>${esc(p.name)}</button>`).join('')}</div>
+    <button class="lgBig" id="lgGoal" ${logPick.s === null ? 'disabled' : ''}>⚽ 골 기록하기</button>
+    <div class="lgFoot"><button class="ghost small" id="lgNext">⏭️ ${LOG.cur + 1}경기 끝 · 다음 경기</button><button class="del small" id="lgDelGame">이 경기 삭제</button></div>
+
+    <div class="lgSum">
+      <h3 class="sub" style="margin-top:0">📋 오늘 기록 정리 <span class="muted" style="font-weight:500">${LOG.games.length}경기 · 골 ${total}</span></h3>
+      <div class="lgSub">경기 결과</div>
+      <div class="lgRes">${LOG.games.map((x, i)=>{ const h = lgCount(x, x.home), a = lgCount(x, x.away);
+        return `<div><span class="n">${i + 1}경기</span><span class="h ${h > a ? 'w' : ''}">${x.home}팀</span><span class="s">${h} : ${a}</span><span class="a ${a > h ? 'w' : ''}">${x.away}팀</span></div>`; }).join('')}</div>
+      <div class="lgSub">팀 성적</div>
+      <table class="lgTbl"><tr><th>팀</th><th>승</th><th>무</th><th>패</th><th>득실</th></tr>${letters.map(t=>{ const r = res[t], gd = r.gf - r.ga;
+        return `<tr><td><span class="lgT t-${t}" style="display:inline-block;width:24px">${t}</span></td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${gd > 0 ? '+' : ''}${gd}</td></tr>`; }).join('')}</table>
+      <div class="lgSub">개인 기록 (골·어시가 있는 사람)</div>
+      ${scorers.length ? `<table class="lgTbl"><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th></tr>${scorers.map(x=>`<tr><td>${esc(lgName(x.id))}</td><td>${teamOf(x.id)}</td><td>${x.g}</td><td>${x.a}</td></tr>`).join('')}</table>` : '<p class="muted" style="margin:0;font-size:13px">아직 없어요.</p>'}
+      <div class="lgSub">🏅 MVP (직접 골라 주세요)</div>
+      <div class="lgChips"><button class="lgChip muted ${!LOG.mvp ? 'on' : ''}" data-lg-mvp="">없음</button>${everyone.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(p=>`<button class="lgChip ${LOG.mvp === p.id ? 'on' : ''}" data-lg-mvp="${p.id}">${esc(p.name)}</button>`).join('')}</div>
+      <button class="lgBig" id="lgSave">✅ 경기 기록에 등록</button>
+      <div class="lgFoot"><span class="muted" style="font-size:12px">등록하면 경기 결과·골·어시·MVP가 저장되고 출석은 팀 그대로 들어가요. 나중에 아래 "경기 기록 입력"에서 고칠 수 있어요.</span><button class="del small" id="lgClear">기록일지 비우기</button></div>
+    </div>`;
+
+  const redraw = ()=>{ logSave(); renderLog(); };
+  box.querySelectorAll('[data-lg-tab]').forEach(b=>b.onclick = ()=>{ LOG.cur = +b.dataset.lgTab; logPick.t = null; redraw(); });
+  const addGame = ()=>{ const [h, a] = nextPair(letters, LOG.games[LOG.games.length - 1]); LOG.games.push({home: h, away: a, goals: []}); LOG.cur = LOG.games.length - 1; logPick.t = null; redraw(); };
+  $('lgAddGame').onclick = addGame; $('lgNext').onclick = addGame;
+  box.querySelectorAll('[data-lg-side]').forEach(sel=>sel.onchange = ()=>{
+    if(g.goals.length && !confirm('팀을 바꾸면 이 경기 골 기록이 지워져요. 바꿀까요?')){ renderLog(); return; }
+    g[sel.dataset.lgSide] = sel.value; g.goals = []; logPick.t = null; redraw();
+  });
+  box.querySelectorAll('[data-lg-team]').forEach(b=>b.onclick = ()=>{ logPick = {t: b.dataset.lgTeam, s: null, a: null}; renderLog(); });
+  box.querySelectorAll('[data-lg-s]').forEach(b=>b.onclick = ()=>{ logPick.s = +b.dataset.lgS; if(logPick.a === logPick.s) logPick.a = null; renderLog(); });
+  box.querySelectorAll('[data-lg-a]').forEach(b=>b.onclick = ()=>{ logPick.a = b.dataset.lgA ? +b.dataset.lgA : null; renderLog(); });
+  $('lgGoal').onclick = ()=>{
+    if(logPick.s === null) return;
+    g.goals.push({t: logPick.t, s: logPick.s || null, a: logPick.s ? logPick.a : null});
+    logPick = {t: logPick.t, s: null, a: null}; redraw(); plToast(`${logPick.t}팀 골!`);
+  };
+  box.querySelectorAll('[data-lg-del]').forEach(b=>b.onclick = ()=>{ if(!confirm('이 골 기록을 지울까요?')) return; g.goals.splice(+b.dataset.lgDel, 1); redraw(); });
+  $('lgDelGame').onclick = ()=>{
+    if(!confirm(`${LOG.cur + 1}경기를 삭제할까요?${g.goals.length ? `\n골 ${g.goals.length}개 기록도 같이 지워져요.` : ''}`)) return;
+    LOG.games.splice(LOG.cur, 1); LOG.cur = Math.max(0, LOG.cur - 1); logPick.t = null; redraw();
+  };
+  box.querySelectorAll('[data-lg-mvp]').forEach(b=>b.onclick = ()=>{ LOG.mvp = b.dataset.lgMvp ? +b.dataset.lgMvp : null; redraw(); });
+  $('lgClear').onclick = ()=>{ if(!confirm('이 날짜의 기록일지를 모두 비울까요?\n(이미 경기 기록에 등록한 내용은 그대로예요)')) return; LOG = {games: [], cur: 0, mvp: null}; redraw(); };
+  $('lgSave').onclick = ()=> logRegister(T, letters, pts);
+}
+
+async function logRegister(T, letters, pts){
+  const list = LOG.games.filter(x=>x.home !== x.away);
+  if(!list.length){ alert('등록할 경기가 없어요'); return; }
+  if(!LOG.mvp && !confirm('MVP를 고르지 않았어요. 그대로 등록할까요?')) return;
+  let day = days.find(d=>d.played_on === logDate);
+  if(!day){
+    day = await q((sportMissing ? sb.from('match_days').upsert({played_on: logDate}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: logDate, sport: SPORT}, {onConflict:'played_on,sport'})).select('id').single(), '경기일을 만들지 못했어요');
+    if(!day) return;
+  }
+  const old = games.filter(x=>x.day_id === day.id);
+  const oldPts = stats.filter(r=>r.day_id === day.id && (r.goals || r.assists || r.mvp));
+  const msg = `${fmtDay(logDate)} 경기 기록에 등록할까요?\n· 경기 ${list.length}개 · 골 ${list.reduce((n, x)=>n + x.goals.length, 0)}개${LOG.mvp ? ` · MVP ${lgName(LOG.mvp)}` : ''}`
+    + (old.length || oldPts.length ? `\n\n⚠️ 이 날 이미 입력된 경기 결과·골·어시·MVP는 기록일지 내용으로 바뀌어요.` : '');
+  if(!confirm(msg)) return;
+  $('lgSave').disabled = true;
+  try{
+    if(old.length && !await q(sb.from('match_games').delete().eq('day_id', day.id), '예전 경기 결과를 지우지 못했어요')) return;
+    const gameRows = list.map(x=>({day_id: day.id, home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away)}));
+    if(!await q(sb.from('match_games').insert(gameRows), '경기 결과를 저장하지 못했어요')) return;
+    const inTeam = new Set();
+    const rows = letters.flatMap(t=>T[t].map(p=>{ inTeam.add(p.id); return {day_id: day.id, player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id}; }));
+    // 팀에는 없지만 예전에 기록이 있던 사람은 0으로 정리
+    stats.filter(r=>r.day_id === day.id && !inTeam.has(r.player_id) && (r.goals || r.assists || r.mvp))
+      .forEach(r=>rows.push({day_id: day.id, player_id: r.player_id, team: r.team, goals: 0, assists: 0, mvp: false}));
+    if(!await q(sb.from('player_stats').upsert(rows, {onConflict:'day_id,player_id'}), '개인 기록을 저장하지 못했어요')) return;
+    LOG.saved = new Date().toISOString(); logSave();
+    selectedDayId = day.id; histDayId = day.id;
+    await loadRecords();
+    alert('경기 기록에 등록했어요. 경기 기록·개인 기록·순위에 반영됐어요.');
+  } finally { if($('lgSave')) $('lgSave').disabled = false; }
+}
+$('logDate').onchange = ()=>{ logDate = $('logDate').value || todayStr(); LOG = null; logPick = {t: null, s: null, a: null}; renderLog(); };
+
+/* ===================== 등급 잠금 (관리 탭) ===================== */
+const GRADE_OPEN_KEY = 'jfc-grade-open';
+let gradePwSet = null, gradeOpen = false, gradeMissing = false, gradeForm = null;
+const ssGet = k => { try{ return sessionStorage.getItem(k); }catch(e){ return null; } };
+const ssSet = (k, v) => { try{ v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); }catch(e){} };
+async function checkGradeLock(){
+  if(!isAdmin()) return;
+  const {data, error} = await sb.rpc('grade_pw_status');
+  gradeMissing = !!error; gradePwSet = error ? false : !!data;
+  gradeOpen = !gradePwSet || ssGet(GRADE_OPEN_KEY) === '1';
+  applyGradeLock();
+}
+function applyGradeLock(){
+  document.body.classList.toggle('gradeLocked', isAdmin() && !gradeOpen);
+  const bar = $('gradeBar'); if(!bar) return;
+  bar.style.display = isAdmin() ? '' : 'none';
+  if(gradeMissing){ bar.innerHTML = '<span class="muted">🔒 등급 잠금을 쓰려면 Supabase에서 22-setup-grade-lock.sql을 실행해 주세요.</span>'; return; }
+  if(gradeForm){
+    const chg = gradePwSet;
+    bar.innerHTML = `<b>${chg ? '🔑 등급 비밀번호 바꾸기' : '🔑 등급 비밀번호 정하기'}</b>
+      ${chg ? '<input type="password" id="gpOld" placeholder="지금 비밀번호" autocomplete="off">' : ''}
+      <input type="password" id="gpNew1" placeholder="새 비밀번호 (4자 이상)" autocomplete="new-password">
+      <input type="password" id="gpNew2" placeholder="한 번 더" autocomplete="new-password">
+      <button class="small" id="gpSave">저장</button><button class="ghost small" id="gpCancel">취소</button>
+      ${chg ? '<span class="muted" style="width:100%;font-size:12px">새 비밀번호를 비워 두고 저장하면 잠금을 없애요.</span>' : ''}`;
+    $('gpCancel').onclick = ()=>{ gradeForm = null; applyGradeLock(); };
+    $('gpSave').onclick = async ()=>{
+      const n1 = $('gpNew1').value, n2 = $('gpNew2').value;
+      if(n1 !== n2){ alert('새 비밀번호 두 개가 달라요'); return; }
+      if(!chg && n1.length < 4){ alert('비밀번호는 4자 이상으로 정해 주세요'); return; }
+      const {error} = await sb.rpc('grade_pw_set', {p_old: chg ? $('gpOld').value : null, p_new: n1});
+      if(error){ alert(rpcMsg(error)); return; }
+      gradeForm = null; gradePwSet = !!n1; gradeOpen = !n1 ? true : false; ssSet(GRADE_OPEN_KEY, null);
+      plToast(n1 ? '등급 비밀번호를 저장했어요. 등급을 잠갔어요' : '등급 잠금을 없앴어요');
+      applyGradeLock();
+    };
+    return;
+  }
+  if(!gradePwSet){
+    bar.innerHTML = '<b>🔓 등급 비밀번호가 없어요</b><span class="muted" style="font-size:13px">정해 두면 관리자도 비밀번호를 넣어야 등급이 보여요.</span><button class="ghost small" id="gpSet">비밀번호 정하기</button>';
+    $('gpSet').onclick = ()=>{ gradeForm = 'set'; applyGradeLock(); };
+  } else if(!gradeOpen){
+    bar.innerHTML = '<b>🔒 등급이 잠겨 있어요</b><input type="password" id="gpIn" placeholder="등급 비밀번호" autocomplete="off"><button class="small" id="gpOpen">열기</button>';
+    const open = async ()=>{
+      const v = $('gpIn').value; if(!v) return;
+      $('gpOpen').disabled = true;
+      const {data, error} = await sb.rpc('grade_pw_check', {p_pw: v});
+      if(error){ alert(rpcMsg(error)); $('gpOpen').disabled = false; return; }
+      if(!data){ alert('비밀번호가 달라요'); $('gpIn').value = ''; $('gpOpen').disabled = false; $('gpIn').focus(); return; }
+      gradeOpen = true; ssSet(GRADE_OPEN_KEY, '1'); applyGradeLock();
+    };
+    $('gpOpen').onclick = open; $('gpIn').onkeydown = e=>{ if(e.key === 'Enter') open(); };
+  } else {
+    bar.innerHTML = '<b>🔓 등급 보는 중</b><span class="muted" style="font-size:13px">이 창을 닫으면 다시 잠겨요.</span><button class="small" id="gpLock">지금 잠그기</button><button class="ghost small" id="gpChg">비밀번호 바꾸기</button>';
+    $('gpLock').onclick = ()=>{ gradeOpen = false; ssSet(GRADE_OPEN_KEY, null); applyGradeLock(); };
+    $('gpChg').onclick = ()=>{ gradeForm = 'change'; applyGradeLock(); };
+  }
+}
 
 /* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
 // 구장 좌표 (이름에 들어간 단어로 찾음, 못 찾으면 망원유수지)
