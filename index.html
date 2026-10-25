@@ -362,10 +362,9 @@
     .side .gearGrid{grid-template-columns:1fr}
     .pcGrid{grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:14px}
     #loginCard{top:calc(100% + 8px)}
-    /* 관리 탭은 표가 넓어서 한 단으로, 일정·장비는 아래에 나란히 */
+    /* 관리 탭은 표가 넓어서 한 단으로 (투표·일정·장비는 다른 탭 오른쪽에 있으니 숨김) */
     body.tab-admin .layout{grid-template-columns:minmax(0,1fr)}
-    body.tab-admin .side{grid-column:1;grid-row:2;position:static;max-height:none;overflow:visible;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-    body.tab-admin .side .gearGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    body.tab-admin .side{display:none !important}
     body.shared .layout{display:block}
   }
 
@@ -643,7 +642,10 @@
   @keyframes plFade{from{opacity:0}}
   .vtHead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .vtHead b{font-size:16px}
-  .vtWhen{font-size:13px;color:var(--muted);margin:2px 0 10px}
+  .vtWhen{margin:8px 0 12px;display:flex;flex-direction:column;gap:2px}
+  .vtWhen .vtDate{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+  .vtWhen .vtDate span{color:var(--accent);margin-left:6px}
+  .vtWhen .vtPlace{font-size:14px;color:var(--muted)}
   .vtDl{font-size:13px;font-weight:700;color:var(--accent);background:var(--accent2);border-radius:8px;padding:5px 10px;margin:0 0 10px;display:inline-block}
   .vtDl.closed{color:var(--muted);background:var(--head)}
   .vtBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -2797,7 +2799,7 @@ function renderVote(){
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
     <div class="vtHead"><b>⚽ ${esc(m.title || '경기')}</b><span class="muted" style="font-size:13px;font-weight:700">${dd <= 0 ? '오늘' : dd === 1 ? '내일' : `D-${dd}`}</span></div>
-    <div class="vtWhen">${d.getMonth()+1}/${d.getDate()} (${d.toLocaleDateString('ko-KR',{weekday:'short'})})${m.event_time ? ' ' + esc(m.event_time) : ''}${venue ? ' · 📍 ' + mapLink(venue) : ''}</div>
+    <div class="vtWhen"><div class="vtDate">📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${d.toLocaleDateString('ko-KR',{weekday:'short'})})${m.event_time ? `<span>${esc(m.event_time)}</span>` : ''}</div>${venue ? `<div class="vtPlace">📍 ${mapLink(venue)}</div>` : ''}</div>
     <div class="vtDl${locked ? ' closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - now)} · ${fmtDeadline(dl)}`}</div>
     ${me ? `<div class="vtBtns${locked ? ' locked' : ''}"><button class="yes${shownMine === 'yes' ? ' on' : ''}" data-v="yes" ${locked ? 'disabled' : ''}>✅ 참석</button><button class="no${shownMine === 'no' ? ' on' : ''}" data-v="no" ${locked ? 'disabled' : ''}>불참</button></div>` : loginBtn}
     ${notYet ? '<p class="muted vtNote">투표는 경기 주 일요일 오전 11시에 열려요. 댓글은 지금도 남길 수 있어요.</p>' : ''}
