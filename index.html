@@ -744,6 +744,16 @@
   .autoTeams > div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .autoTeams b{display:block;margin-bottom:6px}
   .autoTeams span{display:inline-block;background:var(--head);border-radius:999px;padding:2px 9px;margin:0 4px 4px 0;font-size:13px}
+
+  /* ---------- 투표 안 한 기록 ---------- */
+  .missTbl{width:100%;border-collapse:collapse;font-size:14px}
+  .missTbl th,.missTbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+  .missTbl th{font-size:12px;color:var(--muted);font-weight:700}
+  .missTbl td.c{text-align:center;font-weight:800;white-space:nowrap}
+  .missTbl td.c.hi{color:var(--danger)}
+  .missDates{display:flex;flex-wrap:wrap;gap:4px}
+  .missDates span{display:inline-flex;align-items:center;gap:2px;background:var(--head);border-radius:999px;padding:2px 4px 2px 9px;font-size:12px}
+  .missDates button{background:none;color:var(--muted);padding:0 5px;font-size:14px;line-height:1}
 </style>
 </head>
 <body>
@@ -997,6 +1007,14 @@
     </div>
   </section>
 
+  <section class="card app admin-only" data-pane="admin" id="missCard">
+    <div class="autoHead"><h2 style="margin:0">🙅 투표 안 한 기록</h2>
+      <div class="row" style="gap:6px"><select id="missPeriod"><option value="all">전체</option><option value="year">올해</option><option value="3m">최근 3개월</option></select>
+      <button class="ghost small" id="missFill" title="지난 경기 중 아직 기록 안 된 날을 계산해서 채워요">지난 경기 채우기</button></div></div>
+    <p class="muted" style="margin:8px 0 12px">마감(목 23시)까지 참석 투표를 안 해서 자동 불참이 된 기록이에요. 매일 밤 자동으로 쌓이고, 관리자만 볼 수 있어요. 사유가 있으면 날짜 옆 ×로 지울 수 있어요. (투표 제외 선수는 빠져요)</p>
+    <div id="missBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
   <section class="card app admin-only" data-pane="admin" id="officerCard">
     <h2>운영진 · 회비 계좌</h2>
     <div class="offRows">
@@ -1140,7 +1158,7 @@ async function loadAll(){
   }));
   renderSkillNew();
   if(isAdmin() && gradePwSet !== false && !gradeOpen) document.body.classList.add('gradeLocked');   // 확인 전엔 일단 가려둠
-  if(isAdmin()){ loadExempt(); checkGradeLock(); loadAuto(); }
+  if(isAdmin()){ loadExempt(); checkGradeLock(); loadAuto(); loadMisses(); }
   render();
   loadRecords();
   loadEvents();
@@ -3400,6 +3418,50 @@ $('autoRun').onclick = async ()=>{
   const r = await callAuto({force: true}); b.disabled = false;
   $('autoResult').innerHTML = `<p style="margin:12px 0 0;font-weight:700">${esc(r.msg || '')}</p>${autoTeamsHtml(r)}`;
   if(r.ok) await loadAll();
+};
+
+
+/* ===================== 투표 안 한 기록 (관리 탭) ===================== */
+let misses = [], missMissing = false;
+async function loadMisses(){
+  if(!sb || !isAdmin()) return;
+  const r = await sb.from('vote_misses').select('event_date,sport,player_id').eq('sport', SPORT).order('event_date', {ascending: false});
+  missMissing = !!r.error; misses = r.error ? [] : r.data;
+  renderMisses();
+}
+function renderMisses(){
+  const box = $('missBox'); if(!box) return;
+  if(missMissing){ box.innerHTML = '<p class="muted">쓰려면 Supabase에서 25-setup-vote-misses.sql을 먼저 실행해 주세요.</p>'; $('missFill').disabled = true; return; }
+  $('missFill').disabled = false;
+  const per = $('missPeriod').value, today = todayStr();
+  const from = per === 'year' ? today.slice(0, 4) + '-01-01' : per === '3m' ? addDays(today, -92) : '0000';
+  const list = misses.filter(m=>m.event_date >= from);
+  const by = {};
+  list.forEach(m=>(by[m.player_id] ||= []).push(m.event_date));
+  const rows = Object.entries(by).map(([pid, ds])=>({p: players.find(x=>x.id === +pid), ds})).filter(x=>x.p)
+    .sort((a,b)=>b.ds.length - a.ds.length || a.p.name.localeCompare(b.p.name,'ko'));
+  const games = new Set(list.map(m=>m.event_date)).size;
+  const md = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; };
+  box.innerHTML = rows.length ? `<p style="margin:0 0 8px;font-size:13px">경기 <b>${games}번</b> 동안 <b>${rows.length}명</b> · 총 <b>${list.length}번</b></p>
+    <div class="tablewrap"><table class="missTbl"><thead><tr><th>이름</th><th style="text-align:center">횟수</th><th>날짜</th></tr></thead><tbody>
+    ${rows.map(({p, ds})=>`<tr><td>${nameLink(p.id, p.name)}</td><td class="c ${ds.length >= 3 ? 'hi' : ''}">${ds.length}번</td>
+      <td><div class="missDates">${ds.map(d=>`<span>${md(d)}<button data-miss="${p.id}|${d}" title="이 기록 지우기 (사유 인정)" aria-label="지우기">×</button></span>`).join('')}</div></td></tr>`).join('')}
+    </tbody></table></div>` : `<p class="muted" style="margin:0">${misses.length ? '이 기간에는 기록이 없어요.' : '아직 기록이 없어요. 마감이 지나면 쌓여요.'}</p>`;
+  box.querySelectorAll('[data-miss]').forEach(b=>b.onclick = async ()=>{
+    const [pid, d] = b.dataset.miss.split('|'), name = players.find(x=>x.id === +pid)?.name;
+    if(!confirm(`${name} · ${md(d)} 기록을 지울까요? (사유 인정)`)) return;
+    if(await q(sb.from('vote_misses').delete().eq('event_date', d).eq('sport', SPORT).eq('player_id', +pid), '지우지 못했어요')){
+      misses = misses.filter(m=>!(m.player_id === +pid && m.event_date === d)); renderMisses();
+    }
+  });
+}
+$('missPeriod').onchange = renderMisses;
+$('missFill').onclick = async ()=>{
+  const b = $('missFill'); b.disabled = true;
+  const {data, error} = await sb.rpc('admin_fill_vote_misses');
+  b.disabled = false;
+  if(error){ alert('채우지 못했어요\n' + rpcMsg(error)); return; }
+  plToast(data ? `${data}건을 새로 채웠어요` : '새로 채울 기록이 없어요'); loadMisses();
 };
 
 /* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
