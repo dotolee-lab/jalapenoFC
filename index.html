@@ -388,6 +388,10 @@
   .matches .match.mExtra{display:none}
   .matches.open .match.mExtra{display:grid}
   .matchMore{margin-top:8px;width:100%}
+  #list tr.lExtra{display:none}
+  #list.open tr.lExtra{display:table-row}
+  #list tr.lMoreRow td{border-bottom:0;padding:8px 0 0}
+  .lMore{width:100%}
   .homeSub{display:none}
   .tabs i{display:none;font-style:normal}
   .tabs .short{display:none}
@@ -1195,13 +1199,16 @@ $('logoutBtn').onclick = async ()=>{ await sb.auth.signOut(); };
 function render(){
   const tb = $('list'); tb.innerHTML = '';
   const admin = isAdmin();
-  const list = players.slice().sort(admin
+  const locked = document.body.classList.contains('gradeLocked');   // 잠겨 있으면 점수 순서도 안 드러나게 이름순
+  const list = players.slice().sort(admin && !locked
     ? (a,b)=>score(b)-score(a) || a.name.localeCompare(b.name,'ko')
     : (a,b)=>a.name.localeCompare(b.name,'ko'));
   if(!list.length) tb.innerHTML = `<tr><td colspan="15" class="muted">등록된 선수가 없어요.</td></tr>`;
   const canAttend = admin || ALLOW_PUBLIC_ATTENDANCE;
-  list.forEach(p=>{
+  const L_SHOW = 10;                                   // 처음엔 10명만, 나머지는 펼치기
+  list.forEach((p, idx)=>{
     const tr = document.createElement('tr');
+    if(idx >= L_SHOW) tr.className = 'lExtra';
     tr.innerHTML = `
       <td>${canAttend ? `<input type="checkbox" ${p.on?'checked':''} data-k="on">` : (p.on?'✓':'')}</td>
       <td class="nameCell">${admin ? `<span class="nmText">${esc(p.name)}</span><button class="editName" title="이름 수정" aria-label="이름 수정">✏️</button>` : esc(p.name)}</td>
@@ -1263,8 +1270,16 @@ function render(){
     }
     tb.appendChild(tr);
   });
+  tb.classList.toggle('open', listOpen);
+  if(list.length > L_SHOW){
+    const more = document.createElement('tr'); more.className = 'lMoreRow';
+    more.innerHTML = `<td colspan="15"><button class="ghost small lMore">${listOpen ? '접기 ▲' : `전체 보기 (${list.length - L_SHOW}명 더) ▼`}</button></td>`;
+    more.querySelector('button').onclick = ()=>{ listOpen = !listOpen; render(); };
+    tb.appendChild(more);
+  }
   count();
 }
+let listOpen = false;
 function count(){
   const on = players.filter(p=>p.on);
   const byPos = POSITIONS.map(x=>`${x} ${on.filter(p=>p.pos.includes(x)).length}`).join(' · ');
@@ -3305,7 +3320,9 @@ async function checkGradeLock(){
   applyGradeLock();
 }
 function applyGradeLock(){
+  const was = document.body.classList.contains('gradeLocked');
   document.body.classList.toggle('gradeLocked', isAdmin() && !gradeOpen);
+  if(was !== document.body.classList.contains('gradeLocked')) render();   // 순서(점수순/이름순) 다시
   const bar = $('gradeBar'); if(!bar) return;
   bar.style.display = isAdmin() ? '' : 'none';
   if(gradeMissing){ bar.innerHTML = '<span class="muted">🔒 등급 잠금을 쓰려면 Supabase에서 22-setup-grade-lock.sql을 실행해 주세요.</span>'; return; }
