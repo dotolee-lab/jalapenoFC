@@ -750,6 +750,10 @@
   .autoInfo dd{margin:0}
   .autoInfo .ok{color:var(--accent);font-weight:700}.autoInfo .bad{color:var(--danger);font-weight:700}
   .autoTeams{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}
+  #pubScores:not(:empty){margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)}
+  .pubScoreHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .gradeLockNote{display:none;font-size:13px;color:var(--muted);background:var(--head);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+  body.gradeLocked .gradeLockNote{display:block}
   .autoTeams > div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .autoTeams b{display:block;margin-bottom:6px}
   .autoTeams span{display:inline-block;background:var(--head);border-radius:999px;padding:2px 9px;margin:0 4px 4px 0;font-size:13px}
@@ -946,6 +950,7 @@
       <button id="autoRun">지금 실행해서 공개</button>
     </div>
     <div id="autoResult"></div>
+    <div id="pubScores"></div>
   </section>
 
   <section class="card app admin-only" data-pane="history" id="logCard">
@@ -1466,7 +1471,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
   return `<div class="teams">${teams.map((t,i)=>{
     const tac = validTactic(tactics[i]) ? tactics[i] : '';
     const posLine = POSITIONS.map(x=>`${x} ${t.filter(p=>p.pos.includes(x)).length}`).join(' · ') + (withScores ? ` · 키퍼가능 ${t.filter(p=>p.gk).length}` : '');
-    const members = t.slice().sort((a,b)=>ORDER[a.pos[0]]-ORDER[b.pos[0]] || a.pos.length-b.pos.length || (withScores ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
+    const members = t.slice().sort((a,b)=>ORDER[a.pos[0]]-ORDER[b.pos[0]] || a.pos.length-b.pos.length || (withScores && !document.body.classList.contains('gradeLocked') ? score(b)-score(a) : a.name.localeCompare(b.name,'ko')));
     const pitch = (tac || editable) ? `<div class="pitch">
         ${tac ? pitchSvg(tac) + `<div class="tacLabel">${tac}</div>` : `<div class="tacEmpty">전술 없음</div>`}
         ${editable ? tacticSelect(i, tac) : ''}
@@ -1511,6 +1516,7 @@ let publishedRow = null;
 function renderPublished(row){
   try{
     publishedRow = row;
+    if(isAdmin()) setTimeout(renderPubScores, 0);
     const {teams, tactics} = unpack(row.teams);
     const editable = !!sb && (ALLOW_PUBLIC_TACTIC || isAdmin());
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
@@ -3342,7 +3348,7 @@ async function checkGradeLock(){
 function applyGradeLock(){
   const was = document.body.classList.contains('gradeLocked');
   document.body.classList.toggle('gradeLocked', isAdmin() && !gradeOpen);
-  if(was !== document.body.classList.contains('gradeLocked')) render();   // 순서(점수순/이름순) 다시
+  if(was !== document.body.classList.contains('gradeLocked')){ render(); renderPubScores(); if(lastTeams) showTeams(lastTeams); }   // 순서(점수순/이름순) 다시
   const bar = $('gradeBar'); if(!bar) return;
   bar.style.display = isAdmin() ? '' : 'none';
   if(gradeMissing){ bar.innerHTML = '<span class="muted">🔒 등급 잠금을 쓰려면 Supabase에서 22-setup-grade-lock.sql을 실행해 주세요.</span>'; return; }
@@ -3407,6 +3413,29 @@ async function loadAuto(){
   autoSetting = get('auto_teams') || {on: true}; autoLast = get('auto_teams_last') || null;
   renderAuto();
 }
+// 관리자: 지금 공개된 팀 구성(자동으로 짠 것 포함)을 등급·평균 점수와 함께 보기
+function renderPubScores(){
+  const box = $('pubScores'); if(!box) return;
+  if(!isAdmin() || !publishedRow){ box.innerHTML = ''; return; }
+  const {teams: pub, tactics} = unpack(publishedRow.teams);
+  const missing = [];
+  const teams = pub.map(t=>t.map(([name])=>{ const p = players.find(x=>x.name === String(name)); if(!p) missing.push(name); return p; }).filter(Boolean));
+  if(!teams.length || teams.some(t=>!t.length)){ box.innerHTML = ''; return; }
+  const when = new Date(publishedRow.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
+  box.innerHTML = `<div class="pubScoreHead"><h3 class="sub" style="margin:0">📊 지금 공개된 팀 구성 <span class="muted" style="font-weight:500">${when} 공개</span></h3>
+      <button class="ghost small" id="pubToMake" title="아래 '팀 나누기'로 불러와서 다시 섞거나 바꿔 공개할 수 있어요">팀 나누기로 불러오기</button></div>
+    <div class="gradeLockNote">🔒 등급이 잠겨 있어서 점수는 숨겨져 있어요. 위 '출석 · 등급 관리'에서 잠금을 열면 보여요.</div>
+    ${teamsHtml(teams, true, tactics, false)}
+    <p class="summary gradeOnly">팀 평균 차이: 최대 <b>${spread(teams).toFixed(2)}점</b> · 전체 평균 ${(teams.flat().reduce((a,p)=>a+score(p),0) / Math.max(1, teams.flat().length)).toFixed(2)}점${useForm ? ' · 최근 폼 반영' : ''}</p>
+    ${missing.length ? `<p class="muted" style="font-size:12px">명단에 없는 이름이 있어서 빼고 계산했어요: ${missing.map(esc).join(', ')}</p>` : ''}`;
+  $('pubToMake').onclick = ()=>{
+    lastTeams = teams.map(t=>t.slice()); lastTactics = teams.map((t, i)=>tactics[i] || DEFAULT_TACTIC_OF(t.length) || '');
+    $('teamCount').value = String(teams.length);
+    showTeams(lastTeams);
+    $('result').scrollIntoView({behavior: 'smooth', block: 'start'});
+    plToast('공개된 팀 구성을 불러왔어요');
+  };
+}
 function renderAuto(){
   const box = $('autoBox'); if(!box) return;
   $('autoOn').checked = autoSetting.on !== false;
@@ -3424,6 +3453,7 @@ function renderAuto(){
     <dt>대상 경기</dt><dd>${vMatch ? `${md(vMatch.next)}${vMatch.event_time ? ' ' + esc(vMatch.event_time) : ''} ${esc(vMatch.title || '')}` : '-'}</dd>
     <dt>예상</dt><dd>${plan}</dd>
     <dt>마지막 결과</dt><dd>${last}</dd></dl>`;
+  renderPubScores();
 }
 async function callAuto(body){
   const {data, error} = await sb.functions.invoke('auto-teams', {body: {sport: 'futsal', ...body}});
