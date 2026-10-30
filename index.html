@@ -674,6 +674,9 @@
   .vtNames{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .vtNm{display:inline-flex;align-items:center;gap:4px;background:var(--head);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
   .vtNm.mine{box-shadow:0 0 0 2px var(--accent) inset}
+  button.vtNm.tap{color:var(--text);border:0;cursor:pointer;font-family:inherit}
+  button.vtNm.tap:hover{box-shadow:0 0 0 2px var(--line) inset}
+  button.vtNm.tap.mine{box-shadow:0 0 0 2px var(--accent) inset}
   .vtNm.auto{opacity:.75}
   .vtNm small{font-weight:500;color:var(--muted);font-size:11px}
   .vtMemos{display:flex;flex-direction:column;gap:6px;margin-top:6px}
@@ -2945,7 +2948,8 @@ function renderVote(){
   const waiting = players.filter(x=>!exemptIds.has(x.id) && !voted.has(x.id)).sort(byName);
   const yes = pick('yes'), no = closed ? [...pick('no'), ...waiting] : pick('no');
   const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
-  const chip = x => `<span class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}">${esc(x.name)}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</span>`;
+  const adm = isAdmin();   // 관리자는 이름을 눌러 바로 참석·불참을 바꿀 수 있음
+  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
   const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
@@ -2965,7 +2969,7 @@ function renderVote(){
       return `<div class="vtMemo${mine ? ' mine' : ''}"><b>${esc(x.name)}</b>${st ? `<span class="vtSt ${st}">${st === 'yes' ? '참석' : '불참'}</span>` : '<span></span>'}<span class="ago">${agoText(c.created_at)}${mine ? ` · <button class="delC" data-cid="${c.id}">삭제</button>` : ''}</span><p>${esc(c.body)}</p></div>`; }).join('') || '<p class="muted" style="font-size:13px;margin:0">아직 댓글이 없어요. 일정이 애매하면 사유를 남겨 주세요.</p>'}</div>
     ${me ? '<div class="vtBox"><input type="text" id="vtCIn" maxlength="300" placeholder="댓글 남기기 (예: 출장이라 목요일에 확정할게요)"><button id="vtCSend">등록</button></div>' : '<p class="muted" style="font-size:12px;margin:6px 0 0">로그인하면 댓글을 남길 수 있어요.</p>'}`}
     <div class="vtAdmin admin-only">
-      <b style="font-size:13px;width:100%">🛠️ 운영진 수정 <span class="muted" style="font-weight:500">(마감 후에도 바꿀 수 있어요)</span></b>
+      <b style="font-size:13px;width:100%">🛠️ 운영진 수정 <span class="muted" style="font-weight:500">(마감 후에도 바꿀 수 있어요 · 위 이름을 눌러도 돼요)</span></b>
       <select id="vtAdmSel"><option value="">선수 고르기…</option>${players.slice().sort(byName).map(p=>{ const st = statusOf(p.id); return `<option value="${p.id}">${esc(p.name)}${st ? ` (${st === 'yes' ? '참석' : '불참'})` : ''}</option>`; }).join('')}</select>
       <button class="small" data-adm="yes">참석</button><button class="ghost small" data-adm="no">불참</button><button class="del small" data-adm="none">투표 지우기</button>
     </div>`;
@@ -3000,11 +3004,25 @@ function bindVote(){
   box.querySelectorAll('[data-adm]').forEach(b=>b.onclick = async ()=>{
     const pid = +$('vtAdmSel').value; if(!pid){ alert('선수를 골라 주세요'); return; }
     b.disabled = true;
-    const {error} = await sb.rpc('admin_set_vote', {p_player: pid, p_date: vMatch.next, p_sport: SPORT, p_status: b.dataset.adm});
-    if(error){ alert(/admin_set_vote|function/i.test(error.message) ? '운영진 수정을 쓰려면 Supabase에서 21-setup-admin-vote.sql을 먼저 실행해 주세요.' : '저장하지 못했어요\n' + rpcMsg(error)); b.disabled = false; return; }
-    const name = players.find(p=>p.id === pid)?.name;
-    await loadVotes(); plToast(`${name} → ${b.dataset.adm === 'yes' ? '참석' : b.dataset.adm === 'no' ? '불참' : '투표 지움'}`);
+    if(!await adminSetVote(pid, b.dataset.adm)) b.disabled = false;
   });
+  // 관리자: 이름을 누르면 바로 바꾸는 창
+  box.querySelectorAll('[data-adm-pid]').forEach(b=>b.onclick = ()=>{
+    const pid = +b.dataset.admPid, p = players.find(x=>x.id === pid); if(!p || !vMatch) return;
+    const st = votes.find(v=>v.player_id === pid)?.status;
+    const d = new Date(vMatch.next + 'T00:00:00');
+    openSheet(`${avatar(p.name, 'md')}<h3>${esc(p.name)}</h3><p class="plHint">${d.getMonth()+1}/${d.getDate()} 경기 · 지금 <b>${st === 'yes' ? '참석' : st === 'no' ? '불참' : '미응답'}</b></p>
+      <div class="plMenu"><button id="admYes" ${st === 'yes' ? 'disabled' : ''}>✅ 참석으로 바꾸기</button><button class="ghost" id="admNo" ${st === 'no' ? 'disabled' : ''}>불참으로 바꾸기</button>${st ? '<button class="ghost" id="admNone" style="color:var(--danger)">투표 지우기 (미응답)</button>' : ''}</div>`);
+    const go = async v => { document.querySelectorAll('.plMenu button').forEach(x=>x.disabled = true); if(await adminSetVote(pid, v)) closeSheet(); else document.querySelectorAll('.plMenu button').forEach(x=>x.disabled = false); };
+    $('admYes').onclick = ()=>go('yes'); $('admNo').onclick = ()=>go('no'); if($('admNone')) $('admNone').onclick = ()=>go('none');
+  });
+}
+async function adminSetVote(pid, status){
+  const {error} = await sb.rpc('admin_set_vote', {p_player: pid, p_date: vMatch.next, p_sport: SPORT, p_status: status});
+  if(error){ alert(/admin_set_vote|function/i.test(error.message) ? '운영진 수정을 쓰려면 Supabase에서 21-setup-admin-vote.sql을 먼저 실행해 주세요.' : '저장하지 못했어요\n' + rpcMsg(error)); return false; }
+  const name = players.find(p=>p.id === pid)?.name;
+  await loadVotes(); plToast(`${name} → ${status === 'yes' ? '참석' : status === 'no' ? '불참' : '투표 지움'}`);
+  return true;
 }
 
 /* ----- 헤더 버튼 ----- */
