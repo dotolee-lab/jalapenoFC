@@ -767,6 +767,16 @@
   .missDates{display:flex;flex-wrap:wrap;gap:4px}
   .missDates span{display:inline-flex;align-items:center;gap:2px;background:var(--head);border-radius:999px;padding:2px 4px 2px 9px;font-size:12px}
   .missDates button{background:none;color:var(--muted);padding:0 5px;font-size:14px;line-height:1}
+
+  /* ---------- 게스트 ---------- */
+  .badge.guestB{background:#ece6fb;color:#6a4fc2;font-weight:700}
+  @media (prefers-color-scheme: dark){.badge.guestB{background:#2c2540;color:#b9a6f5}}
+  .guestDel{padding:0 4px;font-size:15px;line-height:1;vertical-align:middle}
+  .guestForm{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:14px}
+  .guestForm input{flex:1 1 120px;min-width:100px}
+  .lgChip.guest{border-style:dashed;border-color:#b9a6f5}
+  .lgChip small{font-size:11px;color:#6a4fc2;font-weight:700}
+  tr.lgGuest td{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1479,7 +1489,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore gradeOnly">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.guest ? `<span class="badge guestB">게스트</span>${isAdmin() && !withScores ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
@@ -1509,7 +1519,7 @@ $('again').onclick = make;
 
 /* ---------- 공개 / 공유 (이름·포지션·키퍼·전술만) ---------- */
 const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
-const fromPublic = data => data.map(t=>t.map(([name,pos,gk])=>({name:String(name), pos:normPos(pos), gk:!!gk})));
+const fromPublic = data => data.map(t=>t.map(([name,pos,gk,g])=>({name:String(name), pos:normPos(pos), gk:!!gk, guest:!!g})));
 // 예전 형식(팀 배열만)과 새 형식({teams, tactics}) 둘 다 읽음
 const unpack = obj => Array.isArray(obj) ? {teams: obj, tactics: []} : {teams: obj.teams || obj.t || [], tactics: obj.tactics || obj.f || []};
 let publishedRow = null;
@@ -1522,7 +1532,9 @@ function renderPublished(row){
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일 오후 6시에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable);
+      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일 오후 6시에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable)
+      + (isAdmin() ? guestFormHtml(teams.length) : '');
+    bindGuestForm($('published'));
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
@@ -1541,6 +1553,45 @@ $('publishBtn').onclick = async ()=>{
   const row = {id: RESULT_ID(), teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
   if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); await recordAttendance(lastTeams); alert('공개했어요. 오늘 출석도 자동으로 기록했어요.'); }
 };
+
+/* ---------- 게스트 (공개된 팀 구성에 이름만 추가, 개인 기록에는 안 남음) ---------- */
+// 공개 데이터 한 줄: [이름, 포지션, 키퍼, 1] ← 4번째 칸이 1이면 게스트
+function guestFormHtml(n){
+  return `<div class="guestForm"><b>➕ 게스트 추가</b>
+    <input type="text" id="gName" maxlength="12" placeholder="게스트 이름">
+    <select id="gTeam">${TEAM_LETTERS.slice(0, n).map(t=>`<option value="${t}">${t}팀</option>`).join('')}</select>
+    <select id="gPos">${POSITIONS.map(x=>`<option ${x === '미드' ? 'selected' : ''}>${x}</option>`).join('')}</select>
+    <button class="small" id="gAdd">추가</button>
+    <span class="muted" style="width:100%;font-size:12px">게스트는 팀에 이름만 들어가요. 기록일지에서 골·어시를 적으면 경기 점수에는 들어가지만, 개인 기록·순위에는 남지 않아요.</span></div>`;
+}
+function bindGuestForm(root){
+  if($('gAdd')) $('gAdd').onclick = async ()=>{
+    const name = $('gName').value.trim(); if(!name){ $('gName').focus(); return; }
+    if(await saveGuest(name, TEAM_LETTERS.indexOf($('gTeam').value), $('gPos').value)) plToast(`${name} 게스트를 ${$('gTeam').value}팀에 넣었어요`);
+  };
+  if($('gName')) $('gName').onkeydown = e=>{ if(e.key === 'Enter' && !e.isComposing) $('gAdd').click(); };
+  root.querySelectorAll('[data-guest-del]').forEach(b=>b.onclick = async ()=>{
+    const name = b.dataset.guestDel;
+    if(!confirm(`게스트 ${name}을(를) 팀에서 뺄까요?`)) return;
+    await saveGuest(name, -1);
+  });
+}
+// teamIdx = -1 이면 빼기
+async function saveGuest(name, teamIdx, pos = '미드'){
+  if(!publishedRow){ alert('먼저 팀 구성을 공개해 주세요'); return false; }
+  const {teams, tactics} = unpack(publishedRow.teams);
+  const all = teams.flat().map(x=>String(x[0]));
+  if(teamIdx >= 0){
+    if(players.some(p=>p.name === name)){ alert(`${name}은(는) 등록된 선수예요. 게스트가 아니라 출석으로 넣어 주세요.`); return false; }
+    if(all.includes(name)){ alert(`${name}은(는) 이미 팀에 있어요`); return false; }
+  }
+  const next = teams.map(t=>t.filter(x=>!(x[3] && String(x[0]) === name)));
+  if(teamIdx >= 0) next[teamIdx].push([name, pos, 0, 1]);
+  const row = {id: RESULT_ID(), teams: {teams: next, tactics}, created_at: publishedRow.created_at};
+  if(!await q(sb.from('team_results').upsert(row), '게스트를 저장하지 못했어요')) return false;
+  renderPublished(row); renderLog();
+  return true;
+}
 function encode(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function decode(str){ str = str.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(str)))); }
 $('shareBtn').onclick = ()=>{
@@ -3185,7 +3236,9 @@ let logDate = todayStr(), LOG = null, logPick = {t: null, s: null, a: null};
 const logKey = () => `jfc-log-${SPORT}-${logDate}`;
 function logSave(){ if(LOG) store.set(logKey(), JSON.stringify(LOG)); }
 function logLoad(){ try{ const v = JSON.parse(store.get(logKey()) || 'null'); return v && Array.isArray(v.games) ? v : null; }catch(e){ return null; } }
-const lgName = id => players.find(p=>p.id === id)?.name || '?';
+const isGuestId = id => typeof id === 'string' && id.startsWith('g:');
+const lgName = id => isGuestId(id) ? id.slice(2) : (players.find(p=>p.id === id)?.name || '?');
+const lgId = v => /^\d+$/.test(String(v)) ? +v : v;   // 숫자면 선수 id, 'g:이름'이면 게스트
 const lgCount = (g, t) => g.goals.filter(x=>x.t === t).length;
 
 // 그날 팀: 경기 기록(출석·팀)에 있으면 그걸, 없으면 마지막으로 공개한 팀 구성
@@ -3198,7 +3251,9 @@ function logTeams(){
     Object.keys(out).forEach(k=>delete out[k]); from = 'published';
     unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(([name])=>{ const p = players.find(x=>x.name === String(name)); if(p) (out[TEAM_LETTERS[i]] ||= []).push(p); }));
   }
-  Object.values(out).forEach(a=>a.sort((x,y)=>x.name.localeCompare(y.name,'ko')));
+  // 공개된 팀 구성의 게스트도 같은 팀에 넣음
+  if(publishedRow) unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(x=>{ if(x[3]) (out[TEAM_LETTERS[i]] ||= []).push({id: 'g:' + x[0], name: String(x[0]), guest: true}); }));
+  Object.values(out).forEach(a=>a.sort((x,y)=>(!!x.guest - !!y.guest) || x.name.localeCompare(y.name,'ko')));
   return {teams: out, from};
 }
 function nextPair(letters, last){
@@ -3234,11 +3289,11 @@ function renderLog(){
     if(h > a){ res[x.home].w++; res[x.away].l++; } else if(h < a){ res[x.away].w++; res[x.home].l++; } else { res[x.home].d++; res[x.away].d++; } });
   const pts = {}; LOG.games.forEach(x=>x.goals.forEach(e=>{ if(e.s){ (pts[e.s] ||= {g:0, a:0}).g++; } if(e.a){ (pts[e.a] ||= {g:0, a:0}).a++; } }));
   const teamOf = pid => letters.find(t=>T[t].some(p=>p.id === pid)) || '';
-  const scorers = Object.entries(pts).map(([id, v])=>({id: +id, ...v})).sort((a,b)=>(b.g + b.a) - (a.g + a.a) || b.g - a.g || lgName(a.id).localeCompare(lgName(b.id),'ko'));
-  const everyone = letters.flatMap(t=>T[t]);
+  const scorers = Object.entries(pts).map(([id, v])=>({id: lgId(id), ...v})).sort((a,b)=>(b.g + b.a) - (a.g + a.a) || b.g - a.g || lgName(a.id).localeCompare(lgName(b.id),'ko'));
+  const everyone = letters.flatMap(t=>T[t]).filter(p=>!p.guest);   // MVP는 게스트 빼고
 
   box.innerHTML = `
-    <div class="lgTop"><span>${fmtDay(logDate)} · ${from === 'day' ? '출석한 팀' : '공개한 팀 구성'} 기준 · ${letters.map(t=>`${t}팀 ${T[t].length}명`).join(' · ')}</span></div>
+    <div class="lgTop"><span>${fmtDay(logDate)} · ${from === 'day' ? '출석한 팀' : '공개한 팀 구성'} 기준 · ${letters.map(t=>`${t}팀 ${T[t].length}명`).join(' · ')}${letters.some(t=>T[t].some(p=>p.guest)) ? ' (게스트 포함)' : ''}</span></div>
     <div class="lgTabs">${LOG.games.map((x, i)=>`<button data-lg-tab="${i}" class="${i === LOG.cur ? 'on' : ''}">${i + 1}경기 ${x.home}:${x.away}${x.goals.length ? ` (${lgCount(x, x.home)}-${lgCount(x, x.away)})` : ''}</button>`).join('')}<button class="add" id="lgAddGame">＋ 다음 경기</button></div>
     <div class="lgBoard">
       <div>${teamSel('home', g.home)}</div>
@@ -3252,9 +3307,9 @@ function renderLog(){
     <div class="lgSub">＋ 골 추가 — 어느 팀?</div>
     <div class="lgSeg">${[g.home, g.away].map(t=>`<button class="t-${t} ${logPick.t === t ? 'on' : ''}" data-lg-team="${t}">${t}팀 골</button>`).join('')}</div>
     <div class="lgSub">넣은 사람 (${logPick.t}팀)</div>
-    <div class="lgChips">${mates.map(p=>`<button class="lgChip ${logPick.s === p.id ? 'on' : ''}" data-lg-s="${p.id}">${esc(p.name)}</button>`).join('')}<button class="lgChip og ${logPick.s === 0 ? 'on' : ''}" data-lg-s="0">상대 자책골</button></div>
+    <div class="lgChips">${mates.map(p=>`<button class="lgChip ${logPick.s === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-s="${esc(p.id)}">${esc(p.name)}${p.guest ? '<small> 게스트</small>' : ''}</button>`).join('')}<button class="lgChip og ${logPick.s === 0 ? 'on' : ''}" data-lg-s="0">상대 자책골</button></div>
     <div class="lgSub">어시스트 (선택)</div>
-    <div class="lgChips"><button class="lgChip muted ${!logPick.a ? 'on' : ''}" data-lg-a="">없음</button>${mates.map(p=>`<button class="lgChip ${logPick.a === p.id ? 'on' : ''}" data-lg-a="${p.id}" ${logPick.s === p.id ? 'disabled' : ''}>${esc(p.name)}</button>`).join('')}</div>
+    <div class="lgChips"><button class="lgChip muted ${!logPick.a ? 'on' : ''}" data-lg-a="">없음</button>${mates.map(p=>`<button class="lgChip ${logPick.a === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-a="${esc(p.id)}" ${logPick.s === p.id ? 'disabled' : ''}>${esc(p.name)}${p.guest ? '<small> 게스트</small>' : ''}</button>`).join('')}</div>
     <button class="lgBig" id="lgGoal" ${logPick.s === null ? 'disabled' : ''}>⚽ 골 기록하기</button>
     <div class="lgFoot"><button class="ghost small" id="lgNext">⏭️ ${LOG.cur + 1}경기 끝 · 다음 경기</button><button class="del small" id="lgDelGame">이 경기 삭제</button></div>
 
@@ -3267,7 +3322,7 @@ function renderLog(){
       <table class="lgTbl"><tr><th>팀</th><th>승</th><th>무</th><th>패</th><th>득실</th></tr>${letters.map(t=>{ const r = res[t], gd = r.gf - r.ga;
         return `<tr><td><span class="lgT t-${t}" style="display:inline-block;width:24px">${t}</span></td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${gd > 0 ? '+' : ''}${gd}</td></tr>`; }).join('')}</table>
       <div class="lgSub">개인 기록 (골·어시가 있는 사람)</div>
-      ${scorers.length ? `<table class="lgTbl"><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th></tr>${scorers.map(x=>`<tr><td>${esc(lgName(x.id))}</td><td>${teamOf(x.id)}</td><td>${x.g}</td><td>${x.a}</td></tr>`).join('')}</table>` : '<p class="muted" style="margin:0;font-size:13px">아직 없어요.</p>'}
+      ${scorers.length ? `<table class="lgTbl"><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th></tr>${scorers.map(x=>`<tr class="${isGuestId(x.id) ? 'lgGuest' : ''}"><td>${esc(lgName(x.id))}${isGuestId(x.id) ? ' <span class="badge guestB">게스트 · 기록 안 남음</span>' : ''}</td><td>${teamOf(x.id)}</td><td>${x.g}</td><td>${x.a}</td></tr>`).join('')}</table>` : '<p class="muted" style="margin:0;font-size:13px">아직 없어요.</p>'}
       <div class="lgSub">🏅 MVP (직접 골라 주세요)</div>
       <div class="lgChips"><button class="lgChip muted ${!LOG.mvp ? 'on' : ''}" data-lg-mvp="">없음</button>${everyone.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(p=>`<button class="lgChip ${LOG.mvp === p.id ? 'on' : ''}" data-lg-mvp="${p.id}">${esc(p.name)}</button>`).join('')}</div>
       <button class="lgBig" id="lgSave">✅ 경기 기록에 등록</button>
@@ -3283,8 +3338,8 @@ function renderLog(){
     g[sel.dataset.lgSide] = sel.value; g.goals = []; logPick.t = null; redraw();
   });
   box.querySelectorAll('[data-lg-team]').forEach(b=>b.onclick = ()=>{ logPick = {t: b.dataset.lgTeam, s: null, a: null}; renderLog(); });
-  box.querySelectorAll('[data-lg-s]').forEach(b=>b.onclick = ()=>{ logPick.s = +b.dataset.lgS; if(logPick.a === logPick.s) logPick.a = null; renderLog(); });
-  box.querySelectorAll('[data-lg-a]').forEach(b=>b.onclick = ()=>{ logPick.a = b.dataset.lgA ? +b.dataset.lgA : null; renderLog(); });
+  box.querySelectorAll('[data-lg-s]').forEach(b=>b.onclick = ()=>{ logPick.s = lgId(b.dataset.lgS); if(logPick.a === logPick.s) logPick.a = null; renderLog(); });
+  box.querySelectorAll('[data-lg-a]').forEach(b=>b.onclick = ()=>{ logPick.a = b.dataset.lgA ? lgId(b.dataset.lgA) : null; renderLog(); });
   $('lgGoal').onclick = ()=>{
     if(logPick.s === null) return;
     g.goals.push({t: logPick.t, s: logPick.s || null, a: logPick.s ? logPick.a : null});
@@ -3320,7 +3375,7 @@ async function logRegister(T, letters, pts){
     const gameRows = list.map(x=>({day_id: day.id, home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away)}));
     if(!await q(sb.from('match_games').insert(gameRows), '경기 결과를 저장하지 못했어요')) return;
     const inTeam = new Set();
-    const rows = letters.flatMap(t=>T[t].map(p=>{ inTeam.add(p.id); return {day_id: day.id, player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id}; }));
+    const rows = letters.flatMap(t=>T[t].filter(p=>!p.guest).map(p=>{ inTeam.add(p.id); return {day_id: day.id, player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id}; }));
     // 팀에는 없지만 예전에 기록이 있던 사람은 0으로 정리
     stats.filter(r=>r.day_id === day.id && !inTeam.has(r.player_id) && (r.goals || r.assists || r.mvp))
       .forEach(r=>rows.push({day_id: day.id, player_id: r.player_id, team: r.team, goals: 0, assists: 0, mvp: false}));
@@ -3419,7 +3474,8 @@ function renderPubScores(){
   if(!isAdmin() || !publishedRow){ box.innerHTML = ''; return; }
   const {teams: pub, tactics} = unpack(publishedRow.teams);
   const missing = [];
-  const teams = pub.map(t=>t.map(([name])=>{ const p = players.find(x=>x.name === String(name)); if(!p) missing.push(name); return p; }).filter(Boolean));
+  const guests = pub.flatMap((t, i)=>t.filter(x=>x[3]).map(x=>`${esc(x[0])}(${TEAM_LETTERS[i]}팀)`));
+  const teams = pub.map(t=>t.filter(x=>!x[3]).map(([name])=>{ const p = players.find(x=>x.name === String(name)); if(!p) missing.push(name); return p; }).filter(Boolean));
   if(!teams.length || teams.some(t=>!t.length)){ box.innerHTML = ''; return; }
   const when = new Date(publishedRow.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit'});
   box.innerHTML = `<div class="pubScoreHead"><h3 class="sub" style="margin:0">📊 지금 공개된 팀 구성 <span class="muted" style="font-weight:500">${when} 공개</span></h3>
@@ -3427,6 +3483,7 @@ function renderPubScores(){
     <div class="gradeLockNote">🔒 등급이 잠겨 있어서 점수는 숨겨져 있어요. 위 '출석 · 등급 관리'에서 잠금을 열면 보여요.</div>
     ${teamsHtml(teams, true, tactics, false)}
     <p class="summary gradeOnly">팀 평균 차이: 최대 <b>${spread(teams).toFixed(2)}점</b> · 전체 평균 ${(teams.flat().reduce((a,p)=>a+score(p),0) / Math.max(1, teams.flat().length)).toFixed(2)}점${useForm ? ' · 최근 폼 반영' : ''}</p>
+    ${guests.length ? `<p class="muted" style="font-size:12px">게스트 (점수 계산에서 빠짐): ${guests.join(', ')}</p>` : ''}
     ${missing.length ? `<p class="muted" style="font-size:12px">명단에 없는 이름이 있어서 빼고 계산했어요: ${missing.map(esc).join(', ')}</p>` : ''}`;
   $('pubToMake').onclick = ()=>{
     lastTeams = teams.map(t=>t.slice()); lastTactics = teams.map((t, i)=>tactics[i] || DEFAULT_TACTIC_OF(t.length) || '');
