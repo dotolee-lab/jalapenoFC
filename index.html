@@ -1558,7 +1558,7 @@ $('publishBtn').onclick = async ()=>{
   if(!lastTeams) return;
   if(SPORT === 'soccer' && sportMissing){ alert('축구 팀 구성을 공개하려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.'); return; }
   const row = {id: RESULT_ID(), teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
-  if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); await recordAttendance(lastTeams); alert('공개했어요. 오늘 출석도 자동으로 기록했어요.'); }
+  if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); const d = await recordAttendance(lastTeams); alert(`공개했어요. ${d ? d + ' 경기' : '경기일'} 출석과 팀도 자동으로 기록했어요.`); }
 };
 
 /* ---------- 게스트 (공개된 팀 구성에 이름만 추가, 개인 기록에는 안 남음) ---------- */
@@ -2190,7 +2190,9 @@ $('delDay').onclick = async ()=>{
 
 // 팀 구성을 공개하면 오늘 출석과 소속 팀을 자동 기록 (이미 입력한 골·어시는 그대로 유지)
 async function recordAttendance(teams){
-  const today = todayStr();
+  // 공개한 날이 아니라 다가오는 경기 날짜에 기록 (금요일에 공개해도 일요일 경기로 들어감, 자동 팀 구성과 같음)
+  const today = (typeof vMatch !== 'undefined' && vMatch?.next) || todayStr();
+  if(cancelledOn(today)) return today;
   let day = days.find(x=>x.played_on === today);
   if(!day){
     day = await q((sportMissing ? sb.from('match_days').upsert({played_on: today}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: today, sport: SPORT}, {onConflict:'played_on,sport'})).select('id,played_on').single(), '경기일을 만들지 못했어요');
@@ -2204,6 +2206,7 @@ async function recordAttendance(teams){
   if(stale.length) await q(sb.from('player_stats').delete().eq('day_id', day.id).in('player_id', stale));
   selectedDayId = day.id;
   await loadRecords();
+  return today;
 }
 
 /* ----- 전체 백업 파일 ----- */
