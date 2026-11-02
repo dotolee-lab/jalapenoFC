@@ -777,6 +777,13 @@
   .lgChip.guest{border-style:dashed;border-color:#b9a6f5}
   .lgChip small{font-size:11px;color:#6a4fc2;font-weight:700}
   tr.lgGuest td{color:var(--muted)}
+
+  /* ---------- 경기 취소 ---------- */
+  .cancelBox{display:flex;flex-direction:column;align-items:flex-start;gap:3px;background:var(--fw2);border:1px solid var(--fw);border-radius:12px;padding:12px 14px;font-size:14px}
+  .cancelBox b{color:var(--danger);font-size:15px}
+  .cancelRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}
+  .cancelBtn{color:var(--danger) !important;background:var(--fw2) !important}
+  .dday.cx{background:var(--muted);color:#fff}
 </style>
 </head>
 <body>
@@ -1644,6 +1651,8 @@ $('migrate').onclick = async ()=>{
 
 
 /* ---------- 개인 기록 ---------- */
+let cancelMissing = false;
+const cancelledOn = date => days.find(d=>d.played_on === date && d.cancelled) || null;
 let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, venueColumnMissing = false, awardYear = null,
     coffeeMissing = false, amountsMissing = false, coffeeAmounts = [], showCoffeeAmount = true;
 const showAmounts = () => !amountsMissing && (showCoffeeAmount || isAdmin());
@@ -1656,6 +1665,7 @@ async function loadRecords(){
   if(!sb) return;
   // 경기일 칸: 아직 실행 안 한 SQL이 있으면 그 칸만 빼고 다시 불러옴
   const DAY_OPTIONAL = [
+    ['cancel', ['cancelled','cancel_reason']],      // 26-setup-match-cancel.sql (가장 최근이라 먼저 빼봄)
     ['sport',  ['sport']],                          // setup-sport.sql
     ['coffee', ['coffee_teams','coffee_payers']],   // setup-coffee.sql
     ['venue',  ['venue']],                          // setup-venue.sql
@@ -1674,6 +1684,7 @@ async function loadRecords(){
     if(!d.error || !/column|does not exist/i.test(d.error.message)) break;
     missing[name] = true; dayCols = dayCols.filter(c=>!cols.includes(c)); d = await loadDays();
   }
+  cancelMissing = !!missing.cancel;
   sportMissing = !!missing.sport; coffeeMissing = !!missing.coffee; venueColumnMissing = !!missing.venue; lateColumnsMissing = !!missing.late; bookingColumnMissing = !!missing.booking;
   // 커피 금액(공개 설정에 따라 일반 사용자에게는 비어서 옴)과 설정
   const [ca, st] = await Promise.all([
@@ -1692,7 +1703,8 @@ async function loadRecords(){
   }
   days = d.data.map(x=>({...x, sport: x.sport || 'futsal', bookers: x.bookers || [], lates: x.lates || [], noshows: x.noshows || [], coffee_teams: x.coffee_teams || [], coffee_payers: x.coffee_payers || []}))
     .filter(x=>x.sport === SPORT);                       // 지금 종목의 경기일만
-  const dayIds = new Set(days.map(x=>x.id));
+  // 취소된 경기일: 날짜는 남기고, 출석·경기·기록·커피 금액은 집계에서 뺌 (DB에는 그대로 → 취소를 풀면 돌아옴)
+  const dayIds = new Set(days.filter(x=>!x.cancelled).map(x=>x.id));
   games = g.data.filter(x=>dayIds.has(x.day_id)); stats = s.data.filter(x=>dayIds.has(x.day_id));
   coffeeAmounts = coffeeAmounts.filter(x=>dayIds.has(x.day_id));
   if(SPORT === 'soccer' && sportMissing) showErr('축구 기록을 쓰려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.');
@@ -1792,7 +1804,7 @@ function aggregate(period){
   const inPeriod = id => inDate(dayDate[id]);
   const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0, cf:0, cl:0, cfAmt:0}]));
   days.forEach(d=>{
-    if(!inDate(d.played_on)) return;
+    if(!inDate(d.played_on) || d.cancelled) return;
     (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; });
     (d.lates || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.late++; });
     (d.noshows || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.ns++; });
@@ -1826,7 +1838,7 @@ const LEADER_CARDS = {
 };
 // 지금까지 이어지고 있는 연속 출석 (최근 경기일부터 거꾸로, 빠진 날에서 멈춤)
 function attendanceStreaks(){
-  const past = days.filter(d=>d.played_on <= todayStr());   // 최신순
+  const past = days.filter(d=>d.played_on <= todayStr() && !d.cancelled);   // 최신순, 취소된 날은 건너뜀
   const attended = new Set(stats.map(r=>r.day_id + ':' + r.player_id));
   const out = {};
   players.forEach(p=>{ let n = 0; for(const d of past){ if(attended.has(d.id + ':' + p.id)) n++; else break; } out[p.id] = n; });
@@ -2007,6 +2019,14 @@ function renderRecordEditor(){
   $('delDay').disabled = !selectedDayId;
   const box = $('dayEditor');
   if(!selectedDayId){ box.innerHTML = '<p class="muted">팀 구성을 공개하면 오늘 날짜가 자동으로 만들어져요. 지난 경기는 날짜를 골라 추가하세요.</p>'; return; }
+  const selDay = days.find(x=>x.id===selectedDayId) || {};
+  if(selDay.cancelled){
+    box.innerHTML = `<div class="cancelBox"><b>🚫 취소된 경기예요</b>${selDay.cancel_reason ? `<span>사유: ${esc(selDay.cancel_reason)}</span>` : ''}
+      <span class="muted">출석·경기 결과·골·어시·지각·노쇼·커피가 모두 집계에서 빠져 있어요. 입력해 둔 기록은 지우지 않아서, 취소를 풀면 다시 들어가요.</span>
+      <button class="ghost" id="uncancelDay" style="margin-top:6px">↩️ 경기 취소 풀기</button></div>`;
+    $('uncancelDay').onclick = ()=> setCancel(selDay, false);
+    return;
+  }
 
   const rows = stats.filter(r=>r.day_id===selectedDayId)
     .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name ?? '(삭제된 선수)'}))
@@ -2019,6 +2039,7 @@ function renderRecordEditor(){
 
   const curDay = days.find(x=>x.id===selectedDayId) || {};
   box.innerHTML = `
+    <div class="cancelRow">${cancelMissing ? '<span class="muted">경기 취소를 쓰려면 Supabase에서 26-setup-match-cancel.sql을 먼저 실행해 주세요.</span>' : '<button class="ghost small cancelBtn" id="cancelDay">🚫 이 날 경기 취소</button><span class="muted">비·구장 사정 등으로 경기를 못 했으면 눌러 주세요. 출석이 쌓이지 않아요.</span>'}</div>
     <h3 class="sub">📍 구장</h3>
     ${venueColumnMissing ? '<p class="muted">구장을 기록하려면 Supabase에서 setup-venue.sql을 먼저 실행해 주세요.</p>' : `
     <div class="row">
@@ -2061,6 +2082,7 @@ function renderRecordEditor(){
       <button id="saveStats" style="margin-left:auto">기록 저장</button>
     </div>`;
 
+  if($('cancelDay')) $('cancelDay').onclick = ()=> setCancel(curDay, true);
   if($('venueSave')) $('venueSave').onclick = async ()=>{
     const venue = $('venueIn').value.trim() || null;
     if(await q(sb.from('match_days').update({venue}).eq('id', selectedDayId), '구장을 저장하지 못했어요')) await loadRecords();
@@ -2137,6 +2159,19 @@ function renderRecordEditor(){
   };
 }
 $('daySel').addEventListener('change', ()=>{ selectedDayId = +$('daySel').value || null; renderRecordEditor(); });
+// 경기 취소 / 취소 풀기
+async function setCancel(day, on){
+  if(!day?.id) return;
+  let reason = null;
+  if(on){
+    reason = prompt(`${day.played_on} 경기를 취소할까요?\n출석·경기 결과·골·어시·지각·노쇼·커피가 집계에서 빠져요. (입력한 기록은 지우지 않아요)\n\n사유를 적어 주세요 (예: 우천). 비워도 돼요.`, '우천');
+    if(reason === null) return;
+    reason = reason.trim().slice(0, 60) || null;
+  } else if(!confirm(`${day.played_on} 경기 취소를 풀까요?\n입력해 둔 출석·기록이 다시 집계에 들어가요.`)) return;
+  if(await q(sb.from('match_days').update({cancelled: on, cancel_reason: on ? reason : null}).eq('id', day.id), on ? '경기를 취소하지 못했어요' : '취소를 풀지 못했어요')){
+    await loadRecords(); plToast(on ? '경기를 취소했어요' : '경기 취소를 풀었어요');
+  }
+}
 $('addDay').onclick = async ()=>{
   const date = $('newDay').value; if(!date){ alert('날짜를 골라주세요'); return; }
   const r = await q((sportMissing ? sb.from('match_days').upsert({played_on: date}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: date, sport: SPORT}, {onConflict:'played_on,sport'})).select('id,venue').single(), '경기일을 추가하지 못했어요');
@@ -2257,6 +2292,11 @@ function renderHistory(){
   $('histPrev').disabled = idx >= days.length - 1;
   $('histNext').disabled = idx <= 0;
 
+  const hDay = days.find(d=>d.id===histDayId);
+  if(hDay?.cancelled){
+    $('histBox').innerHTML = `<div class="cancelBox"><b>🚫 취소된 경기</b>${hDay.cancel_reason ? `<span>사유: ${esc(hDay.cancel_reason)}</span>` : ''}<span class="muted">이 날은 출석·기록에 들어가지 않아요.</span></div>`;
+    return;
+  }
   const dayGames = games.filter(g=>g.day_id===histDayId);
   const rows = stats.filter(r=>r.day_id===histDayId).map(r=>{
     const p = players.find(x=>x.id===r.player_id);
@@ -2701,7 +2741,8 @@ function renderSchedule(){
   if(eventsMissing){ list.innerHTML = '<p class="muted">일정을 쓰려면 Supabase에서 setup-extras.sql을 먼저 실행해 주세요.</p>'; return; }
   list.innerHTML = items.length ? `<div class="sched${schedOpen ? ' open' : ''}">${items.map((e, idx)=>{
       const d = new Date(e.next + 'T00:00:00'), dd = daysBetween(today, e.next);
-      const badge = dd === 0 ? '<span class="dday today">D-DAY</span>' : dd === 1 ? '<span class="dday soon">내일</span>' : `<span class="dday ${dd <= 3 ? 'soon' : ''}">D-${dd}</span>`;
+      const cx = e.kind === '경기' && cancelledOn(e.next);
+      const badge = cx ? '<span class="dday cx">취소</span>' : dd === 0 ? '<span class="dday today">D-DAY</span>' : dd === 1 ? '<span class="dday soon">내일</span>' : `<span class="dday ${dd <= 3 ? 'soon' : ''}">D-${dd}</span>`;
       return `<div class="ev k-${e.kind}${idx >= SHOW ? ' evExtra' : ''}">
         <div class="evDate"><b>${d.getMonth()+1}/${d.getDate()}</b><span>${d.toLocaleDateString('ko-KR',{weekday:'short'})}</span></div>
         <div class="evBody">
@@ -3010,6 +3051,7 @@ function renderVote(){
   const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
+    ${cancelledOn(m.next) ? `<div class="cancelBox" style="margin-bottom:10px"><b>🚫 이번 경기는 취소됐어요</b>${cancelledOn(m.next).cancel_reason ? `<span>사유: ${esc(cancelledOn(m.next).cancel_reason)}</span>` : ''}</div>` : ''}
     <div class="vtHead"><b>⚽ ${esc(m.title || '경기')}</b><span class="muted" style="font-size:13px;font-weight:700">${dd <= 0 ? '오늘' : dd === 1 ? '내일' : `D-${dd}`}</span></div>
     <div class="vtWhen"><div class="vtDate">📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${d.toLocaleDateString('ko-KR',{weekday:'short'})})${m.event_time ? `<span>${esc(m.event_time)}</span>` : ''}</div>${venue ? `<div class="vtPlace">📍 ${mapLink(venue)}</div>` : ''}</div>
     <div class="vtDl${locked ? ' closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - now)} · ${fmtDeadline(dl)}`}</div>
@@ -3356,6 +3398,7 @@ function renderLog(){
 }
 
 async function logRegister(T, letters, pts){
+  if(cancelledOn(logDate)){ alert('취소된 경기일이에요. 아래 "경기 기록 입력"에서 취소를 푼 뒤 등록해 주세요.'); return; }
   const list = LOG.games.filter(x=>x.home !== x.away);
   if(!list.length){ alert('등록할 경기가 없어요'); return; }
   if(!LOG.mvp && !confirm('MVP를 고르지 않았어요. 그대로 등록할까요?')) return;
@@ -3559,7 +3602,7 @@ function renderMisses(){
   $('missFill').disabled = false;
   const per = $('missPeriod').value, today = todayStr();
   const from = per === 'year' ? today.slice(0, 4) + '-01-01' : per === '3m' ? addDays(today, -92) : '0000';
-  const list = misses.filter(m=>m.event_date >= from);
+  const list = misses.filter(m=>m.event_date >= from && !cancelledOn(m.event_date));
   const by = {};
   list.forEach(m=>(by[m.player_id] ||= []).push(m.event_date));
   const rows = Object.entries(by).map(([pid, ds])=>({p: players.find(x=>x.id === +pid), ds})).filter(x=>x.p)
