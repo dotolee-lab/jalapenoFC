@@ -784,6 +784,11 @@
   .cancelRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}
   .cancelBtn{color:var(--danger) !important;background:var(--fw2) !important}
   .dday.cx{background:var(--muted);color:#fff}
+
+  .exItem.gItem.on{background:#ece6fb;color:#6a4fc2;text-decoration:none;border-color:#b9a6f5}
+  @media (prefers-color-scheme: dark){.exItem.gItem.on{background:#2c2540;color:#b9a6f5}}
+  .vtNm .gTag{color:#6a4fc2;font-weight:700;margin-left:2px}
+  .guestLine{grid-column:1 / -1;font-size:13px;margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -892,6 +897,7 @@
         <label class="chk"><input type="checkbox" class="posNew" value="미드" checked> 미드</label>
         <label class="chk"><input type="checkbox" class="posNew" value="수비"> 수비</label>
       </span>
+      <label class="chk" title="투표·팀 구성에만 들어가고 기록은 안 남아요"><input type="checkbox" id="newGuest"> 게스트</label>
       <button id="add">추가</button>
     </div>
     <div class="row skillNew gradeOnly" id="skillNew"></div>
@@ -1028,8 +1034,10 @@
 
   <section class="card app admin-only" data-pane="admin" id="exemptCard">
     <h2>🗳️ 참석 투표 · 선수 로그인</h2>
-    <p class="muted" style="margin-top:-6px"><b>투표 제외</b> — 체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 게스트나 휴면 회원을 체크해 두세요.</p>
+    <p class="muted" style="margin-top:-6px"><b>투표 제외</b> — 체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 휴면 회원 등을 체크해 두세요.</p>
     <div id="exemptBox" class="exemptGrid"><p class="muted">불러오는 중…</p></div>
+    <p class="muted" style="margin:14px 0 6px"><b>👤 게스트 선수</b> — 체크한 선수는 투표·팀 구성·밸런스 계산에는 들어가지만, 출석·골·어시·MVP·순위·투표 안 한 기록에는 남지 않아요. 선수 명단에서도 아래쪽에 따로 표시돼요.</p>
+    <div id="guestBox" class="exemptGrid"></div>
     <div class="pinRow">
       <b style="font-size:14px">🔑 비밀번호 초기화</b>
       <select id="pinResetSel"></select>
@@ -1135,7 +1143,10 @@ function normPos(v){
 }
 const posBadges = p => p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('');
 
-let sb = null, session = null, players = [], lastTeams = null;
+let sb = null, session = null, players = [], lastTeams = null, guestColMissing = false;
+// 게스트 선수: 투표·팀 구성에는 들어가고, 출석·기록·순위에는 안 남음
+const isGuestPid = id => !!players.find(p=>p.id === id)?.isGuest;
+const guestBadge = '<span class="badge guestB">게스트</span>';
 const isAdmin = () => !!session;
 
 /* ---------- DB 읽기/쓰기 ---------- */
@@ -1156,6 +1167,11 @@ async function loadAll(){
   if(res.error && /column|foot_|number|intro|birth/i.test(res.error.message)){
     profileColumnsMissing = true;   // setup-profile.sql 실행 전
     res = await sb.from('players').select(BASE).order('name');
+  }
+  guestColMissing = false;
+  if(!res.error){
+    const gq = await sb.from('players').select('id,is_guest');
+    if(gq.error) guestColMissing = true; else { const gs = new Set(gq.data.filter(x=>x.is_guest).map(x=>x.id)); res.data.forEach(x=>x.is_guest = gs.has(x.id)); }
   }
   if(res.error){
     $('list').innerHTML = `<tr><td colspan="15" class="muted">명단을 불러오지 못했어요: ${esc(res.error.message)}</td></tr>`;
@@ -1179,7 +1195,7 @@ async function loadAll(){
     if(!r.error) r.data.forEach(x=>ratings[x.player_id]=x);
   }
   players = res.data.map(p=>({
-    id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending,
+    id:p.id, name:p.name, pos:normPos(p.pos), gk:p.gk, on:p.attending, isGuest: !!p.is_guest,
     number: p.number ?? null, intro: p.intro ?? null, birth: p.birth ?? null,
     footL: p.foot_left ?? null, footR: p.foot_right ?? null, photo: p.photo ?? null,
     grade: ratings[p.id]?.grade ?? 3, act: ratings[p.id]?.act ?? '보통',
@@ -1322,7 +1338,10 @@ $('add').onclick = async ()=>{
   $('add').disabled = true;
   const gkV = document.querySelector('#skillNew [data-sk=s_gk]')?.value || '';
   const gkOld = $('gk') ? $('gk').checked : false;
-  const row = await q(sb.from('players').insert({name, pos:normPos(picked), gk: gkMissing ? gkOld : !!gkV, attending:true}).select('id').single(), '선수를 추가하지 못했어요');
+  const ins = {name, pos:normPos(picked), gk: gkMissing ? gkOld : !!gkV, attending:true};
+  if($('newGuest').checked && !guestColMissing) ins.is_guest = true;
+  const row = await q(sb.from('players').insert(ins).select('id').single(), '선수를 추가하지 못했어요');
+  $('newGuest').checked = false;
   if(row){
     const nr = {id:row.id, grade:+$('grade').value, act:$('act').value};
     [...SKILLS, ['s_gk']].forEach(([k])=>{ const v = document.querySelector(`#skillNew [data-sk=${k}]`)?.value; nr[k] = v ? +v : null; });
@@ -1496,7 +1515,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore gradeOnly">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.guest ? `<span class="badge guestB">게스트</span>${isAdmin() && !withScores ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.isGuest ? guestBadge : ''}${p.guest ? `<span class="badge guestB">게스트</span>${isAdmin() && !withScores && p.tmpGuest ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
@@ -1526,7 +1545,7 @@ $('again').onclick = make;
 
 /* ---------- 공개 / 공유 (이름·포지션·키퍼·전술만) ---------- */
 const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
-const fromPublic = data => data.map(t=>t.map(([name,pos,gk,g])=>({name:String(name), pos:normPos(pos), gk:!!gk, guest:!!g})));
+const fromPublic = data => data.map(t=>t.map(([name,pos,gk,g])=>({name:String(name), pos:normPos(pos), gk:!!gk, guest:!!g || !!players.find(p=>p.name === String(name))?.isGuest, tmpGuest:!!g})));
 // 예전 형식(팀 배열만)과 새 형식({teams, tactics}) 둘 다 읽음
 const unpack = obj => Array.isArray(obj) ? {teams: obj, tactics: []} : {teams: obj.teams || obj.t || [], tactics: obj.tactics || obj.f || []};
 let publishedRow = null;
@@ -1653,6 +1672,7 @@ $('migrate').onclick = async ()=>{
 /* ---------- 개인 기록 ---------- */
 let cancelMissing = false;
 const cancelledOn = date => days.find(d=>d.played_on === date && d.cancelled) || null;
+let statsAll = [];
 let days = [], games = [], stats = [], selectedDayId = null, bookingColumnMissing = false, lateColumnsMissing = false, venueColumnMissing = false, awardYear = null,
     coffeeMissing = false, amountsMissing = false, coffeeAmounts = [], showCoffeeAmount = true;
 const showAmounts = () => !amountsMissing && (showCoffeeAmount || isAdmin());
@@ -1705,7 +1725,8 @@ async function loadRecords(){
     .filter(x=>x.sport === SPORT);                       // 지금 종목의 경기일만
   // 취소된 경기일: 날짜는 남기고, 출석·경기·기록·커피 금액은 집계에서 뺌 (DB에는 그대로 → 취소를 풀면 돌아옴)
   const dayIds = new Set(days.filter(x=>!x.cancelled).map(x=>x.id));
-  games = g.data.filter(x=>dayIds.has(x.day_id)); stats = s.data.filter(x=>dayIds.has(x.day_id));
+  games = g.data.filter(x=>dayIds.has(x.day_id)); statsAll = s.data.filter(x=>dayIds.has(x.day_id));
+  stats = statsAll.filter(x=>!isGuestPid(x.player_id));   // 게스트 선수 기록은 집계에서 뺌
   coffeeAmounts = coffeeAmounts.filter(x=>dayIds.has(x.day_id));
   if(SPORT === 'soccer' && sportMissing) showErr('축구 기록을 쓰려면 Supabase에서 setup-sport.sql을 먼저 실행해 주세요.');
   if(!days.some(x=>x.id===selectedDayId)) selectedDayId = days[0]?.id ?? null;
@@ -1802,7 +1823,7 @@ function aggregate(period){
     return true;
   };
   const inPeriod = id => inDate(dayDate[id]);
-  const agg = new Map(players.map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0, cf:0, cl:0, cfAmt:0}]));
+  const agg = new Map(players.filter(p=>!p.isGuest).map(p=>[p.id, {id:p.id, name:p.name, att:0, w:0, d:0, l:0, g:0, a:0, mvp:0, bk:0, late:0, ns:0, cf:0, cl:0, cfAmt:0}]));
   days.forEach(d=>{
     if(!inDate(d.played_on) || d.cancelled) return;
     (d.bookers || []).forEach(pid=>{ const x = agg.get(pid); if(x) x.bk++; });
@@ -1993,10 +2014,10 @@ function coffeeBlock(){
   if(!hasCoffee()) return '';
   if(coffeeMissing) return '<h3 class="sub">☕ 커피 내기</h3><p class="muted">기록하려면 Supabase에서 setup-coffee.sql을 먼저 실행해 주세요.</p>';
   const day = days.find(x=>x.id===selectedDayId) || {};
-  const used = [...new Set(stats.filter(r=>r.day_id===selectedDayId).map(r=>r.team).filter(Boolean))].sort();
+  const used = [...new Set(statsAll.filter(r=>r.day_id===selectedDayId).map(r=>r.team).filter(Boolean))].sort();
   const letters = used.length ? used : TEAM_LETTERS;
   const lose = day.coffee_teams || [], payers = day.coffee_payers || [];
-  const teamOf = pid => stats.find(r=>r.day_id===selectedDayId && r.player_id===pid)?.team;
+  const teamOf = pid => statsAll.find(r=>r.day_id===selectedDayId && r.player_id===pid)?.team;
   const amountOf = pid => coffeeAmounts.find(a=>a.day_id===selectedDayId && a.player_id===pid)?.amount ?? '';
   // 진 팀 선수를 목록 위쪽에
   const cands = players.filter(x=>!payers.includes(x.id)).sort((a,b)=>(lose.includes(teamOf(b.id)) - lose.includes(teamOf(a.id))) || a.name.localeCompare(b.name,'ko'));
@@ -2028,7 +2049,7 @@ function renderRecordEditor(){
     return;
   }
 
-  const rows = stats.filter(r=>r.day_id===selectedDayId)
+  const rows = statsAll.filter(r=>r.day_id===selectedDayId)
     .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name ?? '(삭제된 선수)'}))
     .sort((a,b)=>(a.team||'Z').localeCompare(b.team||'Z') || a.name.localeCompare(b.name,'ko'));
   const usedTeams = [...new Set(rows.map(r=>r.team).filter(Boolean))].sort();
@@ -2094,7 +2115,7 @@ function renderRecordEditor(){
   box.querySelectorAll('[data-list-add]').forEach(btn=>btn.onclick = async ()=>{
     const field = btn.dataset.listAdd, pid = +box.querySelector(`[data-list-sel="${field}"]`).value;
     if(!pid) return;
-    if(field === 'noshows' && stats.some(r=>r.day_id===selectedDayId && r.player_id===pid)){
+    if(field === 'noshows' && statsAll.some(r=>r.day_id===selectedDayId && r.player_id===pid)){
       // 노쇼는 출석이 아니므로 그날 출석 기록에서 빼기
       if(!confirm('이 선수는 그날 출석으로 되어 있어요. 노쇼로 바꾸면 출석과 그날 골·어시 기록이 빠져요. 계속할까요?')) return;
       await q(sb.from('player_stats').delete().eq('day_id', selectedDayId).eq('player_id', pid));
@@ -2202,7 +2223,7 @@ async function recordAttendance(teams){
   if(!await q(sb.from('player_stats').upsert(rows, {onConflict:'day_id,player_id'}), '출석을 기록하지 못했어요')) return;
   // 다시 공개하면서 빠진 선수 중 기록이 없는 사람은 출석에서 정리
   const ids = new Set(rows.map(r=>r.player_id));
-  const stale = stats.filter(r=>r.day_id === day.id && !ids.has(r.player_id) && !r.goals && !r.assists && !r.mvp).map(r=>r.player_id);
+  const stale = statsAll.filter(r=>r.day_id === day.id && !ids.has(r.player_id) && !r.goals && !r.assists && !r.mvp).map(r=>r.player_id);
   if(stale.length) await q(sb.from('player_stats').delete().eq('day_id', day.id).in('player_id', stale));
   selectedDayId = day.id;
   await loadRecords();
@@ -2512,11 +2533,12 @@ function renderProfilePicker(){
   // 포지션 필터: 전체 / 공격 / 미드 / 수비 / 키퍼 (여러 포지션 선수는 해당하는 칸 모두에 나옴)
   const POS_F = [['all','전체', ()=>true], ['공격','공격', p=>p.pos.includes('공격')], ['미드','미드', p=>p.pos.includes('미드')], ['수비','수비', p=>p.pos.includes('수비')], ['gk','키퍼', p=>p.gk]];
   if(!POS_F.some(([k])=>k === rosterPos)) rosterPos = 'all';
-  $('posFilter').innerHTML = POS_F.map(([k, label, f])=>`<button class="pf-${k} ${k === rosterPos ? 'on' : ''}" data-posf="${k}">${label} <small>${players.filter(f).length}</small></button>`).join('');
+  const members = players.filter(p=>!p.isGuest), guestsP = players.filter(p=>p.isGuest);
+  $('posFilter').innerHTML = POS_F.map(([k, label, f])=>`<button class="pf-${k} ${k === rosterPos ? 'on' : ''}" data-posf="${k}">${label} <small>${members.filter(f).length}</small></button>`).join('');
   $('posFilter').querySelectorAll('[data-posf]').forEach(b=>b.onclick = ()=>{ rosterPos = b.dataset.posf; renderProfilePicker(); });
   const posFn = POS_F.find(([k])=>k === rosterPos)[2];
-  const list = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>(!qText || p.name.includes(qText)) && posFn(p));
-  $('rosterCount').textContent = `${players.length}명`;
+  const list = members.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>(!qText || p.name.includes(qText)) && posFn(p));
+  $('rosterCount').textContent = `${members.length}명`;
   $('pfPicker').innerHTML = list.map(p=>{
     const st = agg[p.id] || {att:0, g:0, a:0};
     return `<button class="pcard" data-pick="${p.id}">
@@ -2527,6 +2549,7 @@ function renderProfilePicker(){
       <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
+  $('pfPicker').insertAdjacentHTML('beforeend', guestsP.length ? `<p class="muted guestLine">${guestBadge} ${guestsP.map(p=>esc(p.name)).join(', ')} — 투표·팀 구성에만 들어가고 기록은 남지 않아요</p>` : '');
   $('pfPicker').querySelectorAll('[data-pick]').forEach(b=>b.onclick = ()=>{ profileId = +b.dataset.pick; renderProfile(); keepTabsInView(); });
 }
 function renderProfile(){
@@ -3042,15 +3065,15 @@ function renderVote(){
   const inRoster = id => players.some(p=>p.id === id);
   const statusOf = pid => votes.find(v=>v.player_id === pid)?.status || null;
   const myVote = me ? statusOf(me.id) : null;
-  const shownMine = closed && me && !myVote && !exemptIds.has(me.id) ? 'no' : myVote;
+  const shownMine = closed && me && !myVote && !exemptIds.has(me.id) && !me.isGuest ? 'no' : myVote;
   const byName = (a,b)=>a.name.localeCompare(b.name,'ko');
   const pick = st => votes.filter(v=>v.status === st && inRoster(v.player_id)).map(v=>players.find(x=>x.id === v.player_id)).sort(byName);
   const voted = new Set(votes.map(v=>v.player_id));
-  const waiting = players.filter(x=>!exemptIds.has(x.id) && !voted.has(x.id)).sort(byName);
+  const waiting = players.filter(x=>!exemptIds.has(x.id) && !x.isGuest && !voted.has(x.id)).sort(byName);
   const yes = pick('yes'), no = closed ? [...pick('no'), ...waiting] : pick('no');
   const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
   const adm = isAdmin();   // 관리자는 이름을 눌러 바로 참석·불참을 바꿀 수 있음
-  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
+  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${x.isGuest ? '<small class="gTag">게스트</small>' : ''}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
   const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
@@ -3174,7 +3197,7 @@ function openPicker(){
 `, {wide: true, canClose: !plGate, gate: plGate});
   const draw = ()=>{
     const qv = $('plSearch').value.trim();
-    const list = players.filter(p=>!qv || p.name.includes(qv)).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+    const list = players.filter(p=>!p.isGuest && (!qv || p.name.includes(qv))).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
     $('plGrid').innerHTML = list.map(p=>`<button class="plPc" data-plp="${p.id}"><small>${p.number != null ? `No. ${noLabel(p.number)}` : '&nbsp;'}</small>${avatar(p.name, 'md')}<b>${esc(p.name)}</b></button>`).join('') || '<p class="muted">검색 결과가 없어요.</p>';
     $('plGrid').querySelectorAll('[data-plp]').forEach(b=>b.onclick = ()=> openPin(players.find(p=>p.id === +b.dataset.plp), 'login'));
   };
@@ -3281,8 +3304,8 @@ let logDate = todayStr(), LOG = null, logPick = {t: null, s: null, a: null};
 const logKey = () => `jfc-log-${SPORT}-${logDate}`;
 function logSave(){ if(LOG) store.set(logKey(), JSON.stringify(LOG)); }
 function logLoad(){ try{ const v = JSON.parse(store.get(logKey()) || 'null'); return v && Array.isArray(v.games) ? v : null; }catch(e){ return null; } }
-const isGuestId = id => typeof id === 'string' && id.startsWith('g:');
-const lgName = id => isGuestId(id) ? id.slice(2) : (players.find(p=>p.id === id)?.name || '?');
+const isGuestId = id => (typeof id === 'string' && id.startsWith('g:')) || isGuestPid(id);
+const lgName = id => (typeof id === 'string' && id.startsWith('g:')) ? id.slice(2) : (players.find(p=>p.id === id)?.name || '?');
 const lgId = v => /^\d+$/.test(String(v)) ? +v : v;   // 숫자면 선수 id, 'g:이름'이면 게스트
 const lgCount = (g, t) => g.goals.filter(x=>x.t === t).length;
 
@@ -3290,11 +3313,12 @@ const lgCount = (g, t) => g.goals.filter(x=>x.t === t).length;
 function logTeams(){
   const out = {};
   const day = days.find(d=>d.played_on === logDate);
-  if(day) stats.filter(r=>r.day_id === day.id && r.team).forEach(r=>{ const p = players.find(x=>x.id === r.player_id); if(p) (out[r.team] ||= []).push(p); });
+  const asLog = p => p.isGuest ? {...p, guest: true} : p;
+  if(day) statsAll.filter(r=>r.day_id === day.id && r.team).forEach(r=>{ const p = players.find(x=>x.id === r.player_id); if(p) (out[r.team] ||= []).push(asLog(p)); });
   let from = 'day';
   if(Object.keys(out).length < 2 && publishedRow){
     Object.keys(out).forEach(k=>delete out[k]); from = 'published';
-    unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(([name])=>{ const p = players.find(x=>x.name === String(name)); if(p) (out[TEAM_LETTERS[i]] ||= []).push(p); }));
+    unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(([name])=>{ const p = players.find(x=>x.name === String(name)); if(p) (out[TEAM_LETTERS[i]] ||= []).push(asLog(p)); }));
   }
   // 공개된 팀 구성의 게스트도 같은 팀에 넣음
   if(publishedRow) unpack(publishedRow.teams).teams.forEach((t, i)=>t.forEach(x=>{ if(x[3]) (out[TEAM_LETTERS[i]] ||= []).push({id: 'g:' + x[0], name: String(x[0]), guest: true}); }));
@@ -3411,7 +3435,7 @@ async function logRegister(T, letters, pts){
     if(!day) return;
   }
   const old = games.filter(x=>x.day_id === day.id);
-  const oldPts = stats.filter(r=>r.day_id === day.id && (r.goals || r.assists || r.mvp));
+  const oldPts = statsAll.filter(r=>r.day_id === day.id && (r.goals || r.assists || r.mvp));
   const msg = `${fmtDay(logDate)} 경기 기록에 등록할까요?\n· 경기 ${list.length}개 · 골 ${list.reduce((n, x)=>n + x.goals.length, 0)}개${LOG.mvp ? ` · MVP ${lgName(LOG.mvp)}` : ''}`
     + (old.length || oldPts.length ? `\n\n⚠️ 이 날 이미 입력된 경기 결과·골·어시·MVP는 기록일지 내용으로 바뀌어요.` : '');
   if(!confirm(msg)) return;
@@ -3423,7 +3447,7 @@ async function logRegister(T, letters, pts){
     const inTeam = new Set();
     const rows = letters.flatMap(t=>T[t].filter(p=>!p.guest).map(p=>{ inTeam.add(p.id); return {day_id: day.id, player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id}; }));
     // 팀에는 없지만 예전에 기록이 있던 사람은 0으로 정리
-    stats.filter(r=>r.day_id === day.id && !inTeam.has(r.player_id) && (r.goals || r.assists || r.mvp))
+    statsAll.filter(r=>r.day_id === day.id && !inTeam.has(r.player_id) && (r.goals || r.assists || r.mvp))
       .forEach(r=>rows.push({day_id: day.id, player_id: r.player_id, team: r.team, goals: 0, assists: 0, mvp: false}));
     if(!await q(sb.from('player_stats').upsert(rows, {onConflict:'day_id,player_id'}), '개인 기록을 저장하지 못했어요')) return;
     LOG.saved = new Date().toISOString(); logSave();
@@ -3727,6 +3751,16 @@ async function loadExempt(){
   const sorted = players.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   box.innerHTML = sorted.map(p=>`<label class="exItem ${ex.has(p.id) ? 'on' : ''}"><input type="checkbox" data-ex="${p.id}" ${ex.has(p.id) ? 'checked' : ''}> ${esc(p.name)}</label>`).join('')
     + `<p class="muted exSum">제외 ${ex.size}명 · 투표 대상 ${players.length - ex.size}명</p>`;
+  const gb = $('guestBox');
+  if(gb){
+    gb.innerHTML = guestColMissing ? '<p class="muted">쓰려면 Supabase에서 27-setup-guest-player.sql을 먼저 실행해 주세요.</p>'
+      : sorted.map(p=>`<label class="exItem gItem ${p.isGuest ? 'on' : ''}"><input type="checkbox" data-gst="${p.id}" ${p.isGuest ? 'checked' : ''}> ${esc(p.name)}</label>`).join('')
+        + `<p class="muted exSum">게스트 ${players.filter(p=>p.isGuest).length}명</p>`;
+    gb.querySelectorAll('[data-gst]').forEach(cb=>cb.onchange = async ()=>{
+      cb.disabled = true;
+      if(await q(sb.from('players').update({is_guest: cb.checked}).eq('id', +cb.dataset.gst), '저장하지 못했어요')) await loadAll(); else cb.disabled = false;
+    });
+  }
   const ps = $('pinResetSel');
   if(ps) ps.innerHTML = '<option value="">선수 고르기…</option>' + sorted.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   box.querySelectorAll('[data-ex]').forEach(cb=>cb.onchange = async ()=>{
