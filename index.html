@@ -790,6 +790,9 @@
   .vtNm .gTag{color:#6a4fc2;font-weight:700;margin-left:2px}
   .guestLine{grid-column:1 / -1;font-size:13px;margin:8px 0 0}
 
+
+  .bondChip{gap:6px}
+  .bondDel{background:none;color:var(--muted);padding:0 2px;font-size:14px;line-height:1}
 </style>
 </head>
 <body>
@@ -1379,7 +1382,13 @@ function cost(teams){
   const size = variance(teams.map(t=>t.length)) * 100;
   // 능력치별 평균도 고르게 (미평가는 3점으로 보고 맞춤)
   const sk = SKILLS.reduce((acc,[k])=>acc + variance(teams.map(t=>t.length ? t.reduce((v,p)=>v + (p[k] || 3), 0) / t.length : 0)), 0) * 18;
-  return s + pos + gk + size + sk;
+  // 같은 팀 묶기 (이번 경기): 둘 다 있는데 다른 팀이면 아주 큰 벌점 → 항상 같은 팀
+  let pair = 0;
+  if(typeof bonds !== 'undefined' && bonds.length){
+    const teamIdx = new Map(); teams.forEach((t, i)=>t.forEach(p=>teamIdx.set(p.id, i)));
+    bonds.forEach(({a, b})=>{ if(teamIdx.has(a) && teamIdx.has(b) && teamIdx.get(a) !== teamIdx.get(b)) pair++; });
+  }
+  return s + pos + gk + size + sk + pair * 1000;
 }
 function snake(list, n){
   const teams = Array.from({length:n},()=>[]);
@@ -3005,6 +3014,7 @@ startApp();
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
+let bonds = [], bondsMissing = false;   // 이번 경기 '같은 팀 묶기' [{a, b}]
 let vMatch = null, vKey = null, votes = [], vComments = [], exemptIds = new Set(), voteMissing = false, commentsMissing = false, voteSeq = 0;
 const myPlayer = () => mePid ? players.find(p=>p.id === mePid) || null : null;
 function plToast(msg){
@@ -3047,12 +3057,14 @@ async function loadVotes(){
   const seq = ++voteSeq, m = vMatch;
   const ex = await sb.from('players').select('id,vote_exempt');
   const nv = m ? await sb.from('attendance_votes').select('player_id,status').eq('event_date', m.next).eq('sport', SPORT) : {data: []};
+  const nb = m ? await sb.from('team_bonds').select('a,b').eq('event_date', m.next).eq('sport', SPORT) : {data: []};
   const nc = m ? await sb.from('match_comments').select('id,player_id,body,created_at').eq('event_date', m.next).eq('sport', SPORT).order('created_at') : {data: []};
   if(seq !== voteSeq) return;                     // 그 사이 종목을 바꿨으면 버림
   exemptIds = new Set(ex.error ? [] : ex.data.filter(x=>x.vote_exempt).map(x=>x.id));
   voteMissing = !!(nv.error && /relation|does not exist|schema cache/i.test(nv.error.message));
   votes = nv.error ? [] : nv.data.filter(x=>x.status === 'yes' || x.status === 'no');
   commentsMissing = !!nc.error; vComments = nc.error ? [] : nc.data;
+  bondsMissing = !!nb.error; bonds = nb.error ? [] : nb.data;
   renderVote(); if(isAdmin()) renderAuto();
 }
 
@@ -3098,6 +3110,15 @@ function renderVote(){
     <div class="vtMemos">${vComments.map(c=>{ const x = players.find(y=>y.id === c.player_id); if(!x) return ''; const st = statusOf(x.id), mine = me && x.id === me.id;
       return `<div class="vtMemo${mine ? ' mine' : ''}"><b>${esc(x.name)}</b>${st ? `<span class="vtSt ${st}">${st === 'yes' ? '참석' : '불참'}</span>` : '<span></span>'}<span class="ago">${agoText(c.created_at)}${mine ? ` · <button class="delC" data-cid="${c.id}">삭제</button>` : ''}</span><p>${esc(c.body)}</p></div>`; }).join('') || '<p class="muted" style="font-size:13px;margin:0">아직 댓글이 없어요. 일정이 애매하면 사유를 남겨 주세요.</p>'}</div>
     ${me ? '<div class="vtBox"><input type="text" id="vtCIn" maxlength="300" placeholder="댓글 남기기 (예: 출장이라 목요일에 확정할게요)"><button id="vtCSend">등록</button></div>' : '<p class="muted" style="font-size:12px;margin:6px 0 0">로그인하면 댓글을 남길 수 있어요.</p>'}`}
+    ${bonds.length ? `<div class="vtSub">🤝 같은 팀 (이번 경기)</div><div class="vtNames">${bonds.map(({a, b})=>`<span class="vtNm bondChip">${esc(players.find(p=>p.id === a)?.name || '?')} + ${esc(players.find(p=>p.id === b)?.name || '?')}${adm ? `<button class="bondDel" data-bond-del="${a}|${b}" title="묶음 풀기" aria-label="묶음 풀기">×</button>` : ''}</span>`).join('')}</div>` : ''}
+    <div class="vtAdmin admin-only">
+      <b style="font-size:13px;width:100%">🤝 같은 팀으로 묶기 <span class="muted" style="font-weight:500">(이번 경기만 · 게스트와 부른 사람 등)</span></b>
+      ${bondsMissing ? '<span class="muted" style="font-size:13px">쓰려면 Supabase에서 28-setup-team-bonds.sql을 먼저 실행해 주세요.</span>' : `
+      <select id="bondA"><option value="">선수 1…</option>${players.slice().sort(byName).map(p=>`<option value="${p.id}">${esc(p.name)}${statusOf(p.id) === 'yes' ? ' ✅' : ''}</option>`).join('')}</select>
+      <select id="bondB"><option value="">선수 2…</option>${players.slice().sort(byName).map(p=>`<option value="${p.id}">${esc(p.name)}${statusOf(p.id) === 'yes' ? ' ✅' : ''}</option>`).join('')}</select>
+      <button class="small" id="bondAdd">묶기</button>
+      <span class="muted" style="font-size:12px;width:100%">둘 다 참석이면 금요일 자동 팀 구성·팀 나누기에서 항상 같은 팀이 돼요. 다음 주에는 자동으로 풀려요. ✅ = 참석</span>`}
+    </div>
     <div class="vtAdmin admin-only">
       <b style="font-size:13px;width:100%">🛠️ 운영진 수정 <span class="muted" style="font-weight:500">(마감 후에도 바꿀 수 있어요 · 위 이름을 눌러도 돼요)</span></b>
       <select id="vtAdmSel"><option value="">선수 고르기…</option>${players.slice().sort(byName).map(p=>{ const st = statusOf(p.id); return `<option value="${p.id}">${esc(p.name)}${st ? ` (${st === 'yes' ? '참석' : '불참'})` : ''}</option>`; }).join('')}</select>
@@ -3135,6 +3156,22 @@ function bindVote(){
     const pid = +$('vtAdmSel').value; if(!pid){ alert('선수를 골라 주세요'); return; }
     b.disabled = true;
     if(!await adminSetVote(pid, b.dataset.adm)) b.disabled = false;
+  });
+  // 관리자: 같은 팀 묶기 / 풀기
+  if($('bondAdd')) $('bondAdd').onclick = async ()=>{
+    let a = +$('bondA').value, b = +$('bondB').value;
+    if(!a || !b){ alert('두 사람을 골라 주세요'); return; }
+    if(a === b){ alert('서로 다른 두 사람을 골라 주세요'); return; }
+    if(a > b) [a, b] = [b, a];
+    if(bonds.some(x=>x.a === a && x.b === b)){ alert('이미 묶여 있어요'); return; }
+    $('bondAdd').disabled = true;
+    if(await q(sb.from('team_bonds').insert({event_date: vMatch.next, sport: SPORT, a, b}), '묶지 못했어요')){ await loadVotes(); plToast(`${players.find(p=>p.id === a)?.name} + ${players.find(p=>p.id === b)?.name} 같은 팀으로 묶었어요`); }
+    else if($('bondAdd')) $('bondAdd').disabled = false;
+  };
+  box.querySelectorAll('[data-bond-del]').forEach(x=>x.onclick = async ()=>{
+    const [a, b] = x.dataset.bondDel.split('|').map(Number);
+    if(!confirm('이 묶음을 풀까요?')) return;
+    if(await q(sb.from('team_bonds').delete().eq('event_date', vMatch.next).eq('sport', SPORT).eq('a', a).eq('b', b), '풀지 못했어요')){ await loadVotes(); plToast('묶음을 풀었어요'); }
   });
   // 관리자: 이름을 누르면 바로 바꾸는 창
   box.querySelectorAll('[data-adm-pid]').forEach(b=>b.onclick = ()=>{
