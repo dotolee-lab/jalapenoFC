@@ -1148,6 +1148,8 @@ let sb = null, session = null, players = [], lastTeams = null, guestColMissing =
 // 게스트 선수: 투표·팀 구성에는 들어가고, 출석·기록·순위에는 안 남음
 const isGuestPid = id => !!players.find(p=>p.id === id)?.isGuest;
 const guestBadge = '<span class="badge guestB">게스트</span>';
+// 이름에 이미 '게스트'가 들어 있으면 보라색 표시는 생략 (두 번 나오지 않게)
+const showGuestTag = name => !/게스트/.test(String(name || ''));
 const isAdmin = () => !!session;
 
 /* ---------- DB 읽기/쓰기 ---------- */
@@ -1516,7 +1518,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore gradeOnly">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.isGuest ? guestBadge : ''}${p.guest ? `<span class="badge guestB">게스트</span>${isAdmin() && !withScores && p.tmpGuest ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.isGuest && showGuestTag(p.name) ? guestBadge : ''}${p.guest ? `${showGuestTag(p.name) ? '<span class="badge guestB">게스트</span>' : ''}${isAdmin() && !withScores && p.tmpGuest ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
@@ -3075,7 +3077,7 @@ function renderVote(){
   const yes = pick('yes'), no = closed ? [...pick('no'), ...waiting] : pick('no');
   const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
   const adm = isAdmin();   // 관리자는 이름을 눌러 바로 참석·불참을 바꿀 수 있음
-  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${x.isGuest ? '<small class="gTag">게스트</small>' : ''}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
+  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${x.isGuest && showGuestTag(x.name) ? '<small class="gTag">게스트</small>' : ''}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
   const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
@@ -3379,9 +3381,9 @@ function renderLog(){
     <div class="lgSub">＋ 골 추가 — 어느 팀?</div>
     <div class="lgSeg">${[g.home, g.away].map(t=>`<button class="t-${t} ${logPick.t === t ? 'on' : ''}" data-lg-team="${t}">${t}팀 골</button>`).join('')}</div>
     <div class="lgSub">넣은 사람 (${logPick.t}팀)</div>
-    <div class="lgChips">${mates.map(p=>`<button class="lgChip ${logPick.s === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-s="${esc(p.id)}">${esc(p.name)}${p.guest ? '<small> 게스트</small>' : ''}</button>`).join('')}<button class="lgChip og ${logPick.s === 0 ? 'on' : ''}" data-lg-s="0">상대 자책골</button></div>
+    <div class="lgChips">${mates.map(p=>`<button class="lgChip ${logPick.s === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-s="${esc(p.id)}">${esc(p.name)}${p.guest && showGuestTag(p.name) ? '<small> 게스트</small>' : ''}</button>`).join('')}<button class="lgChip og ${logPick.s === 0 ? 'on' : ''}" data-lg-s="0">상대 자책골</button></div>
     <div class="lgSub">어시스트 (선택)</div>
-    <div class="lgChips"><button class="lgChip muted ${!logPick.a ? 'on' : ''}" data-lg-a="">없음</button>${mates.map(p=>`<button class="lgChip ${logPick.a === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-a="${esc(p.id)}" ${logPick.s === p.id ? 'disabled' : ''}>${esc(p.name)}${p.guest ? '<small> 게스트</small>' : ''}</button>`).join('')}</div>
+    <div class="lgChips"><button class="lgChip muted ${!logPick.a ? 'on' : ''}" data-lg-a="">없음</button>${mates.map(p=>`<button class="lgChip ${logPick.a === p.id ? 'on' : ''}${p.guest ? ' guest' : ''}" data-lg-a="${esc(p.id)}" ${logPick.s === p.id ? 'disabled' : ''}>${esc(p.name)}${p.guest && showGuestTag(p.name) ? '<small> 게스트</small>' : ''}</button>`).join('')}</div>
     <button class="lgBig" id="lgGoal" ${logPick.s === null ? 'disabled' : ''}>⚽ 골 기록하기</button>
     <div class="lgFoot"><button class="ghost small" id="lgNext">⏭️ ${LOG.cur + 1}경기 끝 · 다음 경기</button><button class="del small" id="lgDelGame">이 경기 삭제</button></div>
 
