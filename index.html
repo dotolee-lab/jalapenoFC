@@ -341,6 +341,7 @@
   .mode{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);margin-left:6px;vertical-align:middle}
   .notice{background:var(--df2);color:var(--text);border-color:var(--df)}
   body:not(.admin) .admin-only{display:none !important}
+  body:not(.can-log) .log-only{display:none !important}
   body.admin .guest-only{display:none !important}
   body.shared .app{display:none !important}
   #sharedView,#loginCard{display:none}
@@ -980,7 +981,7 @@
     <div id="pubScores"></div>
   </section>
 
-  <section class="card app admin-only" data-pane="history" id="logCard">
+  <section class="card app log-only" data-pane="history" id="logCard">
     <div class="histHead">
       <h2>📝 경기 기록일지</h2>
       <input type="date" id="logDate">
@@ -1224,6 +1225,7 @@ async function loadAll(){
 /* ---------- 관리자 로그인 (Supabase Auth) ---------- */
 function applyMode(){
   document.body.classList.toggle('admin', isAdmin());
+  try{ document.body.classList.toggle('can-log', canLog()); }catch(e){}   // 처음 열 때는 아직 준비 전일 수 있음
   if(!isAdmin()) document.body.classList.remove('gradeLocked');
   $('modeLabel').textContent = isAdmin() ? '관리자' : '일반';
   if(typeof setTab === 'function' && !isAdmin() && document.body.classList.contains('tab-admin')) setTab('roster');
@@ -1757,7 +1759,8 @@ async function loadRecords(){
   renderProfile();
   renderSchedule(); renderVote();
   if(publishedRow) renderPublished(publishedRow);
-  if(isAdmin()){ renderRecordEditor(); render(); renderLog(); }
+  if(isAdmin()){ renderRecordEditor(); render(); }
+  updateLogAccess();
 }
 
 // 선수 한 명의 그날 승/무/패: 그날 소속 팀이 치른 경기 결과로 계산
@@ -3199,7 +3202,7 @@ function renderPlBtn(){
   b.innerHTML = me ? `${avatar(me.name, 'sm')}${esc(me.name)}` : '🙋 선수 로그인';
   b.onclick = me ? openMyMenu : openPicker;
 }
-function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); renderProfile(); if(gate) regate(); }
+function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess(); if(gate) regate(); }
 // 관리자 로그아웃 등으로 일반 상태가 되면 로그인 화면
 function regate(){ if(typeof maybeGate === 'function' && sb && players.length) maybeGate(); }
 // 첫 화면 로그인: 로그인 안 된 채로 들어오면 선수 고르기를 먼저 보여줌
@@ -3218,7 +3221,7 @@ async function initPlayer(authChecked){
   const {data, error} = await sb.rpc('player_me', {p_token: plToken});
   if(error) return;                                   // 함수가 아직 없거나 연결 문제: 저장된 로그인은 그대로 둠
   if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(false); maybeGate(authChecked); return; }
-  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear(); renderProfile();
+  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess();
   if(data.must_change) openPin(myPlayer(), 'new1');
 }
 
@@ -3288,7 +3291,7 @@ async function pinPress(k){
       if(error){ pinShake(rpcMsg(error)); return; }
       if(!data.ok){ pinShake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
       plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id; plGate = false;
-      renderPlBtn(); renderVote(); renderGear(); renderProfile();
+      renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess();
       if(data.must_change){ openPin(pinPlayer, 'new1'); return; }
       closeSheet(); plToast(`${pinPlayer.name}님, 반가워요!`);
     } else if(pinMode === 'new1'){
@@ -3339,7 +3342,11 @@ $('allVote').onclick = async ()=>{
 // 마감 시간이 지나면 화면도 바뀌게 1분마다 다시 그림
 setInterval(()=>{ if(sb && !document.hidden) syncVote(); }, 60000);
 
-/* ===================== 경기 기록일지 (관리자) ===================== */
+/* ===================== 경기 기록일지 (관리자 + 회장·총무) ===================== */
+// 회장·총무로 지정된 선수가 선수 로그인을 하면 기록일지를 쓰고 등록할 수 있음
+const isOfficerMe = () => typeof myPlayer === 'function' && !!myPlayer() && OFFICER_ROLES.some(([r])=>officerOf(r)?.p.id === myPlayer().id);
+const canLog = () => isAdmin() || isOfficerMe();
+function updateLogAccess(){ document.body.classList.toggle('can-log', canLog()); renderLog(); }
 // 경기 중에 골·어시를 눌러 적어두고, 끝나면 '경기 기록에 등록'으로 경기 결과·개인 기록을 한 번에 저장
 // 적는 동안의 내용은 이 기기에 저장돼서 새로고침해도 남아 있음
 let logDate = todayStr(), LOG = null, logPick = {t: null, s: null, a: null};
@@ -3377,11 +3384,11 @@ function nextPair(letters, last){
 }
 
 function renderLog(){
-  const box = $('logBox'); if(!box || !isAdmin()) return;
+  const box = $('logBox'); if(!box || !canLog()) return;
   $('logDate').value = logDate;
   const {teams: T, from} = logTeams(), letters = Object.keys(T).sort();
   if(letters.length < 2){
-    box.innerHTML = '<p class="muted">이 날짜의 팀이 없어요. 팀 구성을 공개하거나, 아래 "경기 기록 입력"에서 출석과 팀을 먼저 넣어 주세요.</p>'; return;
+    box.innerHTML = `<p class="muted">이 날짜의 팀이 없어요. 팀 구성이 공개된 뒤에 쓸 수 있어요.${isAdmin() ? ' (또는 아래 "경기 기록 입력"에서 출석과 팀을 먼저 넣어 주세요)' : ''}</p>`; return;
   }
   if(!LOG || LOG.key !== logKey()) LOG = logLoad() || {games: [], cur: 0, mvp: null};
   LOG.key = logKey();
@@ -3437,7 +3444,7 @@ function renderLog(){
       <div class="lgSub">🏅 MVP (직접 골라 주세요)</div>
       <div class="lgChips"><button class="lgChip muted ${!LOG.mvp ? 'on' : ''}" data-lg-mvp="">없음</button>${everyone.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(p=>`<button class="lgChip ${LOG.mvp === p.id ? 'on' : ''}" data-lg-mvp="${p.id}">${esc(p.name)}</button>`).join('')}</div>
       <button class="lgBig" id="lgSave">✅ 경기 기록에 등록</button>
-      <div class="lgFoot"><span class="muted" style="font-size:12px">등록하면 경기 결과·골·어시·MVP가 저장되고 출석은 팀 그대로 들어가요. 나중에 아래 "경기 기록 입력"에서 고칠 수 있어요.</span><button class="del small" id="lgClear">기록일지 비우기</button></div>
+      <div class="lgFoot"><span class="muted" style="font-size:12px">등록하면 경기 결과·골·어시·MVP가 저장되고 출석은 팀 그대로 들어가요. 나중에 ${isAdmin() ? '아래 "경기 기록 입력"에서' : '관리자가'} 고칠 수 있어요.</span><button class="del small" id="lgClear">기록일지 비우기</button></div>
     </div>`;
 
   const redraw = ()=>{ logSave(); renderLog(); };
@@ -3472,6 +3479,7 @@ async function logRegister(T, letters, pts){
   if(!list.length){ alert('등록할 경기가 없어요'); return; }
   if(!LOG.mvp && !confirm('MVP를 고르지 않았어요. 그대로 등록할까요?')) return;
   let day = days.find(d=>d.played_on === logDate);
+  if(!day && !isAdmin()) day = {id: -1};            // 운영진은 함수가 경기일을 만들어 줌
   if(!day){
     day = await q((sportMissing ? sb.from('match_days').upsert({played_on: logDate}, {onConflict:'played_on'}) : sb.from('match_days').upsert({played_on: logDate, sport: SPORT}, {onConflict:'played_on,sport'})).select('id').single(), '경기일을 만들지 못했어요');
     if(!day) return;
@@ -3482,6 +3490,19 @@ async function logRegister(T, letters, pts){
     + (old.length || oldPts.length ? `\n\n⚠️ 이 날 이미 입력된 경기 결과·골·어시·MVP는 기록일지 내용으로 바뀌어요.` : '');
   if(!confirm(msg)) return;
   $('lgSave').disabled = true;
+  if(!isAdmin()){                                   // 회장·총무: 선수 로그인으로 등록 (Supabase 함수)
+    try{
+      const gamesJ = list.map(x=>({home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away)}));
+      const rowsJ = letters.flatMap(t=>T[t].filter(p=>!p.guest).map(p=>({player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id})));
+      const {data, error} = await sb.rpc('officer_register_log', {p_token: plToken, p_date: logDate, p_sport: SPORT, p_games: gamesJ, p_rows: rowsJ});
+      if(error){ alert(/officer_register_log|function/i.test(error.message) ? '운영진 등록을 쓰려면 Supabase에서 29-setup-officer-log.sql을 먼저 실행해 주세요.' : '등록하지 못했어요\n' + rpcMsg(error)); return; }
+      LOG.saved = new Date().toISOString(); logSave();
+      histDayId = data;
+      await loadRecords();
+      alert('경기 기록에 등록했어요. 경기 기록·개인 기록·순위에 반영됐어요.');
+    } finally { if($('lgSave')) $('lgSave').disabled = false; }
+    return;
+  }
   try{
     if(old.length && !await q(sb.from('match_games').delete().eq('day_id', day.id), '예전 경기 결과를 지우지 못했어요')) return;
     const gameRows = list.map(x=>({day_id: day.id, home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away)}));
