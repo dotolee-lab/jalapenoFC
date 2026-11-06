@@ -794,6 +794,32 @@
 
   .bondChip{gap:6px}
   .bondDel{background:none;color:var(--muted);padding:0 2px;font-size:14px;line-height:1}
+
+  /* ---------- 마감 후 변경 · 알림 ---------- */
+  :root{--warnC:#b7791f;--warnBg:#fdf3e1;--lateC:#6a4fc2;--lateBg:#ece6fb}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warnBg:#3a2f1a;--lateBg:#2c2540;--lateC:#b9a6f5;--warnC:#e3b25c}}
+  .vtDl.late{color:var(--warnC);background:var(--warnBg)}
+  .vtNm .chgTag,.chgTag{color:var(--warnC);font-weight:700;font-size:11px;margin-left:3px}
+  .vtNm .lateTag,.lateTag{color:var(--lateC);font-weight:700;font-size:11px;margin-left:3px}
+  .chgList{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .chgItem{background:var(--warnBg);border-radius:12px;padding:8px 12px;font-size:14px}
+  .chgTop{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .chgTop .muted{font-size:12px}
+  .chgItem p{margin:2px 0 0;word-break:break-all}
+  .cy{color:var(--accent);font-weight:800}.cn{color:var(--danger);font-weight:800}.cm{color:var(--muted);font-weight:800}
+  .chgPill{align-self:center;background:var(--head);border-radius:999px;padding:6px 14px;font-weight:800;font-size:15px}
+  .lateTa{width:100%;height:84px;border:2px solid var(--line);border-radius:12px;padding:10px 12px;font:15px/1.5 inherit;resize:none;background:var(--bg);color:var(--text)}
+  .lateTa.err{border-color:var(--danger)}
+  .lateMeta{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:12px}
+  .lateMeta .bad{color:var(--danger);font-weight:700}.lateMeta .good{color:var(--accent);font-weight:700}
+  .lateGo{width:100%;padding:13px;font-weight:800;font-size:16px;border-radius:12px}
+  .lateGo:disabled{opacity:.45}
+  .lateRow{margin-bottom:6px;font-size:13px}
+  .lateRow .muted{font-size:12px}
+  .pushRow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--head);border-radius:12px;padding:12px 14px;text-align:left}
+  .pushOpts{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:14px;text-align:left}
+  .pushOpt{display:flex;align-items:flex-start;gap:8px}
+  .pushOpt input{margin-top:3px}
 </style>
 </head>
 <body>
@@ -1059,6 +1085,17 @@
     <div id="missBox"><p class="muted">불러오는 중…</p></div>
   </section>
 
+  <section class="card app admin-only" data-pane="admin" id="lateCard">
+    <h2 style="margin:0 0 4px">🔁 마감 후 변경 기록</h2>
+    <p class="muted" style="margin:0 0 12px;font-size:13px">선수가 마감 뒤에 사유를 적고 직접 바꾼 기록이에요. '늦게 응답'은 미응답이었다가 바꾼 경우예요. (투표 안 한 기록은 그대로 남아요)</p>
+    <div id="lateBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
+  <section class="card app admin-only" data-pane="admin" id="pushCard">
+    <h2 style="margin:0 0 10px">🔔 운영진 알림</h2>
+    <div id="pushBox"><p class="muted">불러오는 중…</p></div>
+  </section>
+
   <section class="card app admin-only" data-pane="admin" id="officerCard">
     <h2>운영진 · 회비 계좌</h2>
     <div class="offRows">
@@ -1212,7 +1249,7 @@ async function loadAll(){
   }));
   renderSkillNew();
   if(isAdmin() && gradePwSet !== false && !gradeOpen) document.body.classList.add('gradeLocked');   // 확인 전엔 일단 가려둠
-  if(isAdmin()){ loadExempt(); checkGradeLock(); loadAuto(); loadMisses(); }
+  if(isAdmin()){ loadExempt(); checkGradeLock(); loadAuto(); loadMisses(); loadLateAll(); renderPushBox($('pushBox')); }
   render();
   loadRecords();
   loadEvents();
@@ -3016,9 +3053,10 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.06-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.06-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
-let bonds = [], bondsMissing = false;   // 이번 경기 '같은 팀 묶기' [{a, b}]
+let bonds = [], bondsMissing = false;
+let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
 let vMatch = null, vKey = null, votes = [], vComments = [], exemptIds = new Set(), voteMissing = false, commentsMissing = false, voteSeq = 0;
 const myPlayer = () => mePid ? players.find(p=>p.id === mePid) || null : null;
 function plToast(msg){
@@ -3061,6 +3099,7 @@ async function loadVotes(){
   const seq = ++voteSeq, m = vMatch;
   const ex = await sb.from('players').select('id,vote_exempt');
   const nv = m ? await sb.from('attendance_votes').select('player_id,status').eq('event_date', m.next).eq('sport', SPORT) : {data: []};
+  const nch = m ? await sb.from('vote_changes').select('id,player_id,from_status,to_status,reason,created_at').eq('event_date', m.next).eq('sport', SPORT).order('created_at') : {data: []};
   const nb = m ? await sb.from('team_bonds').select('a,b').eq('event_date', m.next).eq('sport', SPORT) : {data: []};
   const nc = m ? await sb.from('match_comments').select('id,player_id,body,created_at').eq('event_date', m.next).eq('sport', SPORT).order('created_at') : {data: []};
   if(seq !== voteSeq) return;                     // 그 사이 종목을 바꿨으면 버림
@@ -3069,6 +3108,7 @@ async function loadVotes(){
   votes = nv.error ? [] : nv.data.filter(x=>x.status === 'yes' || x.status === 'no');
   commentsMissing = !!nc.error; vComments = nc.error ? [] : nc.data;
   bondsMissing = !!nb.error; bonds = nb.error ? [] : nb.data;
+  lateMissing = !!nch.error; vChanges = nch.error ? [] : nch.data;
   renderVote(); if(isAdmin()) renderAuto();
 }
 
@@ -3080,7 +3120,11 @@ function renderVote(){
   const loginBtn = me ? '' : '<button class="vtLogin" id="vtLogin">🙋 로그인하고 투표하기</button>';
   if(!m){ box.innerHTML = `<p class="muted" style="margin:0 0 10px">예정된 경기 일정이 없어요.</p>${me ? '' : loginBtn}`; bindVote(); return; }
   const dl = voteDeadline(m.next), op = voteOpen(m.next), now = Date.now();
-  const closed = now > dl.getTime(), notYet = now < op.getTime(), locked = closed || notYet;
+  const closed = now > dl.getTime(), notYet = now < op.getTime();
+  // 마감 후 변경: 마감 뒤 ~ 팀 구성 공개 전 (경기 날까지), 본인이 사유를 적고 바꿈
+  const pubAfterDl = !!(publishedRow && Date.parse(publishedRow.created_at) > dl.getTime());
+  const lateOpen = closed && !lateMissing && !pubAfterDl && todayStr() <= m.next && !!me && !me.isGuest;
+  const locked = notYet || (closed && !lateOpen);
   const inRoster = id => players.some(p=>p.id === id);
   const statusOf = pid => votes.find(v=>v.player_id === pid)?.status || null;
   const myVote = me ? statusOf(me.id) : null;
@@ -3093,21 +3137,28 @@ function renderVote(){
   const yes = pick('yes'), no = closed ? [...pick('no'), ...waiting] : pick('no');
   const autoNo = new Set(closed ? waiting.map(x=>x.id) : []);
   const adm = isAdmin();   // 관리자는 이름을 눌러 바로 참석·불참을 바꿀 수 있음
-  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${x.isGuest && showGuestTag(x.name) ? '<small class="gTag">게스트</small>' : ''}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}</${adm ? 'button' : 'span'}>`;
+  const lastChg = new Map(vChanges.map(c=>[c.player_id, c]));   // 사람마다 마지막 변경
+  const chgTag = x => { const c = lastChg.get(x.id); return c ? (c.from_status ? '<small class="chgTag">마감 후 변경</small>' : '<small class="lateTag">늦게 응답</small>') : ''; };
+  const chip = x => `<${adm ? `button data-adm-pid="${x.id}"` : 'span'} class="vtNm${me && x.id === me.id ? ' mine' : ''}${autoNo.has(x.id) ? ' auto' : ''}${adm ? ' tap' : ''}">${esc(x.name)}${x.isGuest && showGuestTag(x.name) ? '<small class="gTag">게스트</small>' : ''}${autoNo.has(x.id) ? '<small>(미응답)</small>' : ''}${chgTag(x)}</${adm ? 'button' : 'span'}>`;
   const venue = days.find(d=>d.played_on === m.next)?.venue || m.place || '';
   const d = new Date(m.next + 'T00:00:00'), dd = daysBetween(todayStr(), m.next);
   box.innerHTML = `
     ${cancelledOn(m.next) ? `<div class="cancelBox" style="margin-bottom:10px"><b>🚫 이번 경기는 취소됐어요</b>${cancelledOn(m.next).cancel_reason ? `<span>사유: ${esc(cancelledOn(m.next).cancel_reason)}</span>` : ''}</div>` : ''}
     <div class="vtHead"><b>⚽ ${esc(m.title || '경기')}</b><span class="muted" style="font-size:13px;font-weight:700">${dd <= 0 ? '오늘' : dd === 1 ? '내일' : `D-${dd}`}</span></div>
     <div class="vtWhen"><div class="vtDate">📅 ${d.getMonth()+1}월 ${d.getDate()}일 (${d.toLocaleDateString('ko-KR',{weekday:'short'})})${m.event_time ? `<span>${esc(m.event_time)}</span>` : ''}</div>${venue ? `<div class="vtPlace">📍 ${mapLink(venue)}</div>` : ''}</div>
-    <div class="vtDl${locked ? ' closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - now)} · ${fmtDeadline(dl)}`}</div>
+    <div class="vtDl${lateOpen ? ' late' : locked ? ' closed' : ''}">${notYet ? `🕚 투표는 ${fmtOpen(op)}부터 · 마감 ${fmtDeadline(dl)}` : lateOpen ? `🔒 투표 마감 · 이제부터는 사유를 적고 바꿀 수 있어요 (팀 공개 전까지)` : closed ? `🔒 투표 마감 · ${fmtDeadline(dl)}` : `⏰ 마감까지 ${leftText(dl.getTime() - now)} · ${fmtDeadline(dl)}`}</div>
     ${me ? `<div class="vtBtns${locked ? ' locked' : ''}"><button class="yes${shownMine === 'yes' ? ' on' : ''}" data-v="yes" ${locked ? 'disabled' : ''}>✅ 참석</button><button class="no${shownMine === 'no' ? ' on' : ''}" data-v="no" ${locked ? 'disabled' : ''}>불참</button></div>` : loginBtn}
     ${notYet ? '<p class="muted vtNote">투표는 경기 주 일요일 오전 11시에 열려요. 댓글은 지금도 남길 수 있어요.</p>' : ''}
-    ${closed ? '<p class="muted vtNote">마감 후 변경은 운영진에게 말해 주세요. 댓글은 계속 남길 수 있어요.</p>' : ''}
+    ${lateOpen ? '<p class="muted vtNote"><b style="color:var(--warnC)">마감 후 변경</b>은 사유를 적어야 반영되고, 변경 내역은 모두에게 보여요.</p>'
+      : closed ? `<p class="muted vtNote">${pubAfterDl ? '팀 구성이 공개돼서 이제는 ' : ''}변경은 운영진에게 말해 주세요. 댓글은 계속 남길 수 있어요.</p>` : ''}
     <div class="vtCount">참석 <b>${yes.length}명</b> · 불참 ${no.length}명${closed ? (autoNo.size ? ` (미응답 ${autoNo.size}명 포함)` : '') : ` · 미응답 ${waiting.length}명`}</div>
     ${yes.length ? `<div class="vtSub">참석 (${yes.length})</div><div class="vtNames">${yes.map(chip).join('')}</div>` : ''}
     ${no.length ? `<div class="vtSub">불참 (${no.length})</div><div class="vtNames">${no.map(chip).join('')}</div>` : ''}
-    ${!locked && waiting.length ? `<div class="vtSub">아직 투표 안 함 (${waiting.length})</div><div class="vtNames">${waiting.map(chip).join('')}</div>` : ''}
+    ${!closed && !notYet && waiting.length ? `<div class="vtSub">아직 투표 안 함 (${waiting.length})</div><div class="vtNames">${waiting.map(chip).join('')}</div>` : ''}
+    ${vChanges.length ? `<div class="vtSub">🔁 마감 후 변경 (${vChanges.length})</div><div class="chgList">${vChanges.slice().reverse().map(c=>{ const x = players.find(p=>p.id === c.player_id); if(!x) return '';
+      const st = v => v === 'yes' ? '<span class="cy">참석</span>' : v === 'no' ? '<span class="cn">불참</span>' : '<span class="cm">미응답</span>';
+      const t = new Date(c.created_at);
+      return `<div class="chgItem"><div class="chgTop"><span><b>${esc(x.name)}</b> · ${st(c.from_status)} → ${st(c.to_status)}${c.from_status ? '' : ' <small class="lateTag">늦게 응답</small>'}</span><span class="muted">${t.getMonth()+1}/${t.getDate()} (${'일월화수목금토'[t.getDay()]}) ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}</span></div><p>${esc(c.reason)}</p></div>`; }).join('')}</div>` : ''}
     ${guestsIdle.length ? `<div class="vtSub">👤 게스트 (${guestsIdle.length})${adm ? ' <span style="font-weight:500">— 눌러서 참석으로 넣으면 팀 구성에 들어가요</span>' : ''}</div><div class="vtNames">${guestsIdle.map(chip).join('')}</div>` : ''}
     <div class="vtSub">💬 댓글${vComments.length ? ` (${vComments.length})` : ''}</div>
     ${commentsMissing ? '<p class="muted" style="font-size:13px;margin:6px 0 0">댓글을 쓰려면 Supabase에서 18-setup-match-comments.sql을 먼저 실행해 주세요.</p>' : `
@@ -3136,6 +3187,12 @@ function bindVote(){
   box.querySelectorAll('[data-v]').forEach(b=>b.onclick = async ()=>{
     const me = myPlayer(); if(!me || !vMatch) return;
     const cur = votes.find(v=>v.player_id === me.id)?.status;
+    if(Date.now() > voteDeadline(vMatch.next).getTime()){   // 마감 후: 사유 적기
+      const to = b.dataset.v;
+      if(cur === to){ plToast(`이미 ${to === 'yes' ? '참석' : '불참'}이에요`); return; }
+      if(!cur && to === 'no'){ plToast('이미 불참(미응답)으로 처리돼 있어요'); return; }
+      openLateSheet(me, cur || null, to); return;
+    }
     const v = b.dataset.v === cur ? 'none' : b.dataset.v;   // 같은 버튼 다시 누르면 취소
     b.disabled = true;
     const {error} = await sb.rpc('player_vote', {p_token: plToken, p_date: vMatch.next, p_sport: SPORT, p_status: v});
@@ -3312,8 +3369,9 @@ function openMyMenu(){
   const me = myPlayer(); if(!me) return;
   openSheet(`${avatar(me.name, 'md')}<h3>${esc(me.name)}님</h3><p class="plHint">${me.number != null ? `No. ${noLabel(me.number)}` : '등번호 없음'}${me.pos?.length ? ' · ' + me.pos.map(esc).join('·') : ''}</p>
     ${isOfficerMe() ? `<p class="plHint" style="color:var(--accent);font-weight:700">🗂️ ${OFFICER_ROLES.filter(([r])=>officerOf(r)?.p.id === me.id).map(([, t])=>t).join('·')} · 경기 기록일지를 쓸 수 있어요</p>` : ''}
-    <div class="plMenu">${isOfficerMe() ? '<button id="plGoLog">📝 경기 기록일지 쓰기</button>' : ''}<button class="ghost" id="plMyProfile">👤 내 프로필 보기 · 고치기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>
+    <div class="plMenu">${isOfficerMe() ? '<button id="plGoLog">📝 경기 기록일지 쓰기</button><button class="ghost" id="plPush">🔔 운영진 알림 설정</button>' : ''}<button class="ghost" id="plMyProfile">👤 내 프로필 보기 · 고치기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>
     <p class="plHint" style="font-size:11px;margin-top:6px">앱 버전 ${APP_VERSION}</p>`);
+  if($('plPush')) $('plPush').onclick = openPushSheet;
   if($('plGoLog')) $('plGoLog').onclick = ()=>{ closeSheet(); updateLogAccess(); setTab('history'); setTimeout(()=>$('logCard')?.scrollIntoView({behavior: 'smooth', block: 'start'}), 50); };
   $('plMyProfile').onclick = ()=>{ closeSheet(); setTab('roster'); profileId = me.id; renderProfile(); window.scrollTo(0, 0); };
   $('plChg').onclick = ()=> openPin(me, 'new1', true);
@@ -3726,6 +3784,134 @@ $('missFill').onclick = async ()=>{
   if(error){ alert('채우지 못했어요\n' + rpcMsg(error)); return; }
   plToast(data ? `${data}건을 새로 채웠어요` : '새로 채울 기록이 없어요'); loadMisses();
 };
+
+
+/* ===================== 마감 후 변경 (사유 필수) ===================== */
+// 서버(_reason_problem)와 같은 규칙: 공백 빼고 4글자 이상, 100자 이하, 자음·모음만/같은 글자 반복/숫자·기호만 X
+function reasonProblem(t){
+  const r = String(t || '').trim(), c = r.replace(/\s/g, '');
+  if(c.length < 4) return '사유를 공백 빼고 4글자 이상 적어 주세요';
+  if(r.length > 100) return '사유는 100자까지 쓸 수 있어요';
+  if(/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(c)) return '자음·모음만으로는 안 돼요. 사유를 적어 주세요';
+  if(/^(.)\1+$/u.test(c)) return '같은 글자만 반복하면 안 돼요. 사유를 적어 주세요';
+  if(/^[0-9\p{P}\p{S}]+$/u.test(c)) return '숫자·기호만으로는 안 돼요. 사유를 적어 주세요';
+  return null;
+}
+function openLateSheet(me, from, to){
+  const lab = v => v === 'yes' ? '<span class="cy">참석</span>' : v === 'no' ? '<span class="cn">불참</span>' : '<span class="cm">미응답</span>';
+  openSheet(`<h3>마감 후 변경</h3><div class="chgPill">${lab(from)} → ${lab(to)}</div>
+    <p class="plHint">사유를 적으면 바로 반영돼요. 변경 내역과 사유는 모두에게 보여요.</p>
+    <textarea id="lateReason" class="lateTa" maxlength="100" placeholder="예: 출장 일정이 취소됐어요"></textarea>
+    <div class="lateMeta"><span id="lateMsg" class="muted">공백 빼고 4글자 이상</span><span id="lateCnt" class="muted">0/100</span></div>
+    <button class="lateGo" id="lateGo" disabled>사유 적고 ${to === 'yes' ? '참석' : '불참'}으로 바꾸기</button>
+    <button class="ghost" id="lateCancel" style="width:100%">취소</button>`);
+  const ta = $('lateReason');
+  const check = ()=>{
+    const v = ta.value, prob = reasonProblem(v), typed = v.trim().length > 0;
+    $('lateCnt').textContent = `${v.trim().length}/100`;
+    $('lateMsg').textContent = prob ? (typed ? '⚠️ ' + prob : '공백 빼고 4글자 이상') : '✔︎ 반영할 수 있어요';
+    $('lateMsg').className = prob ? (typed ? 'bad' : 'muted') : 'good';
+    ta.classList.toggle('err', !!prob && typed);
+    $('lateGo').disabled = !!prob;
+  };
+  ta.oninput = check; setTimeout(()=>ta.focus(), 100);
+  $('lateCancel').onclick = closeSheet;
+  $('lateGo').onclick = async ()=>{
+    if(reasonProblem(ta.value)) return;
+    $('lateGo').disabled = true;
+    const {data, error} = await sb.rpc('player_late_vote', {p_token: plToken, p_date: vMatch.next, p_sport: SPORT, p_status: to, p_reason: ta.value.trim()});
+    if(error){
+      alert(/player_late_vote|function/i.test(error.message) ? '마감 후 변경을 쓰려면 Supabase에서 31-setup-late-change.sql을 먼저 실행해 주세요.' : rpcMsg(error));
+      $('lateGo').disabled = false; if(/로그인/.test(error.message)) plSignedOut(); return;
+    }
+    closeSheet(); await loadVotes();
+    plToast(`${to === 'yes' ? '참석' : '불참'}으로 바꿨어요 · 지금 참석 ${data?.yes ?? ''}명`);
+  };
+  check();
+}
+
+/* ===================== 관리 탭: 마감 후 변경 기록 ===================== */
+let lateAll = [];
+async function loadLateAll(){
+  if(!sb || !isAdmin()) return;
+  const r = await sb.from('vote_changes').select('event_date,player_id,from_status,to_status,reason,created_at').eq('sport', SPORT).order('created_at', {ascending: false});
+  const box = $('lateBox'); if(!box) return;
+  if(r.error){ box.innerHTML = '<p class="muted">쓰려면 Supabase에서 31-setup-late-change.sql을 먼저 실행해 주세요.</p>'; return; }
+  lateAll = r.data.filter(c=>!cancelledOn(c.event_date));
+  const by = {};
+  lateAll.forEach(c=>(by[c.player_id] ||= []).push(c));
+  const rows = Object.entries(by).map(([pid, cs])=>({p: players.find(x=>x.id === +pid), cs})).filter(x=>x.p).sort((a,b)=>b.cs.length - a.cs.length || a.p.name.localeCompare(b.p.name,'ko'));
+  const md = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; };
+  const lab = v => v === 'yes' ? '참석' : v === 'no' ? '불참' : '미응답';
+  box.innerHTML = rows.length ? `<div class="tablewrap"><table class="missTbl"><thead><tr><th>이름</th><th style="text-align:center">횟수</th><th>내역 (최근 순)</th></tr></thead><tbody>
+    ${rows.map(({p, cs})=>`<tr><td>${nameLink(p.id, p.name)}</td><td class="c">${cs.length}번<br><small class="muted" style="font-weight:500">늦게 응답 ${cs.filter(c=>!c.from_status).length}</small></td>
+      <td>${cs.slice(0, 4).map(c=>`<div class="lateRow"><span>${md(c.event_date)} ${lab(c.from_status)}→${lab(c.to_status)}</span>${c.from_status ? '<small class="chgTag">변경</small>' : '<small class="lateTag">늦게 응답</small>'}<div class="muted">"${esc(c.reason)}"</div></div>`).join('')}${cs.length > 4 ? `<small class="muted">… 외 ${cs.length - 4}번</small>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted" style="margin:0">아직 기록이 없어요.</p>';
+}
+
+/* ===================== 운영진 알림 (웹 푸시) ===================== */
+const VAPID_PUBLIC = 'BHcruo_yKdaW_C6eql-bK41sAPnvuYUfLq65yzUjeymMbJUrjizKqDrbAfapSDlmlrGT2RpAbvGq4GWTVVqwbo0';
+const PUSH_DEFAULT = {below10: true, noteam: true, change: false};
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const canPush = () => isAdmin() || isOfficerMe();
+const urlB64 = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushSub(){ if(!pushSupported()) return null; const reg = await navigator.serviceWorker.getRegistration(); return reg ? reg.pushManager.getSubscription() : null; }
+async function pushState(){
+  const sub = await pushSub(); if(!sub) return {on: false, opts: {...PUSH_DEFAULT}};
+  const {data} = await sb.rpc('push_get', {p_endpoint: sub.endpoint});
+  return {on: !!data, opts: {...PUSH_DEFAULT, ...(data || {})}, sub};
+}
+async function pushSave(opts){
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: urlB64(VAPID_PUBLIC)});
+  const j = sub.toJSON();
+  const {error} = await sb.rpc('push_subscribe', {p_token: isAdmin() ? null : plToken, p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_opts: opts});
+  if(error) throw error;
+}
+async function pushOff(){
+  const sub = await pushSub(); if(!sub) return;
+  await sb.rpc('push_unsubscribe', {p_endpoint: sub.endpoint});
+  await sub.unsubscribe().catch(()=>{});
+}
+// 알림 설정 화면 (관리 탭 카드 / 회장·총무 메뉴 창 둘 다 이걸로 그림)
+async function renderPushBox(box){
+  if(!box) return;
+  if(!pushSupported()){
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    box.innerHTML = `<p class="muted" style="margin:0">${ios ? '아이폰은 <b>iOS 16.4 이상</b>에서, 사이트를 <b>홈 화면에 추가</b>한 뒤 그 아이콘으로 열어야 알림을 받을 수 있어요.' : '이 브라우저는 알림을 지원하지 않아요. 크롬으로 열어 주세요.'}</p>`;
+    return;
+  }
+  const st = await pushState().catch(()=>({on: false, opts: {...PUSH_DEFAULT}}));
+  const blocked = Notification.permission === 'denied';
+  const opt = (k, t) => `<label class="pushOpt"><input type="checkbox" data-po="${k}" ${st.opts[k] ? 'checked' : ''} ${st.on ? '' : 'disabled'}><span>${t}</span></label>`;
+  box.innerHTML = `<div class="pushRow"><div><b>이 휴대폰으로 알림 받기</b><br><span class="muted" style="font-size:12px">운영진(관리자·회장·총무)만 · 기기마다 따로 켜요</span></div>
+      <button class="${st.on ? '' : 'ghost '}small" id="pushToggle" ${blocked ? 'disabled' : ''}>${st.on ? '켜짐 ✓' : '켜기'}</button></div>
+    ${blocked ? '<p class="muted" style="font-size:12px;color:var(--danger)">이 휴대폰에서 알림이 차단돼 있어요. 브라우저(또는 앱) 설정에서 할라피뇨FC 알림을 허용해 주세요.</p>' : ''}
+    <div class="pushOpts">${opt('below10', '마감 후 변경으로 <b>참석이 10명 아래</b>로 떨어졌을 때')}${opt('noteam', '경기 1시간 전 <b>팀이 안 만들어졌을 때</b> (인원 부족 등)')}${opt('change', '마감 후 변경이 생길 때마다')}</div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">아이폰은 iOS 16.4 이상 + 홈 화면에 추가한 앱에서만 알림이 와요.</p>`;
+  const toggle = box.querySelector('#pushToggle');
+  toggle.onclick = async ()=>{
+    toggle.disabled = true;
+    try{
+      if(st.on){ await pushOff(); plToast('알림을 껐어요'); }
+      else{
+        const perm = await Notification.requestPermission();
+        if(perm !== 'granted'){ alert('알림을 허용해야 받을 수 있어요'); toggle.disabled = false; return; }
+        await pushSave(st.opts); plToast('이 휴대폰으로 알림을 받아요');
+      }
+    }catch(e){ alert(/push_subscribe|function/i.test(String(e?.message)) ? '알림을 쓰려면 Supabase에서 31-setup-late-change.sql을 먼저 실행해 주세요.' : '알림 설정을 하지 못했어요\n' + rpcMsg(e)); }
+    renderPushBox(box);
+  };
+  box.querySelectorAll('[data-po]').forEach(cb=>cb.onchange = async ()=>{
+    const opts = {...st.opts}; box.querySelectorAll('[data-po]').forEach(x=>opts[x.dataset.po] = x.checked);
+    try{ await pushSave(opts); st.opts = opts; plToast('알림 설정을 저장했어요'); }catch(e){ alert('저장하지 못했어요\n' + rpcMsg(e)); }
+  });
+}
+function openPushSheet(){
+  openSheet(`<h3>🔔 운영진 알림</h3><div id="pushSheetBox" style="width:100%"><p class="muted">불러오는 중…</p></div>`);
+  renderPushBox($('pushSheetBox'));
+}
 
 /* ---------- 경기 날씨 (Open-Meteo, 무료·키 없음) ---------- */
 // 구장 좌표 (이름에 들어간 단어로 찾음, 못 찾으면 망원유수지)

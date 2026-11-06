@@ -1,7 +1,7 @@
 // 할라피뇨FC 앱 서비스 워커
 // - 화면(index.html)은 항상 새 버전을 먼저 받아오고, 인터넷이 끊겼을 때만 저장본을 보여줘요.
 // - 선수·기록 데이터(Supabase)는 저장하지 않아요. 항상 최신으로 불러와요.
-const CACHE = 'jalapeno-v32';
+const CACHE = 'jalapeno-v34';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png', './logo-dark.png', './logo-light.png'];
 
 self.addEventListener('install', e => {
@@ -33,4 +33,22 @@ self.addEventListener('fetch', e => {
       return hit || net;
     }));
   }
+});
+
+// 운영진 알림 (웹 푸시)
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = {title: '할라피뇨FC', body: e.data ? e.data.text() : ''}; }
+  e.waitUntil(self.registration.showNotification(d.title || '할라피뇨FC', {
+    body: d.body || '', icon: './icon-192.png', badge: './favicon-32.png', tag: d.tag || 'jfc', renotify: true,
+    data: {url: d.url || './'}
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(list => {
+    for (const c of list) { if ('focus' in c) { c.navigate && c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
+  }));
 });
