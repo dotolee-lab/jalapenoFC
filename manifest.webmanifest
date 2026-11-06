@@ -1,18 +1,17 @@
 {
-  "name": "할라피뇨FC 팀관리",
-  "short_name": "할라피뇨FC",
-  "description": "할라피뇨FC 일정·출석·팀 구성·기록",
+  "name": "Corner Of The Room",
+  "short_name": "COR",
+  "description": "친구들과 함께 쓰는 영화 선정·평론 기록",
   "lang": "ko",
-  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1c1c1e",
-  "theme_color": "#13281b",
+  "background_color": "#13120f",
+  "theme_color": "#13120f",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
