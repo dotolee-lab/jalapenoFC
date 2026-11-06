@@ -861,7 +861,7 @@
   <div class="mainCol">
   <section class="card app" id="publishedCard">
     <h2>최근 공개된 팀 구성</h2>
-    <div id="published"><p class="muted">팀 구성은 매주 금요일 오후 6시에 공개돼요.</p></div>
+    <div id="published"><p class="muted">팀 구성은 경기 시작 1시간 전에 공개돼요.</p></div>
   </section>
 
   <nav class="tabs app">
@@ -970,7 +970,7 @@
 
   <section class="card app admin-only" data-pane="admin" id="autoCard">
     <div class="autoHead"><h2 style="margin:0">🤖 자동 팀 구성</h2><label class="chk switch"><input type="checkbox" id="autoOn" checked> <b>매주 자동으로</b></label></div>
-    <p class="muted" style="margin:8px 0 12px">매주 <b>금요일 오후 6시</b>에 이번 경기 <b>참석</b> 투표 인원으로 팀을 나눠 바로 공개해요. <b>9명 이하</b>면 만들지 않고, <b>10~14명은 2팀</b>, <b>15명 이상은 3팀</b>이에요.
+    <p class="muted" style="margin:8px 0 12px"><b>경기 시작 1시간 전</b>에 이번 경기 <b>참석</b> 투표 인원으로 팀을 나눠 바로 공개해요. <b>9명 이하</b>면 만들지 않고, <b>10~14명은 2팀</b>, <b>15명 이상은 3팀</b>이에요.
       목요일 마감 뒤 운영진이 고친 투표도 반영되고, 그 사이 관리자가 직접 공개했으면 건너뛰어요. 공개하면 출석·팀도 경기 기록에 들어가요. (풋살만)</p>
     <div id="autoBox"><p class="muted">불러오는 중…</p></div>
     <div class="row" style="margin-top:10px">
@@ -1219,7 +1219,7 @@ async function loadAll(){
   loadGear();
   const t = await sb.from('team_results').select('teams,created_at').eq('id', RESULT_ID()).maybeSingle();
   if(!t.error && t.data) renderPublished(t.data);
-  else { publishedRow = null; $('published').innerHTML = `<p class="muted">${SPORT === 'soccer' ? '축구 팀 구성이 공개되면 여기에 보여요.' : '팀 구성은 매주 금요일 오후 6시에 공개돼요.'}</p>`; }
+  else { publishedRow = null; $('published').innerHTML = `<p class="muted">${SPORT === 'soccer' ? '축구 팀 구성이 공개되면 여기에 보여요.' : '팀 구성은 경기 시작 1시간 전에 공개돼요.'}</p>`; }
 }
 
 /* ---------- 관리자 로그인 (Supabase Auth) ---------- */
@@ -1572,7 +1572,7 @@ function renderPublished(row){
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 매주 금요일 오후 6시에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable)
+      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 경기 시작 1시간 전에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable)
       + (isAdmin() ? guestFormHtml(teams.length) : '');
     bindGuestForm($('published'));
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
@@ -3016,6 +3016,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
+const APP_VERSION = '2026.11.06-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;   // 이번 경기 '같은 팀 묶기' [{a, b}]
 let vMatch = null, vKey = null, votes = [], vComments = [], exemptIds = new Set(), voteMissing = false, commentsMissing = false, voteSeq = 0;
@@ -3120,7 +3121,7 @@ function renderVote(){
       <select id="bondA"><option value="">선수 1…</option>${players.slice().sort(byName).map(p=>`<option value="${p.id}">${esc(p.name)}${statusOf(p.id) === 'yes' ? ' ✅' : ''}</option>`).join('')}</select>
       <select id="bondB"><option value="">선수 2…</option>${players.slice().sort(byName).map(p=>`<option value="${p.id}">${esc(p.name)}${statusOf(p.id) === 'yes' ? ' ✅' : ''}</option>`).join('')}</select>
       <button class="small" id="bondAdd">묶기</button>
-      <span class="muted" style="font-size:12px;width:100%">둘 다 참석이면 금요일 자동 팀 구성·팀 나누기에서 항상 같은 팀이 돼요. 다음 주에는 자동으로 풀려요. ✅ = 참석</span>`}
+      <span class="muted" style="font-size:12px;width:100%">둘 다 참석이면 자동 팀 구성(경기 1시간 전)·팀 나누기에서 항상 같은 팀이 돼요. 다음 주에는 자동으로 풀려요. ✅ = 참석</span>`}
     </div>
     <div class="vtAdmin admin-only">
       <b style="font-size:13px;width:100%">🛠️ 운영진 수정 <span class="muted" style="font-weight:500">(마감 후에도 바꿀 수 있어요 · 위 이름을 눌러도 돼요)</span></b>
@@ -3310,7 +3311,10 @@ async function pinPress(k){
 function openMyMenu(){
   const me = myPlayer(); if(!me) return;
   openSheet(`${avatar(me.name, 'md')}<h3>${esc(me.name)}님</h3><p class="plHint">${me.number != null ? `No. ${noLabel(me.number)}` : '등번호 없음'}${me.pos?.length ? ' · ' + me.pos.map(esc).join('·') : ''}</p>
-    <div class="plMenu"><button class="ghost" id="plMyProfile">👤 내 프로필 보기 · 고치기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>`);
+    ${isOfficerMe() ? `<p class="plHint" style="color:var(--accent);font-weight:700">🗂️ ${OFFICER_ROLES.filter(([r])=>officerOf(r)?.p.id === me.id).map(([, t])=>t).join('·')} · 경기 기록일지를 쓸 수 있어요</p>` : ''}
+    <div class="plMenu">${isOfficerMe() ? '<button id="plGoLog">📝 경기 기록일지 쓰기</button>' : ''}<button class="ghost" id="plMyProfile">👤 내 프로필 보기 · 고치기</button><button class="ghost" id="plChg">🔒 비밀번호 바꾸기</button><button class="ghost" id="plOut" style="color:var(--danger)">로그아웃</button></div>
+    <p class="plHint" style="font-size:11px;margin-top:6px">앱 버전 ${APP_VERSION}</p>`);
+  if($('plGoLog')) $('plGoLog').onclick = ()=>{ closeSheet(); updateLogAccess(); setTab('history'); setTimeout(()=>$('logCard')?.scrollIntoView({behavior: 'smooth', block: 'start'}), 50); };
   $('plMyProfile').onclick = ()=>{ closeSheet(); setTab('roster'); profileId = me.id; renderProfile(); window.scrollTo(0, 0); };
   $('plChg').onclick = ()=> openPin(me, 'new1', true);
   $('plOut').onclick = async ()=>{
@@ -3584,15 +3588,17 @@ function applyGradeLock(){
 
 
 /* ===================== 자동 팀 구성 (관리 탭) ===================== */
-// 실제 실행은 Supabase의 auto-teams 함수가 금요일 18:00에 함 — 여기서는 켜기/끄기, 마지막 결과, 미리 나눠보기
+// 실제 실행은 Supabase의 auto-teams 함수가 경기 시작 1시간 전에 함 (5분마다 확인) — 여기서는 켜기/끄기, 마지막 결과, 미리 나눠보기
 const AUTO_MIN = 10, autoCount = n => n <= 14 ? 2 : 3;
 let autoSetting = {on: true}, autoLast = null;
 function nextAutoRun(){
-  const k = new Date(Date.now() + 9 * 3600e3);                       // 한국 시간 기준
-  const dow = k.getUTCDay(), past = dow === 5 && k.getUTCHours() >= 18;
-  const add = ((5 - dow + 7) % 7) || (past ? 7 : 0);
-  const d = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() + add));
-  return `${d.getUTCMonth()+1}/${d.getUTCDate()} (금) 18:00`;
+  // 대상 경기 시작 1시간 전 (시간이 없으면 오전 8시 기준)
+  if(!vMatch) return '-';
+  const t = (vMatch.event_time || '08:00').slice(0, 5);
+  const at = new Date(Date.parse(`${vMatch.next}T${t}:00+09:00`) - 3600e3);
+  const k = new Date(at.getTime() + 9 * 3600e3);
+  const wd = ['일','월','화','수','목','금','토'][k.getUTCDay()];
+  return `${k.getUTCMonth()+1}/${k.getUTCDate()} (${wd}) ${String(k.getUTCHours()).padStart(2,'0')}:${String(k.getUTCMinutes()).padStart(2,'0')} · 경기 1시간 전`;
 }
 async function loadAuto(){
   if(!sb || !isAdmin()) return;
@@ -3935,7 +3941,7 @@ const RULES_DEFAULT = `> 💰 월 회비 2만원
 * 팀 카카오톡 단체 채팅방을 통해 진행
 * 매주 월요일 시작 ~ 목요일 저녁 마감
 [팀 배정]
-* 매주 금요일 할라피뇨 FC 팀관리 어플을 통해 자동 배정
+* 경기 시작 1시간 전 할라피뇨 FC 팀관리 어플을 통해 자동 배정
 * 모든 경기 기록은 전용 어플을 통해 누적·관리
 [집합 및 지각]
 * 경기 시작 10분 전 집합을 원칙으로 함
