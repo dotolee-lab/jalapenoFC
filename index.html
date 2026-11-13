@@ -417,7 +417,7 @@
     body.tab-home .homeSub{display:flex;gap:4px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
     .homeSub button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px 4px;border-radius:9px}
     .homeSub button.on{background:var(--accent);color:#fff}
-    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-sched) #voteCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
+    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-sched) #voteCard, body.tab-home:not(.sub-sched) #noticeCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
     body.shared nav.tabs, body.shared .homeSub{display:none !important}
     body.shared{padding-bottom:0}
   }
@@ -817,6 +817,40 @@
   .lateRow{margin-bottom:6px;font-size:13px}
   .lateRow .muted{font-size:12px}
   .pushRow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--head);border-radius:12px;padding:12px 14px;text-align:left}
+  /* ---------- 공지 · 업데이트 ---------- */
+  :root{--nBlue:#2f6fd1;--nBlue2:#e7effb;--nPin:#a8740b;--nPin2:#fff4d6;--nRed2:#fdecea}
+  @media (prefers-color-scheme: dark){:root{--nBlue:#7fa8ef;--nBlue2:#1d2a40;--nPin:#e0b34f;--nPin2:#3a2f14;--nRed2:#3d2220}}
+  .nBanner{display:flex;align-items:center;gap:10px;background:#2f6fd1;color:#fff;padding:10px 12px;font-size:14px;border-radius:12px;margin:0 0 12px;cursor:pointer}
+  .nBanner b{white-space:nowrap}
+  .nBanner .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nBanner .x{background:rgba(255,255,255,.22);color:#fff;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+  .nHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+  .nHead h2{margin:0}
+  .nHeadBtns{display:flex;gap:6px}
+  .nList{display:flex;flex-direction:column;width:100%}
+  .nItem{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:9px 2px;border-top:1px solid var(--line);font-size:14px;cursor:pointer;background:none;color:var(--text);text-align:left;border-radius:0;width:100%;font-weight:400}
+  .nItem:first-child{border-top:0}
+  .nItem .tt{display:flex;align-items:center;gap:5px;min-width:0;font-weight:600}
+  .nItem .tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .nN{flex:none;background:#e5383b;color:#fff;font-size:10px;font-weight:800;font-style:normal;border-radius:4px;padding:0 4px;line-height:15px}
+  .nItem .d{font-size:12px;color:var(--muted)}
+  .nTag{font-size:11px;font-weight:800;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .nTag.update{background:var(--nBlue2);color:var(--nBlue)}.nTag.notice{background:var(--nRed2);color:var(--danger)}.nTag.pin{background:var(--nPin2);color:var(--nPin)}
+  .nPost{width:100%;text-align:left}
+  .nPost .nTags{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+  .nPost h3{text-align:left;margin:0 0 2px}
+  .nPost .nMeta{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .nPost .nBody{font-size:14px;background:var(--head);border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;line-height:1.6}
+  .nPost .nBody a{color:var(--accent)}
+  .nForm{width:100%;display:flex;flex-direction:column;gap:10px;text-align:left}
+  .nForm label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}
+  .nForm input:not([type=checkbox]), .nForm textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;font-weight:400;background:var(--bg);color:var(--text)}
+  .nForm textarea{min-height:150px;resize:vertical;line-height:1.5}
+  .nSeg{display:flex;gap:6px}
+  .nSeg button{flex:1;background:var(--card);color:var(--text);border:2px solid var(--line);font-weight:700}
+  .nSeg button.on{border-color:var(--accent);background:var(--accent2);color:var(--accent)}
+  .nChk{display:flex !important;flex-direction:row !important;align-items:center;gap:8px;font-weight:600 !important;font-size:14px !important}
+  .nChk input{width:18px;height:18px}
   .pushOpts{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:14px;text-align:left}
   .pushOpt{display:flex;align-items:flex-start;gap:8px}
   .pushOpt input{margin-top:3px}
@@ -846,6 +880,7 @@
   </header>
 
   <div id="errBox" class="errBox" role="alert" style="display:none"></div>
+  <div id="noticeBanner" class="nBanner app" style="display:none"></div>
   <div id="mvpBanner" class="app"></div>
 
   <div class="layout">
@@ -853,6 +888,10 @@
     <button data-sub="sched">📅 일정</button><button data-sub="gear">🎒 장비</button><button data-sub="teams">👥 팀구성</button><button data-sub="rules">📜 회칙</button>
   </div>
   <aside class="side app">
+  <section class="card app" id="noticeCard" style="display:none">
+    <div class="nHead"><h2>📢 공지 · 업데이트</h2><span class="nHeadBtns"><button class="small" id="nWrite" style="display:none">✏️ 쓰기</button><button class="ghost small" id="nAll">전체 보기</button></span></div>
+    <div id="noticeBox"></div>
+  </section>
   <section class="card app" id="voteCard">
     <h2>🗳️ 참석 투표</h2>
     <div id="voteBox"><p class="muted">불러오는 중…</p></div>
@@ -2549,10 +2588,18 @@ const canEditProfile = p => isAdmin() || (typeof myPlayer === 'function' && myPl
 const blobToB64 = blob => new Promise((ok, no)=>{ const r = new FileReader(); r.onload = ()=>ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(blob); });
 async function selfPhoto(body){
   const {data, error} = await sb.functions.invoke('player-photo', {body: {token: plToken, ...body}});
-  if(!error) return data;
-  let msg = error.message || String(error);
-  try{ const j = await error.context.json(); if(j?.msg) msg = j.msg; }catch(e){ msg = 'Supabase에 player-photo 함수가 아직 없어요. 운영진에게 알려 주세요.'; }
-  return {ok: false, msg};
+  if(!error) return data && typeof data === 'object' ? data : {ok: false, msg: '응답을 읽지 못했어요'};
+  // 함수가 2xx가 아닌 응답을 줬을 때: 상태 코드와 실제 이유를 꺼내서 보여줌
+  const res = error.context, status = res?.status;
+  let detail = '';
+  try{ const j = await res.clone().json(); detail = j?.msg || j?.message || j?.error || j?.code || ''; }
+  catch(e){ try{ detail = (await res.text()).slice(0, 120); }catch(e2){} }
+  let msg;
+  if(status === 404) msg = 'Supabase에 player-photo 함수가 없어요. (운영진: Edge Functions에 player-photo 배포)';
+  else if(status === 401 || status === 403) msg = /jwt/i.test(detail) || !detail ? 'player-photo 함수의 JWT 확인(Verify JWT)을 꺼야 해요. (운영진에게 알려 주세요)' : detail;
+  else if(!status) msg = '서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.';
+  else msg = detail || error.message || String(error);
+  return {ok: false, msg: status ? `${msg} [${status}]` : msg};
 }
 function renderAllAfterPhoto(){
   renderProfile(); renderStats(); renderHistory(); renderMvpBanner(); renderYearAwards();
@@ -3033,7 +3080,8 @@ async function startApp(){
   catch(e){ showErr('서버 연결 준비에 실패했어요. 와이파이/데이터 연결을 확인하고 다시 시도해 주세요.', e.message); return; }
   if(!sb) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let authDone; const authChecked = new Promise(r=>authDone = r);
-  loadAll().then(()=>initPlayer(authChecked));   // 로그인 확인을 기다리지 않고 바로 불러오기 (선수 로그인은 명단을 받은 뒤 확인)
+  loadAll().then(()=>initPlayer(authChecked));
+  loadNotices();   // 로그인 확인을 기다리지 않고 바로 불러오기 (선수 로그인은 명단을 받은 뒤 확인)
   try{
     const { data } = await withTimeout(sb.auth.getSession(), 6000);
     const was = !!session; session = data.session; applyMode();
@@ -3053,7 +3101,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.10-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.13-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -3408,7 +3456,7 @@ setInterval(()=>{ if(sb && !document.hidden) syncVote(); }, 60000);
 // 회장·총무로 지정된 선수가 선수 로그인을 하면 기록일지를 쓰고 등록할 수 있음
 const isOfficerMe = () => typeof myPlayer === 'function' && !!myPlayer() && OFFICER_ROLES.some(([r])=>officerOf(r)?.p.id === myPlayer().id);
 const canLog = () => isAdmin() || isOfficerMe();
-function updateLogAccess(){ document.body.classList.toggle('can-log', canLog()); renderLog(); }
+function updateLogAccess(){ document.body.classList.toggle('can-log', canLog()); renderLog(); try{ renderNotices(); }catch(e){} }
 // 경기 중에 골·어시를 눌러 적어두고, 끝나면 '경기 기록에 등록'으로 경기 결과·개인 기록을 한 번에 저장
 // 적는 동안의 내용은 이 기기에 저장돼서 새로고침해도 남아 있음
 let logDate = todayStr(), LOG = null, logPick = {t: null, s: null, a: null};
@@ -4027,6 +4075,154 @@ async function loadExempt(){
     const ok = await q(sb.from('players').update({vote_exempt: cb.checked}).eq('id', +cb.dataset.ex), '저장하지 못했어요');
     if(ok){ loadExempt(); loadVotes(); } else cb.disabled = false;
   });
+}
+
+/* ---------- 공지 · 업데이트 ----------
+   글쓰기: 관리자 · 회장 · 총무 (회장·총무는 본인 글만 고치기·지우기)
+   새 글 알림 (섞어 쓰기): '팝업으로 띄우기' 글 → 사이트 열 때 가운데 팝업 한 번
+                          그 밖의 새 글 → 위쪽 파란 배너 / 홈 카드에는 모두 N 표시 */
+let notices = [], noticesMissing = false;
+const N_SEEN_KEY = 'jfc-notice-seen', N_NEW_DAYS = 14;
+const nSeen = () => { try{ return new Set(JSON.parse(store.get(N_SEEN_KEY) || '[]')); }catch(e){ return new Set(); } };
+function nMarkSeen(ids){
+  const s = nSeen(); [].concat(ids).forEach(id=>s.add(+id));
+  store.set(N_SEEN_KEY, JSON.stringify([...s].slice(-300)));
+}
+const nIsNew = n => !nSeen().has(n.id) && (Date.now() - new Date(n.created_at).getTime()) < N_NEW_DAYS * 864e5;
+const nDate = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})`; };
+const nKindTag = n => n.kind === 'update' ? '<span class="nTag update">업데이트</span>' : '<span class="nTag notice">공지</span>';
+const nLinkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+const nSorted = () => notices.slice().sort((a, b)=>(b.pinned - a.pinned) || (new Date(b.created_at) - new Date(a.created_at)));
+const nCanEdit = n => isAdmin() || (isOfficerMe() && n.author_pid === mePid);
+
+async function loadNotices(){
+  if(!sb) return;
+  const r = await sb.from('notices').select('*').order('created_at', {ascending: false}).limit(100);
+  noticesMissing = !!r.error; notices = r.error ? [] : r.data;
+  renderNotices(); nKick();
+}
+function renderNotices(){
+  const card = $('noticeCard'); if(!card) return;
+  const writer = canLog();
+  card.style.display = (noticesMissing || (!notices.length && !writer)) ? 'none' : '';
+  $('nWrite').style.display = writer && !noticesMissing ? '' : 'none';
+  $('nAll').style.display = notices.length > 4 ? '' : 'none';
+  const list = nSorted();
+  const show = [...list.filter(n=>n.pinned), ...list.filter(n=>!n.pinned).slice(0, 3)].slice(0, 5);
+  $('noticeBox').innerHTML = show.length ? `<div class="nList">${show.map(nRow).join('')}</div>` : '<p class="muted">아직 올린 글이 없어요. ✏️ 쓰기로 첫 글을 올려 보세요.</p>';
+  $('noticeBox').querySelectorAll('[data-nid]').forEach(b=>b.onclick = ()=>openNotice(+b.dataset.nid));
+  $('nWrite').onclick = ()=>openNoticeForm();
+  $('nAll').onclick = openNoticeList;
+  renderNoticeBanner();
+}
+const nRow = n => `<button class="nItem${nIsNew(n) ? ' new' : ''}" data-nid="${n.id}">${n.pinned ? '<span class="nTag pin">📌 고정</span>' : nKindTag(n)}<span class="tt"><span class="tx">${esc(n.title)}</span>${nIsNew(n) ? '<i class="nN">N</i>' : ''}</span><span class="d">${nDate(n.created_at)}</span></button>`;
+
+// 배너: 팝업으로 안 띄우는 새 글
+function renderNoticeBanner(){
+  const b = $('noticeBanner'); if(!b) return;
+  const fresh = nSorted().filter(n=>!n.popup && nIsNew(n));
+  if(!fresh.length || !(mePid || isAdmin())){ b.style.display = 'none'; return; }
+  b.innerHTML = `<b>📢 새 글</b><span class="t">${esc(fresh[0].title)}${fresh.length > 1 ? ` 외 ${fresh.length - 1}개` : ''}</span><button class="x" id="nBanX">닫기</button>`;
+  b.style.display = '';
+  b.onclick = e=>{ if(e.target.id === 'nBanX'){ nMarkSeen(fresh.map(n=>n.id)); renderNotices(); return; } openNotice(fresh[0].id); };
+}
+
+// 팝업: 로그인이 끝나고 다른 창이 없을 때 한 번
+let nPopTimer = null;
+function nKick(){
+  clearInterval(nPopTimer);
+  if(!nPopQueue().length) return;
+  nPopTimer = setInterval(()=>{ if(!nPopQueue().length){ clearInterval(nPopTimer); return; } if((mePid || isAdmin()) && !$('plDim')){ clearInterval(nPopTimer); openNoticePopup(); } }, 1200);
+}
+const nPopQueue = () => nSorted().filter(n=>n.popup && nIsNew(n)).sort((a, b)=>new Date(a.created_at) - new Date(b.created_at));
+function openNoticePopup(){
+  const q = nPopQueue(); if(!q.length) return;
+  let i = 0;
+  const draw = ()=>{
+    const n = q[i];
+    openSheet(`<div class="nPost">
+      <div class="nTags">${n.pinned ? '<span class="nTag pin">📌 고정</span>' : ''}${nKindTag(n)}${q.length > 1 ? `<span class="muted" style="font-size:12px">새 글 ${q.length}개 중 ${i + 1}</span>` : ''}</div>
+      <h3>${esc(n.title)}</h3><div class="nMeta">${nDate(n.created_at)} · ${esc(n.author_name || '관리자')}</div>
+      <div class="nBody">${nLinkify(n.body || '')}</div></div>
+      <div class="plMenu">${q.length > 1 ? `<div style="display:flex;gap:8px">${i > 0 ? '<button class="ghost" id="nPrev" style="flex:1">← 이전</button>' : ''}${i < q.length - 1 ? '<button class="ghost" id="nNext" style="flex:1">다음 글 →</button>' : ''}</div>` : ''}
+        <button id="nOk">확인했어요</button><button class="ghost" id="nGoAll">전체 공지 보기</button></div>`);
+    nMarkSeen(n.id);
+    if($('nPrev')) $('nPrev').onclick = ()=>{ i--; draw(); };
+    if($('nNext')) $('nNext').onclick = ()=>{ i++; draw(); };
+    $('nOk').onclick = ()=>{ nMarkSeen(q.map(x=>x.id)); closeSheet(); renderNotices(); };
+    $('nGoAll').onclick = ()=>{ nMarkSeen(q.map(x=>x.id)); renderNotices(); openNoticeList(); };
+    const x = $('plX'); if(x) x.onclick = ()=>{ closeSheet(); renderNotices(); };
+  };
+  draw();
+}
+
+function openNotice(id){
+  const n = notices.find(x=>x.id === id); if(!n) return;
+  nMarkSeen(id); renderNotices();
+  openSheet(`<div class="nPost">
+    <div class="nTags">${n.pinned ? '<span class="nTag pin">📌 고정</span>' : ''}${nKindTag(n)}</div>
+    <h3>${esc(n.title)}</h3><div class="nMeta">${nDate(n.created_at)} · ${esc(n.author_name || '관리자')}${n.updated_at && new Date(n.updated_at) - new Date(n.created_at) > 60000 ? ' · 고침' : ''}</div>
+    <div class="nBody">${nLinkify(n.body || '')}</div></div>
+    <div class="plMenu">${nCanEdit(n) ? '<div style="display:flex;gap:8px"><button class="ghost" id="nEdit" style="flex:1">✏️ 고치기</button><button class="ghost" id="nDel" style="flex:1;color:var(--danger)">지우기</button></div>' : ''}
+      <button class="ghost" id="nBack">목록 보기</button></div>`);
+  $('nBack').onclick = openNoticeList;
+  if($('nEdit')) $('nEdit').onclick = ()=>openNoticeForm(n);
+  if($('nDel')) $('nDel').onclick = ()=>deleteNotice(n);
+}
+function openNoticeList(){
+  const list = nSorted();
+  openSheet(`<h3>📢 공지 · 업데이트</h3>
+    ${canLog() ? '<button class="small" id="nListWrite" style="align-self:flex-end">✏️ 쓰기</button>' : ''}
+    ${list.length ? `<div class="nList">${list.map(nRow).join('')}</div>` : '<p class="muted">아직 올린 글이 없어요.</p>'}`, {wide: true});
+  document.querySelectorAll('#plDim [data-nid]').forEach(b=>b.onclick = ()=>openNotice(+b.dataset.nid));
+  if($('nListWrite')) $('nListWrite').onclick = ()=>openNoticeForm();
+}
+
+function openNoticeForm(n = null){
+  if(!canLog()){ alert('관리자 · 회장 · 총무만 글을 쓸 수 있어요'); return; }
+  let kind = n?.kind || 'notice';
+  openSheet(`<h3>${n ? '✏️ 글 고치기' : '✏️ 새 글 쓰기'}</h3>
+    <div class="nForm">
+      <label>종류<div class="nSeg"><button type="button" data-k="notice">📣 공지</button><button type="button" data-k="update">🛠️ 업데이트</button></div></label>
+      <label>제목<input id="nfTitle" maxlength="80" placeholder="예: 11/15 경기는 난지천공원 풋살장이에요" value="${esc(n?.title || '')}"></label>
+      <label>내용<textarea id="nfBody" maxlength="3000" placeholder="내용을 적어 주세요 (줄바꿈 그대로 보여요)">${esc(n?.body || '')}</textarea></label>
+      <label class="nChk"><input type="checkbox" id="nfPin" ${n?.pinned ? 'checked' : ''}> 📌 맨 위에 고정</label>
+      <label class="nChk"><input type="checkbox" id="nfPop" ${n ? (n.popup ? 'checked' : '') : 'checked'}> 사이트 열 때 팝업으로 띄우기 <span class="muted" style="font-weight:400;font-size:12px">(끄면 위쪽 배너로만)</span></label>
+      <button id="nfSave">${n ? '고친 내용 저장' : '올리기'}</button>
+      <p class="muted" style="font-size:12px;margin:0">올린 글은 쓴 사람과 관리자가 고치거나 지울 수 있어요.</p>
+    </div>`, {wide: true});
+  const seg = ()=>document.querySelectorAll('.nSeg button').forEach(b=>b.classList.toggle('on', b.dataset.k === kind));
+  document.querySelectorAll('.nSeg button').forEach(b=>b.onclick = ()=>{ kind = b.dataset.k; seg(); });
+  seg();
+  $('nfSave').onclick = async ()=>{
+    const title = $('nfTitle').value.trim(), body = $('nfBody').value.replace(/\s+$/, '');
+    if(!title){ alert('제목을 적어 주세요'); $('nfTitle').focus(); return; }
+    const pinned = $('nfPin').checked, popup = $('nfPop').checked;
+    $('nfSave').disabled = true;
+    let ok = false;
+    if(isAdmin()){
+      const me = myPlayer();
+      const row = {kind, title, body, pinned, popup, updated_at: new Date().toISOString()};
+      const r = n ? await sb.from('notices').update(row).eq('id', n.id)
+                  : await sb.from('notices').insert({...row, author_pid: me?.id ?? null, author_name: me ? `${me.name} (관리자)` : '관리자'});
+      if(r.error) alert('저장하지 못했어요\n' + r.error.message); else ok = true;
+    }else{
+      const {error} = await sb.rpc('officer_notice_save', {p_token: plToken, p_id: n?.id ?? null, p_kind: kind, p_title: title, p_body: body, p_pinned: pinned, p_popup: popup});
+      if(error) alert(/officer_notice_save|function/i.test(error.message) ? '글쓰기를 쓰려면 Supabase에서 33-setup-notices.sql을 먼저 실행해 주세요.' : '저장하지 못했어요\n' + rpcMsg(error)); else ok = true;
+    }
+    if(!ok){ $('nfSave').disabled = false; return; }
+    await loadNotices();
+    const mine = n ? n.id : nSorted().find(x=>x.title === title)?.id;
+    if(mine) nMarkSeen(mine);                                  // 내가 쓴 글은 나한테 다시 안 띄움
+    closeSheet(); renderNotices(); plToast(n ? '고쳤어요' : '올렸어요');
+  };
+}
+async function deleteNotice(n){
+  if(!confirm(`'${n.title}' 글을 지울까요?`)) return;
+  const r = isAdmin() ? await sb.from('notices').delete().eq('id', n.id)
+                      : await sb.rpc('officer_notice_delete', {p_token: plToken, p_id: n.id});
+  if(r.error){ alert('지우지 못했어요\n' + rpcMsg(r.error)); return; }
+  closeSheet(); await loadNotices(); plToast('지웠어요');
 }
 
 /* ---------- 운영진 (회장·총무) ---------- */
