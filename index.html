@@ -81,6 +81,94 @@
   .hofClose{position:absolute;right:10px;top:10px;width:30px;height:30px;padding:0;border-radius:50%;background:rgba(255,255,255,.45);color:#3b2a00;font-size:18px;line-height:30px}
   .hofReopen{display:block;width:100%;margin-bottom:16px;padding:10px 14px;border-radius:12px;font-weight:800;color:#3b2a00;background:linear-gradient(135deg,#ffe27d,#f5b82e);box-shadow:0 4px 14px rgba(227,148,16,.25)}
 
+
+  /* ---------- 축구 라인업 판 ---------- */
+  body.soccer #publishedCard{display:none !important}
+  #luCard{--luA:#d64545;--luB:#2f6fd1;--luGold:#f2c14e}
+  .luHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .luHead h2{margin:0;flex:1;min-width:140px}
+  .luSt{font-size:12px;font-weight:700;color:var(--muted);background:var(--head);border-radius:999px;padding:3px 10px}
+  .luSt.ok{background:var(--accent2);color:var(--accent)}.luSt.warn{background:#fff4d6;color:#a8740b}
+  .luSeg{display:flex;background:var(--head);border-radius:10px;padding:3px}
+  .luSeg button{background:none;color:var(--muted);padding:6px 12px;font-size:13px;font-weight:800;border-radius:8px}
+  .luSeg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .luMeta{margin:0 0 8px;font-size:14px;color:var(--muted)}.luMeta b{color:var(--text)}
+  .luMode{display:flex;gap:4px;background:var(--head);border-radius:12px;padding:4px;margin-bottom:12px}
+  .luMode button{flex:1;background:none;color:var(--muted);padding:8px;font-weight:800;font-size:14px;border-radius:9px;line-height:1.25}
+  .luMode button.on{background:var(--text);color:var(--card)}
+  .luMode small{display:block;font-size:11px;font-weight:600;opacity:.8}
+  .luEdit{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;align-items:start}
+  @media (max-width:900px){.luEdit{grid-template-columns:1fr}}
+  .luRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .luRow select{width:auto;padding:6px 10px}
+  .luTL{font-size:12px;font-weight:900;color:#fff;border-radius:7px;padding:3px 9px;white-space:nowrap}
+  .luTL.A{background:var(--luA)}.luTL.B{background:var(--luB)}
+  .luTabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--head);border-radius:12px;padding:3px;margin-bottom:8px}
+  .luTabs button{background:none;color:var(--muted);padding:7px 12px;font-weight:800;font-size:14px;border-radius:9px}
+  .luTabs button small{font-weight:600;opacity:.8}
+  .luTabs button.on{background:var(--accent);color:#fff}
+  .luTabs button.mine:not(.on){color:var(--accent)}
+  .luTabs button.mine::after{content:' ●';font-size:9px;vertical-align:2px}
+  .luTabs .add{color:var(--accent)}
+  .luPitch{position:relative;width:100%;max-width:560px;margin:0 auto;aspect-ratio:68/100;border-radius:14px;overflow:hidden;
+    background:repeating-linear-gradient(180deg,#2f8a4a 0 10%,#2a7d43 10% 20%);box-shadow:inset 0 0 0 3px rgba(255,255,255,.85)}
+  .luPitch.self{aspect-ratio:68/118}
+  .luLines{position:absolute;inset:0;width:100%;height:100%}
+  .luSlot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;width:78px;-webkit-tap-highlight-color:transparent}
+  #luBox .luEdit .luSlot{cursor:pointer}
+  .luDot{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#fff;border:2px dashed rgba(255,255,255,.8);background:rgba(0,0,0,.18);transition:transform .12s}
+  .luSlot.filled .luDot{border:3px solid #fff;font-size:18px;background:var(--accent);box-shadow:0 4px 10px rgba(0,0,0,.3);font-family:"Arial Black","Helvetica Neue",Arial,sans-serif}
+  .luPitch.self .luSlot.filled.tA .luDot{background:var(--luA)}.luPitch.self .luSlot.filled.tB .luDot{background:var(--luB)}
+  .luPitch.self .luSlot.tA:not(.filled) .luDot{border-color:#ffc4c4}.luPitch.self .luSlot.tB:not(.filled) .luDot{border-color:#c4dbff}
+  .luNm{background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:1px 7px;white-space:nowrap;max-width:84px;overflow:hidden;text-overflow:ellipsis}
+  .luPs{font-size:10px;font-weight:800;color:#fff;opacity:.85;letter-spacing:.5px;white-space:nowrap}
+  .luSlot.off .luPs{color:var(--luGold);opacity:1}
+  .luSlot.sel .luDot{transform:scale(1.12);box-shadow:0 0 0 4px var(--luGold),0 4px 10px rgba(0,0,0,.3)}
+  .luSlot.target .luDot{border-color:var(--luGold)}
+  .luSlot.me .luDot{box-shadow:0 0 0 4px var(--luGold),0 4px 12px rgba(0,0,0,.35)}
+  .luSlot.me .luNm{background:var(--luGold);color:#3b2a00}
+  .luTeamLbl{position:absolute;left:8px;font-size:11px;font-weight:900;color:#fff;padding:2px 8px;border-radius:999px}
+  .luTeamLbl.A{bottom:8px;background:var(--luA)}.luTeamLbl.B{top:8px;background:var(--luB)}
+  .luHint{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;pointer-events:none}
+  .luPitch.self .luDot{width:40px;height:40px}
+  .luPitch.self .luSlot.filled .luDot{font-size:15px}
+  .luSubs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .luSubRow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .luSub{background:none;border:2px dashed var(--line);color:var(--muted);border-radius:10px;padding:4px 10px;font-size:13px;font-weight:700}
+  .luSub.filled{border-style:solid;color:#fff}.luSub.filled.A{background:var(--luA);border-color:var(--luA)}.luSub.filled.B{background:var(--luB);border-color:var(--luB)}
+  .luSub.sel,.luSub.me{box-shadow:0 0 0 3px var(--luGold)}
+  .luSub:disabled{opacity:1;cursor:default}
+  .luBench{background:var(--head);border-radius:12px;padding:10px}
+  .luBench > b{font-size:14px}
+  .luFilters{display:flex;gap:4px;margin:8px 0;flex-wrap:wrap}
+  .luFilters button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  .luFilters button.on{background:var(--text);color:var(--card);border-color:var(--text)}
+  .luChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .luChip{display:inline-flex;align-items:center;gap:5px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:13px;font-weight:700}
+  .luChip.fit{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .luChip.sel{background:var(--luGold);border-color:var(--luGold);color:#3b2a00}
+  .luChip.assigned{opacity:.5}
+  .luPos{font-size:10px;font-weight:900;border-radius:5px;padding:1px 5px;color:#fff;background:#2f8a4a}
+  .luPos.GK{background:#b8860b}.luPos.DF{background:#3a6ea5}.luPos.FW{background:#c0392b}
+  .luCnt{font-size:11px;font-weight:800;border-radius:6px;padding:0 6px;background:var(--head);color:var(--muted)}
+  .luTB{font-size:11px;font-weight:800;border-radius:5px;padding:0 5px;color:#fff}.luTB.A{background:var(--luA)}.luTB.B{background:var(--luB)}
+  .luAll{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:10px;color:var(--muted)}
+  .luHow{font-size:12px;color:var(--muted);margin:8px 0 0}
+  .luRotBox{margin-top:10px}
+  .luRotBox summary{cursor:pointer;font-weight:800;font-size:14px}
+  .luRot{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  .luRot th,.luRot td{padding:4px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
+  .luRot th{font-size:12px;color:var(--muted)}
+  .luRot td:first-child,.luRot th:first-child{text-align:left}
+  .luRot .on{color:var(--accent);font-weight:900}.luRot .rest{color:var(--muted)}
+  .luRot .tot{font-weight:800}.luRot .low .tot{color:var(--danger)}
+  .luRot tr.me td{background:#fff4d6;color:#3b2a00}
+  .luSave{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  @media (max-width:520px){
+    .luSlot{width:64px}.luDot{width:40px;height:40px;font-size:10px}.luSlot.filled .luDot{font-size:15px}
+    .luNm{font-size:11px;max-width:66px;padding:0 5px}.luPs{font-size:9px}
+    .luPitch.self .luDot{width:34px;height:34px}.luPitch.self .luSlot.filled .luDot{font-size:13px}.luPitch.self .luNm{font-size:10px}
+  }
   /* ---------- MVP 배너 (매치데이 포스터) ---------- */
   .hc{position:relative;overflow:hidden;border-radius:22px;margin-bottom:18px;display:grid;grid-template-columns:42% 1fr;min-height:300px;background:#fbf7ef;color:#0b3124;box-shadow:0 6px 20px rgba(11,49,36,.12)}
   .hc .hofClose{z-index:3;background:rgba(0,0,0,.06);color:#333}
@@ -456,11 +544,11 @@
     nav.tabs .short{display:inline}
     .toTop{bottom:calc(80px + env(safe-area-inset-bottom))}
     /* 홈 탭에서만 MVP·일정·장비·팀 구성 */
-    body:not(.tab-home) #mvpBanner, body:not(.tab-home) .side, body:not(.tab-home) #publishedCard{display:none !important}
+    body:not(.tab-home) #mvpBanner, body:not(.tab-home) .side, body:not(.tab-home) #publishedCard, body:not(.tab-home) #luCard{display:none !important}
     body.tab-home .homeSub{display:flex;gap:4px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
     .homeSub button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px 4px;border-radius:9px}
     .homeSub button.on{background:var(--accent);color:#fff}
-    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-sched) #voteCard, body.tab-home:not(.sub-sched) #noticeCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard{display:none !important}
+    body.tab-home:not(.sub-sched) #scheduleCard, body.tab-home:not(.sub-sched) #voteCard, body.tab-home:not(.sub-sched) #noticeCard, body.tab-home:not(.sub-gear) #gearCard, body.tab-home:not(.sub-teams) #publishedCard, body.tab-home:not(.sub-teams) #luCard{display:none !important}
     body.shared nav.tabs, body.shared .homeSub{display:none !important}
     body.shared{padding-bottom:0}
   }
@@ -968,6 +1056,7 @@
 
   </aside>
   <div class="mainCol">
+  <section class="card app" id="luCard" style="display:none"><div id="luBox"></div></section>
   <section class="card app" id="publishedCard">
     <h2>최근 공개된 팀 구성</h2>
     <div id="published"><p class="muted">팀 구성은 경기 시작 1시간 전에 공개돼요.</p></div>
@@ -3158,7 +3247,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.16-5';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.16-6';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -3215,6 +3304,7 @@ async function loadVotes(){
   bondsMissing = !!nb.error; bonds = nb.error ? [] : nb.data;
   lateMissing = !!nch.error; vChanges = nch.error ? [] : nch.data;
   renderVote(); if(isAdmin()) renderAuto();
+  if(SPORT === 'soccer' && LU.date !== (vMatch?.next || null)) loadLineup(); else renderLineup();
 }
 
 function renderVote(){
@@ -3514,7 +3604,7 @@ setInterval(()=>{ if(sb && !document.hidden) syncVote(); }, 60000);
 const isOfficerMe = () => typeof myPlayer === 'function' && !!myPlayer() && OFFICER_ROLES.some(([r])=>officerOf(r)?.p.id === myPlayer().id);
 const canLog = () => isAdmin() || isOfficerMe();
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && logDateAuto && logDate !== todayStr()) try{ renderLog(); }catch(e){} });
-function updateLogAccess(){ document.body.classList.toggle('can-log', canLog()); renderLog(); try{ renderNotices(); }catch(e){} }
+function updateLogAccess(){ document.body.classList.toggle('can-log', canLog()); renderLog(); try{ renderNotices(); }catch(e){} try{ if(SPORT === 'soccer' && canLog() && !LU.data && LU.date) loadLineup(); else renderLineup(); }catch(e){} }
 // 경기 중에 골·어시를 눌러 적어두고, 끝나면 '경기 기록에 등록'으로 경기 결과·개인 기록을 한 번에 저장
 // 적는 동안의 내용은 이 기기에 저장돼서 새로고침해도 남아 있음
 let logDate = todayStr(), logDateAuto = true, LOG = null, logPick = {t: null, s: null, a: null};   // logDateAuto: 날짜를 직접 안 골랐으면 항상 '오늘'
@@ -4298,6 +4388,249 @@ async function deleteNotice(n){
                       : await sb.rpc('officer_notice_delete', {p_token: plToken, p_id: n.id});
   if(r.error){ alert('지우지 못했어요\n' + rpcMsg(r.error)); return; }
   closeSheet(); await loadNotices(); plToast('지웠어요');
+}
+
+/* ---------- 축구 라인업 판 ----------
+   매치: 경기(쿼터)별 선발 11명 + 출전 현황 / 자체전: A 11 vs B 11 + 팀별 교체
+   편집: 관리자 · 회장 · 총무 (37번 SQL) / 공개하면 모두에게 판 모양 그대로 */
+const LU_F = {
+  '4-4-2':[['GK',50,90],['LB',14,70],['CB',37,74],['CB',63,74],['RB',86,70],['LM',14,46],['CM',37,50],['CM',63,50],['RM',86,46],['ST',36,20],['ST',64,20]],
+  '4-3-3':[['GK',50,90],['LB',14,70],['CB',37,74],['CB',63,74],['RB',86,70],['CM',27,50],['CM',50,54],['CM',73,50],['LW',17,24],['ST',50,17],['RW',83,24]],
+  '4-2-3-1':[['GK',50,90],['LB',14,70],['CB',37,74],['CB',63,74],['RB',86,70],['DM',36,57],['DM',64,57],['LAM',16,36],['CAM',50,38],['RAM',84,36],['ST',50,16]],
+  '3-5-2':[['GK',50,90],['CB',26,73],['CB',50,76],['CB',74,73],['LWB',10,48],['CM',32,52],['DM',50,58],['CM',68,52],['RWB',90,48],['ST',36,20],['ST',64,20]],
+  '3-4-3':[['GK',50,90],['CB',26,73],['CB',50,76],['CB',74,73],['LM',12,48],['CM',38,52],['CM',62,52],['RM',88,48],['LW',18,22],['ST',50,17],['RW',82,22]],
+};
+const LU_GROUP = r => r === 'GK' ? 'GK' : ['LB','CB','RB','LWB','RWB'].includes(r) ? 'DF' : ['ST','LW','RW'].includes(r) ? 'FW' : 'MF';
+const LU_KO = {DF:'수비', MF:'미드', FW:'공격'};
+const luFits = (p, g) => g === 'GK' ? !!p.gk : !!g && p.pos.includes(LU_KO[g]);
+const luTag = p => p.gk ? 'GK' : p.pos.map(x=>({공격:'FW', 미드:'MF', 수비:'DF'})[x]).join('/');
+const luTagCls = p => p.gk ? 'GK' : ({공격:'FW', 미드:'MF', 수비:'DF'})[p.pos[0]] || 'MF';
+const luUnit0 = form => ({form, xi: Array(11).fill(null)});
+const luBlank = () => ({mode: 'match', match: {games: [luUnit0('4-4-2'), luUnit0('4-4-2'), luUnit0('4-4-2'), luUnit0('4-4-2')]},
+  self: {A: {...luUnit0('4-4-2'), subs: [null, null]}, B: {...luUnit0('4-4-2'), subs: [null, null]}}});
+let LU = {date: null, data: null, pub: null, pubAt: null, savedAt: null, by: null, dirty: false, missing: false, loading: false,
+  edit: false, sel: null, filter: '전체', all: false, cur: 0, vcur: 0, seq: 0};
+const luKey = () => 'jfc-lineup-' + LU.date;
+const luP = id => players.find(p=>p.id === id);
+const luName = id => luP(id)?.name || '?';
+const luNo = id => { const p = luP(id); return p?.number != null ? noLabel(p.number) : (p?.name || '?').slice(0, 1); };
+
+async function loadLineup(){
+  const card = $('luCard'); if(!card) return;
+  if(SPORT !== 'soccer' || !sb){ card.style.display = 'none'; return; }
+  const date = vMatch?.next || null, seq = ++LU.seq;
+  if(date !== LU.date){ LU = {...LU, date, data: null, pub: null, pubAt: null, savedAt: null, by: null, dirty: false, sel: null, cur: 0, vcur: 0, edit: false}; }
+  if(!date){ renderLineup(); return; }
+  LU.loading = true; renderLineup();
+  const pr = await sb.rpc('soccer_lineup_public', {p_date: date});
+  let row = null, err = pr.error;
+  if(!err && canLog()){
+    if(isAdmin()){ const r = await sb.from('soccer_lineups').select('*').eq('event_date', date).maybeSingle(); err = r.error; row = r.data; }
+    else { const r = await sb.rpc('officer_lineup_get', {p_token: plToken, p_date: date}); err = r.error; row = r.data; }
+  }
+  if(seq !== LU.seq) return;
+  LU.loading = false;
+  LU.missing = !!(err && /soccer_lineup|function|relation|does not exist|schema cache/i.test(err.message));
+  LU.pub = pr.data?.pub || row?.pub || null; LU.pubAt = pr.data?.pub_at || row?.pub_at || null;
+  LU.savedAt = row?.updated_at || null; LU.by = row?.updated_by || null;
+  if(canLog()){
+    let local = null; try{ local = JSON.parse(store.get(luKey()) || 'null'); }catch(e){}
+    const server = row?.draft && row.draft.mode ? row.draft : null;
+    if(local && (!server || Date.parse(local.at) > Date.parse(row.updated_at || 0))){ LU.data = local.data; LU.dirty = true; }
+    else LU.data = server || LU.pub || luBlank();
+    if(!LU.pub && !LU.edit) LU.edit = true;
+  }
+  renderLineup();
+}
+
+// 지금 화면(편집이면 임시본, 보기면 공개본)의 판
+const luDoc = () => LU.edit ? LU.data : LU.pub;
+const luUnits = d => d.mode === 'self' ? ['A', 'B'] : ['G'];
+const luUnit = (d, key, cur) => key === 'G' ? d.match.games[cur] : d.self[key];
+const luApps = (d, id) => d.match.games.filter(g=>g.xi.includes(id)).length;
+const luPos = (key, x, y) => key === 'A' ? [x, 51 + y * 0.47] : key === 'B' ? [100 - x, 49 - y * 0.47] : [x, y];
+const LU_LINES = `<svg class="luLines" viewBox="0 0 68 100" preserveAspectRatio="none" fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".4">
+  <line x1="0" y1="50" x2="68" y2="50"/><circle cx="34" cy="50" r="9.15"/><circle cx="34" cy="50" r=".6" fill="rgba(255,255,255,.75)"/>
+  <rect x="13.84" y="0" width="40.32" height="16.5"/><rect x="24.84" y="0" width="18.32" height="5.5"/>
+  <rect x="13.84" y="83.5" width="40.32" height="16.5"/><rect x="24.84" y="94.5" width="18.32" height="5.5"/>
+  <path d="M26.7 16.5 A9.15 9.15 0 0 0 41.3 16.5"/><path d="M26.7 83.5 A9.15 9.15 0 0 1 41.3 83.5"/></svg>`;
+
+function luPitchHtml(d, cur, editable){
+  const sel = LU.sel, self = d.mode === 'self';
+  let h = `<div class="luPitch${self ? ' self' : ''}">${LU_LINES}${self ? '<span class="luTeamLbl B">B팀</span><span class="luTeamLbl A">A팀</span>' : ''}`;
+  luUnits(d).forEach(k=>{
+    const u = luUnit(d, k, cur);
+    (LU_F[u.form] || LU_F['4-4-2']).forEach(([r, x0, y0], i)=>{
+      const [x, y] = luPos(k, x0, y0), id = u.xi[i], p = id != null ? luP(id) : null;
+      const off = p && !luFits(p, LU_GROUP(r));
+      const isSel = editable && sel?.kind === 'slot' && sel.key === k && sel.where === 'xi' && sel.idx === i;
+      const me = id != null && id === mePid;
+      h += `<div class="luSlot t${k}${id != null ? ' filled' : ''}${isSel ? ' sel' : ''}${editable && sel && !isSel ? ' target' : ''}${off && editable ? ' off' : ''}${me ? ' me' : ''}" style="left:${x}%;top:${y}%" data-k="${k}" data-i="${i}">
+        <div class="luDot">${id != null ? luNo(id) : r}</div>${id != null ? `<div class="luNm">${esc(luName(id))}</div>` : ''}<div class="luPs">${id != null ? r + (off && editable ? ' · ' + luTag(p) : '') : ''}</div></div>`;
+    });
+  });
+  if(editable && sel) h += `<div class="luHint">${sel.kind === 'player' ? esc(luName(sel.id)) + ' → 넣을 자리를 누르세요' : '바꿀 자리 또는 교체할 사람을 누르세요'}</div>`;
+  return h + '</div>';
+}
+function luRotHtml(d, pool){
+  const gs = d.match.games, n = gs.length, ids = [...new Set([...pool.map(p=>p.id), ...gs.flatMap(g=>g.xi).filter(x=>x != null)])];
+  const min = Math.min(...ids.map(id=>luApps(d, id)));
+  return `<table class="luRot"><tr><th>선수</th>${gs.map((_, i)=>`<th>${i + 1}</th>`).join('')}<th>합계</th></tr>
+    ${ids.sort((a, b)=>luApps(d, b) - luApps(d, a)).map(id=>{ const c = luApps(d, id);
+      return `<tr class="${id === mePid ? 'me' : ''} ${c === min && min < n ? 'low' : ''}"><td>${esc(luName(id))}</td>${gs.map(g=>g.xi.includes(id) ? '<td class="on">●</td>' : '<td class="rest">–</td>').join('')}<td class="tot">${c}/${n}</td></tr>`; }).join('')}</table>`;
+}
+function luSubsHtml(d, editable){
+  return `<div class="luSubs">${['A', 'B'].map(k=>`<div class="luSubRow"><span class="luTL ${k}">${k}팀 교체</span>${d.self[k].subs.map((id, i)=>{
+      if(!editable && id == null) return '';
+      const s2 = editable && LU.sel?.kind === 'slot' && LU.sel.key === k && LU.sel.where === 'subs' && LU.sel.idx === i;
+      return `<button class="luSub ${k}${id != null ? ' filled' : ''}${s2 ? ' sel' : ''}${id === mePid && id != null ? ' me' : ''}" data-k="${k}" data-i="${i}" ${editable ? '' : 'disabled'}>${id != null ? luNo(id) + ' ' + esc(luName(id)) : '+ 교체'}</button>`; }).join('')}${editable ? `<button class="luSub" data-add="${k}">＋</button>` : (d.self[k].subs.some(x=>x != null) ? '' : '<span class="muted" style="font-size:13px">없음</span>')}</div>`).join('')}</div>`;
+}
+
+function renderLineup(){
+  const card = $('luCard'), box = $('luBox'); if(!card || !box) return;
+  const writer = canLog();
+  if(SPORT !== 'soccer' || (LU.missing && !writer)){ card.style.display = 'none'; return; }
+  card.style.display = '';
+  const title = `⚽ 라인업${LU.date ? ` <span class="muted" style="font-weight:600;font-size:14px">${fmtDay(LU.date)}</span>` : ''}`;
+  if(LU.missing){ box.innerHTML = `<h2>${title}</h2><p class="muted">라인업 판을 쓰려면 Supabase에서 37-setup-soccer-lineup.sql을 먼저 실행해 주세요.</p>`; return; }
+  if(!LU.date){ box.innerHTML = `<h2>${title}</h2><p class="muted">예정된 축구 경기 일정이 없어요. 일정에 축구 '경기'를 넣으면 라인업을 짤 수 있어요.</p>`; return; }
+  if(LU.loading && !LU.data && !LU.pub){ box.innerHTML = `<h2>${title}</h2><p class="muted">불러오는 중…</p>`; return; }
+  const tog = writer ? `<div class="luSeg"><button data-v="0" class="${LU.edit ? '' : 'on'}">보기</button><button data-v="1" class="${LU.edit ? 'on' : ''}">✏️ 편집</button></div>` : '';
+  const status = LU.pub ? `<span class="luSt ok">공개됨 · ${agoText(LU.pubAt)}</span>` : `<span class="luSt">아직 공개 전</span>`;
+  const head = `<div class="luHead"><h2>${title}</h2>${writer ? status : ''}${tog}</div>`;
+  if(!LU.edit){ box.innerHTML = head + luViewHtml(); luBindView(); }
+  else { box.innerHTML = head + luEditHtml(); luBindEdit(); }
+  box.querySelectorAll('.luSeg button').forEach(b=>b.onclick = ()=>{ LU.edit = b.dataset.v === '1'; LU.sel = null; renderLineup(); });
+}
+
+/* ----- 보기 (모두) ----- */
+function luViewHtml(){
+  const d = LU.pub;
+  if(!d) return `<p class="muted">라인업이 공개되면 여기에 경기장 모양 그대로 보여요.</p>`;
+  if(d.mode === 'self'){
+    const meT = mePid && ['A', 'B'].find(k=>d.self[k].xi.includes(mePid) || d.self[k].subs.includes(mePid));
+    return `<p class="luMeta">🆚 자체전 · A팀 ${d.self.A.form} vs B팀 ${d.self.B.form}${meT ? ` · <b>나는 ${meT}팀</b>` : ''}</p>${luPitchHtml(d, 0, false)}${luSubsHtml(d, false)}`;
+  }
+  const gs = d.match.games, cur = Math.min(LU.vcur, gs.length - 1);
+  const mine = mePid ? gs.map((g, i)=>g.xi.includes(mePid) ? i + 1 : null).filter(Boolean) : [];
+  const myRole = (g)=>{ const i = g.xi.indexOf(mePid); return i >= 0 ? (LU_F[g.form] || [])[i]?.[0] : null; };
+  return `<p class="luMeta">⚔️ 매치 · ${gs.length}경기${mePid ? (mine.length ? ` · <b>내 출전: ${mine.map(i=>`${i}경기(${myRole(gs[i - 1])})`).join(', ')}</b>` : ' · 내 출전 없음') : ''}</p>
+    <div class="luTabs">${gs.map((g, i)=>`<button class="${i === cur ? 'on' : ''}${g.xi.includes(mePid) ? ' mine' : ''}" data-vi="${i}">${i + 1}경기</button>`).join('')}</div>
+    <p class="luMeta" style="margin-top:6px">${gs[cur].form}</p>
+    ${luPitchHtml(d, cur, false)}
+    <details class="luRotBox"><summary>📊 출전 현황 보기</summary>${luRotHtml(d, [])}</details>`;
+}
+function luBindView(){
+  $('luBox').querySelectorAll('[data-vi]').forEach(b=>b.onclick = ()=>{ LU.vcur = +b.dataset.vi; renderLineup(); });
+}
+
+/* ----- 편집 (관리자 · 회장 · 총무) ----- */
+const luPool = () => {
+  const yes = new Set(votes.filter(v=>v.status === 'yes').map(v=>v.player_id));
+  return players.filter(p=>(!p.isGuest || yes.has(p.id)) && (LU.all || yes.has(p.id)));
+};
+const luTeamOf = (d, id) => luUnits(d).find(k=>{ const u = luUnit(d, k, LU.cur); return u.xi.includes(id) || (u.subs || []).includes(id); }) || null;
+function luTouch(){ LU.dirty = true; try{ store.set(luKey(), JSON.stringify({at: new Date().toISOString(), data: LU.data})); }catch(e){} }
+function luRemove(d, id){ luUnits(d).forEach(k=>{ const u = luUnit(d, k, LU.cur); let i = u.xi.indexOf(id); if(i >= 0) u.xi[i] = null; if(u.subs){ i = u.subs.indexOf(id); if(i >= 0) u.subs[i] = null; } }); }
+function luPut(ref, id){ const d = LU.data; luRemove(d, id); luUnit(d, ref.key, LU.cur)[ref.where][ref.idx] = id; LU.sel = null; luTouch(); renderLineup(); }
+function luTap(ref){
+  const d = LU.data, u = luUnit(d, ref.key, LU.cur), cur = u[ref.where][ref.idx], sel = LU.sel;
+  if(!sel){ if(cur != null){ LU.sel = {kind: 'slot', ...ref}; renderLineup(); } else luPicker(ref); return; }
+  if(sel.kind === 'player') return luPut(ref, sel.id);
+  const su = luUnit(d, sel.key, LU.cur), a = su[sel.where][sel.idx]; su[sel.where][sel.idx] = cur; u[ref.where][ref.idx] = a;
+  LU.sel = null; luTouch(); renderLineup();
+}
+function luPicker(ref){
+  const d = LU.data, self = d.mode === 'self', u = luUnit(d, ref.key, LU.cur);
+  const role = ref.where === 'xi' ? (LU_F[u.form] || [])[ref.idx][0] : '교체', g = ref.where === 'xi' ? LU_GROUP(role) : null;
+  const free = luPool().filter(p=>!luTeamOf(d, p.id)).sort((a, b)=>(g ? luFits(b, g) - luFits(a, g) : 0) || (self ? 0 : luApps(d, a.id) - luApps(d, b.id)) || a.name.localeCompare(b.name));
+  openSheet(`<h3>${self ? ref.key + '팀' : (LU.cur + 1) + '경기'} · ${role} 자리</h3>
+    <p class="muted" style="margin:0;font-size:13px">${g ? g + ' 선수가 먼저' : '남은 사람'}${self ? '' : ' · 적게 뛴 사람 순'}</p>
+    <div class="luChips">${free.map(p=>`<button class="luChip${g && luFits(p, g) ? ' fit' : ''}" data-id="${p.id}"><span class="luPos ${luTagCls(p)}">${luTag(p)}</span>${p.number != null ? noLabel(p.number) + ' ' : ''}${esc(p.name)}${self ? '' : `<span class="luCnt">${luApps(d, p.id)}경기</span>`}</button>`).join('') || '<p class="muted">남은 사람이 없어요. 아래 "참석 투표 안 한 사람도 보기"를 켜 보세요.</p>'}</div>`, {wide: true});
+  document.querySelectorAll('#plDim .luChip').forEach(el=>el.onclick = ()=>{ closeSheet(); luPut(ref, +el.dataset.id); });
+}
+function luFill(key){
+  const d = LU.data, u = luUnit(d, key, LU.cur), self = d.mode === 'self';
+  (LU_F[u.form] || []).forEach(([r], i)=>{ if(u.xi[i] != null) return; const g = LU_GROUP(r);
+    const free = luPool().filter(p=>!luTeamOf(d, p.id)).sort((a, b)=>self ? 0 : luApps(d, a.id) - luApps(d, b.id));
+    const p = free.find(p=>luFits(p, g)) || free.find(p=>g !== 'GK' && !p.gk); if(p) u.xi[i] = p.id; });
+  luTouch();
+}
+function luEditHtml(){
+  const d = LU.data, self = d.mode === 'self', pool = luPool();
+  if(!self) LU.cur = Math.min(LU.cur, d.match.games.length - 1);
+  const fo = (k)=>`<select class="luForm" data-k="${k}">${Object.keys(LU_F).map(f=>`<option ${f === luUnit(d, k, LU.cur).form ? 'selected' : ''}>${f}</option>`).join('')}</select>`;
+  const top = self
+    ? ['A', 'B'].map(k=>`<div class="luRow"><span class="luTL ${k}">${k}팀 ${d.self[k].xi.filter(x=>x != null).length}/11</span>${fo(k)}<button class="ghost small" data-fill="${k}">채우기</button></div>`).join('')
+    : `<div class="luTabs">${d.match.games.map((g, i)=>`<button class="${i === LU.cur ? 'on' : ''}" data-gi="${i}">${i + 1}경기 <small>${g.xi.filter(x=>x != null).length}/11</small></button>`).join('')}<button class="add" id="luAddG">＋ 경기 추가</button></div>
+       <div class="luRow">${fo('G')}${LU.cur ? '<button class="ghost small" id="luCopy">⬅ 이전 경기 그대로</button>' : ''}<button class="ghost small" data-fill="G">적게 뛴 사람 우선 채우기</button><span style="flex:1"></span>${d.match.games.length > 1 ? '<button class="ghost small" id="luDelG" style="color:var(--danger)">경기 삭제</button>' : ''}</div>`;
+  const rest = pool.filter(p=>!luTeamOf(d, p.id));
+  const list = (self ? pool : rest).filter(p=>LU.filter === '전체' || (LU.filter === 'GK' ? p.gk : p.pos.includes(LU_KO[LU.filter])))
+    .sort((a, b)=>self ? (!!luTeamOf(d, a.id)) - (!!luTeamOf(d, b.id)) : luApps(d, a.id) - luApps(d, b.id));
+  const benchTitle = self ? `👥 아직 팀 없는 사람 · ${rest.length}명 / ${pool.length}명` : `🪑 이번 경기 쉬는 사람 · ${rest.length}명`;
+  const save = `<div class="luSave">${LU.dirty ? '<span class="luSt warn">저장 안 된 변경 있음</span>' : LU.savedAt ? `<span class="luSt">임시 저장 ${agoText(LU.savedAt)}${LU.by ? ' · ' + esc(LU.by) : ''}</span>` : ''}
+      <span style="flex:1"></span>${LU.pub ? '<button class="ghost small" id="luUnpub">공개 내리기</button>' : ''}<button class="ghost" id="luSaveB">임시 저장</button><button id="luPubB">📢 ${self ? '자체전 팀' : '라인업'} ${LU.pub ? '다시 공개' : '공개'}</button></div>`;
+  return `<div class="luMode"><button data-m="match" class="${self ? '' : 'on'}">⚔️ 매치<small>상대팀 · 경기별 로테이션</small></button><button data-m="self" class="${self ? 'on' : ''}">🆚 자체전<small>우리끼리 A 11 : B 11</small></button></div>
+    <div class="luEdit">
+      <div class="luMain">${top}${luPitchHtml(d, LU.cur, true)}${self ? luSubsHtml(d, true) : ''}</div>
+      <div class="luSide">
+        <div class="luBench"><b>${benchTitle}</b>
+          <div class="luFilters">${['전체', 'GK', 'DF', 'MF', 'FW'].map(f=>`<button class="${LU.filter === f ? 'on' : ''}" data-f="${f}">${f}</button>`).join('')}</div>
+          <div class="luChips">${list.map(p=>{ const t = luTeamOf(d, p.id); return `<button class="luChip${LU.sel?.kind === 'player' && LU.sel.id === p.id ? ' sel' : ''}${t && self ? ' assigned' : ''}" data-id="${p.id}"><span class="luPos ${luTagCls(p)}">${luTag(p)}</span>${p.number != null ? noLabel(p.number) + ' ' : ''}${esc(p.name)}${self ? (t ? `<span class="luTB ${t}">${t}</span>` : '') : `<span class="luCnt">${luApps(d, p.id)}경기</span>`}</button>`; }).join('') || `<p class="muted" style="margin:4px 0">${pool.length ? '모두 들어갔어요' : '참석 투표한 사람이 없어요'}</p>`}</div>
+          <label class="luAll"><input type="checkbox" id="luAll" ${LU.all ? 'checked' : ''}> 참석 투표 안 한 사람도 보기</label>
+          <p class="luHow">빈자리를 누르면 선수를 고를 수 있어요. 판의 선수를 누르고 다른 자리를 누르면 서로 바뀌고, 목록의 선수를 누르면 교체, 목록 빈 곳을 누르면 빠져요.</p>
+        </div>
+        ${self ? '' : `<details class="luRotBox" open><summary>📊 출전 현황</summary>${luRotHtml(d, pool)}</details>`}
+      </div>
+    </div>${save}`;
+}
+function luBindEdit(){
+  const box = $('luBox'), d = LU.data;
+  box.querySelectorAll('.luMode button').forEach(b=>b.onclick = ()=>{ if(d.mode === b.dataset.m) return; d.mode = b.dataset.m; LU.sel = null; LU.filter = '전체'; luTouch(); renderLineup(); });
+  box.querySelectorAll('.luSlot').forEach(el=>el.onclick = e=>{ e.stopPropagation(); luTap({key: el.dataset.k, where: 'xi', idx: +el.dataset.i}); });
+  box.querySelectorAll('.luSub[data-i]').forEach(el=>el.onclick = e=>{ e.stopPropagation(); luTap({key: el.dataset.k, where: 'subs', idx: +el.dataset.i}); });
+  box.querySelectorAll('[data-add]').forEach(el=>el.onclick = ()=>{ d.self[el.dataset.add].subs.push(null); luTouch(); renderLineup(); });
+  box.querySelectorAll('.luForm').forEach(s=>s.onchange = ()=>{ luUnit(d, s.dataset.k, LU.cur).form = s.value; luTouch(); renderLineup(); });
+  box.querySelectorAll('[data-fill]').forEach(b=>b.onclick = ()=>{ luFill(b.dataset.fill); LU.sel = null; renderLineup(); plToast('빈자리를 채웠어요'); });
+  box.querySelectorAll('[data-gi]').forEach(b=>b.onclick = ()=>{ LU.cur = +b.dataset.gi; LU.sel = null; renderLineup(); });
+  if($('luAddG')) $('luAddG').onclick = ()=>{ d.match.games.push(luUnit0(luUnit(d, 'G', LU.cur).form)); LU.cur = d.match.games.length - 1; LU.sel = null; luTouch(); renderLineup(); };
+  if($('luCopy')) $('luCopy').onclick = ()=>{ const p = d.match.games[LU.cur - 1]; d.match.games[LU.cur] = {form: p.form, xi: p.xi.slice()}; LU.sel = null; luTouch(); renderLineup(); plToast(`${LU.cur}경기 라인업을 가져왔어요`); };
+  if($('luDelG')) $('luDelG').onclick = ()=>{ if(!confirm(`${LU.cur + 1}경기를 지울까요?`)) return; d.match.games.splice(LU.cur, 1); LU.cur = Math.max(0, LU.cur - 1); LU.sel = null; luTouch(); renderLineup(); };
+  box.querySelectorAll('.luFilters button').forEach(b=>b.onclick = e=>{ e.stopPropagation(); LU.filter = b.dataset.f; renderLineup(); });
+  box.querySelectorAll('.luBench .luChip').forEach(el=>el.onclick = e=>{
+    e.stopPropagation(); const id = +el.dataset.id;
+    if(LU.sel?.kind === 'slot'){ const r = LU.sel; LU.sel = null; luPut(r, id); return; }
+    LU.sel = LU.sel?.kind === 'player' && LU.sel.id === id ? null : {kind: 'player', id}; renderLineup();
+  });
+  const bench = box.querySelector('.luBench');
+  bench.onclick = ()=>{ const s = LU.sel; if(s?.kind === 'slot'){ luUnit(d, s.key, LU.cur)[s.where][s.idx] = null; LU.sel = null; luTouch(); renderLineup(); } };
+  $('luAll').onclick = e=>e.stopPropagation();
+  $('luAll').onchange = ()=>{ LU.all = $('luAll').checked; renderLineup(); };
+  $('luSaveB').onclick = ()=>luSave(null);
+  $('luPubB').onclick = ()=>{
+    const lack = d.mode === 'self' ? ['A', 'B'].map(k=>[k + '팀', d.self[k].xi.filter(x=>x != null).length]).filter(([, c])=>c < 11)
+      : d.match.games.map((g, i)=>[(i + 1) + '경기', g.xi.filter(x=>x != null).length]).filter(([, c])=>c < 11);
+    if(lack.length && !confirm(`빈자리가 있어요: ${lack.map(([n, c])=>`${n} ${c}/11`).join(', ')}\n그래도 공개할까요?`)) return;
+    luSave(true);
+  };
+  if($('luUnpub')) $('luUnpub').onclick = ()=>{ if(confirm('공개한 라인업을 내릴까요? (편집한 내용은 남아요)')) luSave(false); };
+}
+async function luSave(publish){
+  const d = JSON.parse(JSON.stringify(LU.data)), now = new Date().toISOString();
+  let error = null;
+  if(isAdmin()){
+    const row = {event_date: LU.date, draft: d, updated_at: now, updated_by: myPlayer() ? myPlayer().name + ' (관리자)' : '관리자'};
+    if(publish === true){ row.pub = d; row.pub_at = now; } else if(publish === false){ row.pub = null; row.pub_at = null; }
+    ({error} = await sb.from('soccer_lineups').upsert(row, {onConflict: 'event_date'}));
+  }else{
+    ({error} = await sb.rpc('officer_lineup_save', {p_token: plToken, p_date: LU.date, p_draft: d, p_publish: publish}));
+  }
+  if(error){ alert(/soccer_lineup|function|relation/i.test(error.message) ? 'Supabase에서 37-setup-soccer-lineup.sql을 먼저 실행해 주세요.' : '저장하지 못했어요\n' + rpcMsg(error)); return; }
+  store.del(luKey());
+  LU.dirty = false;
+  if(publish === true){ LU.edit = false; LU.vcur = 0; }
+  plToast(publish === true ? '공개했어요' : publish === false ? '공개를 내렸어요' : '임시 저장했어요');
+  await loadLineup();
 }
 
 /* ---------- 운영진 (회장·총무) ---------- */
