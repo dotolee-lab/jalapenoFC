@@ -175,6 +175,36 @@
     .luNm{font-size:11px;max-width:66px;padding:0 5px}.luPs{font-size:9px}
     .luPitch.self .luDot{width:34px;height:34px}.luPitch.self .luSlot.filled .luDot{font-size:13px}.luPitch.self .luNm{font-size:10px}
   }
+
+  .luTabs2{display:flex;gap:6px;margin:0 0 12px;border-bottom:2px solid var(--line)}
+  .luTabs2 button{background:none;color:var(--muted);padding:8px 14px;font-weight:800;font-size:15px;border-radius:0;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .luTabs2 button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .luPh button.on.def{background:#2f6fd1;color:#fff}.luPh button.on.att{background:#e8590c;color:#fff}
+  .luTg{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer}
+  .luTac{touch-action:none}
+  .luTac .luSlot{transition:left .7s cubic-bezier(.4,.1,.2,1),top .7s cubic-bezier(.4,.1,.2,1);cursor:pointer;z-index:2}
+  .luTac .luSlot.drag{transition:none;z-index:6}
+  .luZone{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;transition:all .6s ease;border:1.5px dashed rgba(255,255,255,.28)}
+  .luZone.dim{opacity:.35}.luZone.sel{border:2px solid var(--luGold);background:rgba(242,193,78,.28) !important}
+  .luArrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .luMemoI{position:absolute;right:-6px;top:-6px;width:17px;height:17px;border-radius:50%;background:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
+  .luDot{position:relative}
+  .luGoal{position:absolute;right:10px;font-size:10px;font-weight:800;color:rgba(255,255,255,.75)}
+  .luPhaseLbl{position:absolute;left:8px;top:8px;font-size:11px;font-weight:900;color:#fff;border-radius:999px;padding:3px 9px;background:#2f6fd1}
+  .luPhaseLbl.att{background:#e8590c}
+  .luRole{margin-top:12px;border:2px solid var(--luGold);border-radius:14px;padding:12px}
+  .luRoleHd{display:flex;align-items:center;gap:10px;margin:6px 0}
+  .luRoleHd .luDot{width:38px;height:38px;border:none;font-size:14px;font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;color:#fff}
+  .luRoleRow{display:flex;gap:8px;margin:8px 0}
+  .luRoleRow div{flex:1;background:var(--head);border-radius:10px;padding:8px;font-size:12px;text-align:center}
+  .luRoleRow b{display:block;font-size:15px}
+  .luMemo{background:var(--head);border-radius:10px;padding:10px;font-weight:700}
+  .luMemoList{margin-top:6px}
+  .luMemoList div{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px;cursor:pointer}
+  .luMemoList b{min-width:40px}.luMemoList span{color:var(--muted);flex:1}
+  .luFld{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;margin:8px 0}
+  .luFld textarea{min-height:64px;font-weight:400}
+  .luFld input[type=range]{width:100%}
   /* ---------- MVP 배너 (매치데이 포스터) ---------- */
   .hc{position:relative;overflow:hidden;border-radius:22px;margin-bottom:18px;display:grid;grid-template-columns:42% 1fr;min-height:300px;background:#fbf7ef;color:#0b3124;box-shadow:0 6px 20px rgba(11,49,36,.12)}
   .hc .hofClose{z-index:3;background:rgba(0,0,0,.06);color:#333}
@@ -3282,7 +3312,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.16-7';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.16-8';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -4533,9 +4563,12 @@ function renderLineup(){
   const tog = writer ? `<div class="luSeg"><button data-v="0" class="${LU.edit ? '' : 'on'}">보기</button><button data-v="1" class="${LU.edit ? 'on' : ''}">✏️ 편집</button></div>` : '';
   const status = LU.pub ? `<span class="luSt ok">공개됨 · ${agoText(LU.pubAt)}</span>` : `<span class="luSt">아직 공개 전</span>`;
   const head = `<div class="luHead"><h2>${title}</h2>${writer ? status : ''}${tog}</div>`;
-  if(!LU.edit){ box.innerHTML = head + luViewHtml(); luBindView(); }
-  else { box.innerHTML = head + luEditHtml(); luBindEdit(); }
-  box.querySelectorAll('.luSeg button').forEach(b=>b.onclick = ()=>{ LU.edit = b.dataset.v === '1'; LU.sel = null; renderLineup(); });
+  const tabs = `<div class="luTabs2"><button data-lt="line" class="${LU.tab !== 'tac' ? 'on' : ''}">🧩 라인업</button><button data-lt="tac" class="${LU.tab === 'tac' ? 'on' : ''}">🧠 전술</button></div>`;
+  if(LU.tab === 'tac'){ box.innerHTML = head + tabs + (LU.edit ? luTacEditHtml() : luTacViewHtml()); luBindTac(); }
+  else if(!LU.edit){ box.innerHTML = head + tabs + luViewHtml(); luBindView(); }
+  else { box.innerHTML = head + tabs + luEditHtml(); luBindEdit(); }
+  box.querySelectorAll('.luTabs2 button').forEach(b=>b.onclick = ()=>{ LU.tab = b.dataset.lt; LU.sel = null; LU.tsel = null; renderLineup(); });
+  box.querySelectorAll('.luHead .luSeg button').forEach(b=>b.onclick = ()=>{ LU.edit = b.dataset.v === '1'; LU.sel = null; LU.tsel = null; renderLineup(); });
 }
 
 /* ----- 보기 (모두) ----- */
@@ -4603,8 +4636,7 @@ function luEditHtml(){
   const list = (self ? pool : rest).filter(p=>LU.filter === '전체' || (LU.filter === 'GK' ? p.gk : p.pos.includes(LU_KO[LU.filter])))
     .sort((a, b)=>self ? (!!luTeamOf(d, a.id)) - (!!luTeamOf(d, b.id)) : luApps(d, a.id) - luApps(d, b.id));
   const benchTitle = self ? `👥 아직 팀 없는 사람 · ${rest.length}명 / ${pool.length}명` : `🪑 이번 경기 쉬는 사람 · ${rest.length}명`;
-  const save = `<div class="luSave">${LU.dirty ? '<span class="luSt warn">저장 안 된 변경 있음</span>' : LU.savedAt ? `<span class="luSt">임시 저장 ${agoText(LU.savedAt)}${LU.by ? ' · ' + esc(LU.by) : ''}</span>` : ''}
-      <span style="flex:1"></span>${LU.pub ? '<button class="ghost small" id="luUnpub">공개 내리기</button>' : ''}<button class="ghost" id="luSaveB">임시 저장</button><button id="luPubB">📢 ${self ? '자체전 팀' : '라인업'} ${LU.pub ? '다시 공개' : '공개'}</button></div>`;
+  const save = luSaveBar(d);
   return `<div class="luMode"><button data-m="match" class="${self ? '' : 'on'}">⚔️ 매치<small>상대팀 · 경기별 로테이션</small></button><button data-m="self" class="${self ? 'on' : ''}">🆚 자체전<small>우리끼리 A 11 : B 11</small></button></div>
     <div class="luEdit">
       <div class="luMain">${top}${luPitchHtml(d, LU.cur, true)}${self ? luSubsHtml(d, true) : ''}</div>
@@ -4641,6 +4673,14 @@ function luBindEdit(){
   bench.onclick = ()=>{ const s = LU.sel; if(s?.kind === 'slot'){ luUnit(d, s.key, LU.cur)[s.where][s.idx] = null; LU.sel = null; luTouch(); renderLineup(); } };
   $('luAll').onclick = e=>e.stopPropagation();
   $('luAll').onchange = ()=>{ LU.all = $('luAll').checked; renderLineup(); };
+  luBindSave(d);
+}
+function luSaveBar(d){
+  const self = d.mode === 'self';
+  return `<div class="luSave">${LU.dirty ? '<span class="luSt warn">저장 안 된 변경 있음</span>' : LU.savedAt ? `<span class="luSt">임시 저장 ${agoText(LU.savedAt)}${LU.by ? ' · ' + esc(LU.by) : ''}</span>` : ''}
+      <span style="flex:1"></span>${LU.pub ? '<button class="ghost small" id="luUnpub">공개 내리기</button>' : ''}<button class="ghost" id="luSaveB">임시 저장</button><button id="luPubB">📢 ${self ? '자체전 팀' : '라인업'}·전술 ${LU.pub ? '다시 공개' : '공개'}</button></div>`;
+}
+function luBindSave(d){
   $('luSaveB').onclick = ()=>luSave(null);
   $('luPubB').onclick = ()=>{
     const lack = d.mode === 'self' ? ['A', 'B'].map(k=>[k + '팀', d.self[k].xi.filter(x=>x != null).length]).filter(([, c])=>c < 11)
@@ -4648,8 +4688,125 @@ function luBindEdit(){
     if(lack.length && !confirm(`빈자리가 있어요: ${lack.map(([n, c])=>`${n} ${c}/11`).join(', ')}\n그래도 공개할까요?`)) return;
     luSave(true);
   };
-  if($('luUnpub')) $('luUnpub').onclick = ()=>{ if(confirm('공개한 라인업을 내릴까요? (편집한 내용은 남아요)')) luSave(false); };
+  if($('luUnpub')) $('luUnpub').onclick = ()=>{ if(confirm('공개한 라인업·전술을 내릴까요? (편집한 내용은 남아요)')) luSave(false); };
 }
+/* ----- 전술판: 포지션별 수비 시 / 공격 시 위치, 활동 반경, 지시 (경기일마다 포메이션별로 하나) ----- */
+const LU_MEMO = {GK:'뒷공간 커버, 빌드업 시작', LB:'공격 땐 측면 끝까지 오버래핑', RB:'공격 땐 측면 끝까지 오버래핑', CB:'수비 라인 지휘 · 상대 ST 마크',
+  LWB:'측면 전체 왕복', RWB:'측면 전체 왕복', DM:'수비 앞 지키기 · 탈압박', CM:'볼 배급, 좌우 전환', CAM:'2선 침투 · 슈팅', LAM:'안으로 파고들기', RAM:'안으로 파고들기',
+  LM:'수비 땐 풀백 앞까지 복귀', RM:'수비 땐 풀백 앞까지 복귀', LW:'수비 땐 미드필드 라인까지', RW:'수비 땐 미드필드 라인까지', ST:'수비 땐 상대 CB 압박'};
+const LU_QUICK = ['오버래핑', '안으로 파고들기', '전방 압박', '라인 지키기', '상대 에이스 마크', '공 뺏기면 바로 압박', '롱볼 받기', '세컨볼 줍기'];
+const luR = v => Math.round(Math.max(4, Math.min(96, v)));
+function luTacPreset(form){
+  return (LU_F[form] || LU_F['4-4-2']).map(([r, x, y])=>{
+    if(r === 'GK') return {def: [50, 92], att: [50, 86], memo: LU_MEMO.GK, zw: 0, zh: 0};
+    const wide = ['LB', 'RB', 'LWB', 'RWB'].includes(r), side = x < 50 ? -1 : 1;
+    const def = [luR(50 + (x - 50) * 0.92), luR(30 + y * 0.68)];
+    let att = [luR(x), luR(y * 0.85 - 2)];
+    if(wide) att = [luR(50 + side * 40), luR(y * 0.85 - 16)];
+    if(r === 'CB') att = [luR(x), 68];
+    if(['LM', 'RM', 'LAM', 'RAM'].includes(r)) att = [luR(50 + (x - 50) * 0.72), luR(y * 0.58)];   // 측면 미드는 안쪽·위로 (풀백 오버래핑 공간)
+    return {def, att, memo: LU_MEMO[r] || '', zw: 0, zh: 0};
+  });
+}
+const luTacOf = (d, form) => { d.tac = d.tac || {}; if(!d.tac[form]) d.tac[form] = luTacPreset(form); return d.tac[form]; };
+const luTacRead = (d, form) => (d.tac && d.tac[form]) || luTacPreset(form);   // 보기: 저장 안 된 건 기본 전술
+const luZone = p => ({cx: (p.def[0] + p.att[0]) / 2, cy: (p.def[1] + p.att[1]) / 2, w: Math.abs(p.def[0] - p.att[0]) + 16 + (p.zw || 0), h: Math.abs(p.def[1] - p.att[1]) + 12 + (p.zh || 0)});
+const luColor = r => r === 'GK' ? '#b8860b' : ['LB','CB','RB','LWB','RWB'].includes(r) ? '#3a6ea5' : ['ST','LW','RW'].includes(r) ? '#c0392b' : '#2f8a4a';
+// 지금 전술판에 쓰는 대형 (매치: 고른 경기 / 자체전: 고른 팀)
+function luTacUnit(d){
+  if(d.mode === 'self'){ LU.tteam = LU.tteam || 'A'; return d.self[LU.tteam]; }
+  const gs = d.match.games; const i = Math.min(LU.edit ? LU.cur : LU.vcur, gs.length - 1); return gs[i];
+}
+function luTacPitch(d, editable){
+  const u = luTacUnit(d), roles = LU_F[u.form] || LU_F['4-4-2'], T = editable ? luTacOf(d, u.form) : luTacRead(d, u.form), ph = LU.phase || 'def', sel = LU.tsel;
+  let h = `<div class="luPitch luTac" id="luTacPitch">${LU_LINES}<span class="luGoal" style="top:6px">▲ 상대 골대</span><span class="luGoal" style="bottom:6px">▼ 우리 골대</span>`;
+  if(LU.tzone !== false) T.forEach((p, i)=>{ const z = luZone(p); h += `<div class="luZone${sel === i ? ' sel' : sel != null ? ' dim' : ''}" style="left:${z.cx}%;top:${z.cy}%;width:${z.w}%;height:${z.h}%;background:${luColor(roles[i][0])}33"></div>`; });
+  if(LU.tmove !== false) h += `<svg class="luArrows" viewBox="0 0 100 100" preserveAspectRatio="none"><defs><marker id="luAr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#fff"/></marker></defs>${T.map((p, i)=>{
+      const [a, b] = ph === 'def' ? [p.def, p.att] : [p.att, p.def]; if(Math.hypot(a[0] - b[0], a[1] - b[1]) < 6) return '';
+      return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#fff" stroke-opacity="${sel === i ? 1 : .55}" stroke-width="${sel === i ? 1.6 : 1}" stroke-dasharray="4 3" marker-end="url(#luAr)" vector-effect="non-scaling-stroke"/>`; }).join('')}</svg>`;
+  T.forEach((p, i)=>{ const [x, y] = p[ph], id = u.xi[i], r = roles[i][0];
+    h += `<div class="luSlot filled luTP${sel === i ? ' sel' : ''}${id != null && id === mePid ? ' me' : ''}" data-ti="${i}" style="left:${x}%;top:${y}%"><div class="luDot" style="background:${luColor(r)}">${id != null ? luNo(id) : r}${p.memo ? '<span class="luMemoI">💬</span>' : ''}</div>${id != null ? `<div class="luNm">${esc(luName(id))}</div>` : ''}<div class="luPs">${r}</div></div>`; });
+  h += `<span class="luPhaseLbl ${ph}">${ph === 'att' ? '⚔️ 공격 시 위치' : '🛡️ 수비 시 위치'}</span></div>`;
+  return h;
+}
+function luTacTop(d){
+  const ph = LU.phase || 'def';
+  const pick = d.mode === 'self'
+    ? `<div class="luSeg"><button data-tt="A" class="${LU.tteam === 'A' ? 'on' : ''}">A팀</button><button data-tt="B" class="${LU.tteam === 'B' ? 'on' : ''}">B팀</button></div>`
+    : `<div class="luTabs" style="margin:0">${d.match.games.map((g, i)=>`<button class="${i === (LU.edit ? LU.cur : LU.vcur) ? 'on' : ''}${!LU.edit && g.xi.includes(mePid) ? ' mine' : ''}" data-tg="${i}">${i + 1}경기</button>`).join('')}</div>`;
+  return `<div class="luRow">${pick}<span class="muted" style="font-size:13px">${luTacUnit(d).form}</span></div>
+    <div class="luRow"><div class="luSeg luPh"><button data-ph="def" class="${ph === 'def' ? 'on def' : ''}">🛡️ 수비 시</button><button data-ph="att" class="${ph === 'att' ? 'on att' : ''}">⚔️ 공격 시</button></div>
+      <button class="ghost small" id="luPlay">▶ 전환 보기</button><span style="flex:1"></span>
+      <label class="luTg"><input type="checkbox" id="luTz" ${LU.tzone !== false ? 'checked' : ''}> 활동 반경</label><label class="luTg"><input type="checkbox" id="luTm" ${LU.tmove !== false ? 'checked' : ''}> 움직임</label></div>`;
+}
+const luArea = y => y < 33 ? '공격 3분의 1' : y < 66 ? '미드필드' : '수비 3분의 1';
+function luTacViewHtml(){
+  const d = LU.pub;
+  if(!d) return `<p class="muted">라인업이 공개되면 전술도 여기에서 볼 수 있어요.</p>`;
+  const u = luTacUnit(d), T = luTacRead(d, u.form), roles = LU_F[u.form] || LU_F['4-4-2'];
+  let i = LU.tsel; if(i == null && mePid) { const k = u.xi.indexOf(mePid); if(k >= 0) i = LU.tsel = k; }
+  const card = i != null ? (()=>{ const p = T[i], id = u.xi[i];
+    return `<div class="luRole"><p class="muted" style="margin:0;font-size:12px">${id === mePid ? '👤 내 역할' : '👤 역할'}</p>
+      <div class="luRoleHd"><div class="luDot" style="background:${luColor(roles[i][0])}">${id != null ? luNo(id) : roles[i][0]}</div><div><b>${id != null ? esc(luName(id)) : '-'}</b><span class="muted"> · ${roles[i][0]}</span></div></div>
+      <div class="luRoleRow"><div>🛡️ 수비 시<b>${luArea(p.def[1])}</b></div><div>⚔️ 공격 시<b>${luArea(p.att[1])}</b></div></div>
+      <div class="luMemo">💬 ${p.memo ? esc(p.memo) : '지시 없음'}</div></div>`; })() : '<p class="muted" style="font-size:13px">선수를 누르면 그 선수의 역할이 보여요.</p>';
+  return luTacTop(d) + luTacPitch(d, false) + card +
+    `<details class="luRotBox"><summary>📋 전체 지시</summary><div class="luMemoList">${T.map((p, k)=>`<div data-tk="${k}"><b>${roles[k][0]}</b>${u.xi[k] != null ? esc(luName(u.xi[k])) : '-'}<span>${esc(p.memo || '')}</span></div>`).join('')}</div></details>`;
+}
+function luTacEditHtml(){
+  const d = LU.data, u = luTacUnit(d), T = luTacOf(d, u.form), roles = LU_F[u.form] || LU_F['4-4-2'], i = LU.tsel, ph = LU.phase || 'def';
+  const side = i == null
+    ? `<div class="luBench"><b>🧠 전술 정하기</b><p class="luHow" style="margin-top:6px">포메이션마다 기본 전술이 깔려 있어요. 🛡️/⚔️로 상황을 바꾸고, 선수를 <b>끌어서</b> 그 상황의 위치를 옮겨요. 선수를 <b>누르면</b> 지시와 활동 반경을 정해요.</p>
+        <div class="luMemoList">${T.map((p, k)=>`<div data-tk="${k}"><b>${roles[k][0]}</b>${u.xi[k] != null ? esc(luName(u.xi[k])) : '-'}<span>${esc(p.memo || '지시 없음')}</span></div>`).join('')}</div>
+        <button class="ghost small" id="luTacReset" style="margin-top:8px">${u.form} 기본 전술로 되돌리기</button></div>`
+    : `<div class="luBench"><div class="luRoleHd"><div class="luDot" style="background:${luColor(roles[i][0])}">${u.xi[i] != null ? luNo(u.xi[i]) : roles[i][0]}</div><div><b>${u.xi[i] != null ? esc(luName(u.xi[i])) : '-'}</b><span class="muted"> · ${roles[i][0]}</span></div><span style="flex:1"></span><button class="ghost small" id="luTClose">닫기</button></div>
+        <label class="luFld">💬 지시 (선수에게 보여요)<textarea id="luTMemo" maxlength="80" placeholder="예: 공격 땐 측면 끝까지 오버래핑">${esc(T[i].memo || '')}</textarea></label>
+        <div class="luChips" style="margin:0 0 10px">${LU_QUICK.map(q=>`<button class="luChip" data-q="${q}">+ ${q}</button>`).join('')}</div>
+        <label class="luFld">↔️ 활동 반경 가로<input type="range" id="luTzw" min="-8" max="30" value="${T[i].zw || 0}"></label>
+        <label class="luFld">↕️ 활동 반경 세로<input type="range" id="luTzh" min="-8" max="40" value="${T[i].zh || 0}"></label>
+        <p class="luHow">경기장에서 끌면 <b>${ph === 'att' ? '공격 시' : '수비 시'}</b> 위치가 바뀌어요.</p></div>`;
+  return `<div class="luEdit"><div class="luMain">${luTacTop(d)}${luTacPitch(d, true)}</div><div class="luSide">${side}</div></div>${luSaveBar(d)}`;
+}
+let luPlaying = false;
+function luBindTac(){
+  const box = $('luBox'), edit = LU.edit, d = edit ? LU.data : LU.pub; if(!d) return;
+  box.querySelectorAll('[data-tt]').forEach(b=>b.onclick = ()=>{ LU.tteam = b.dataset.tt; LU.tsel = null; renderLineup(); });
+  box.querySelectorAll('[data-tg]').forEach(b=>b.onclick = ()=>{ if(edit) LU.cur = +b.dataset.tg; else LU.vcur = +b.dataset.tg; LU.tsel = null; renderLineup(); });
+  box.querySelectorAll('[data-ph]').forEach(b=>b.onclick = ()=>{ LU.phase = b.dataset.ph; renderLineup(); });
+  box.querySelectorAll('[data-tk]').forEach(el=>el.onclick = ()=>{ LU.tsel = +el.dataset.tk; renderLineup(); });
+  if($('luTz')) $('luTz').onchange = e=>{ LU.tzone = e.target.checked; renderLineup(); };
+  if($('luTm')) $('luTm').onchange = e=>{ LU.tmove = e.target.checked; renderLineup(); };
+  $('luPlay').onclick = ()=>{ if(luPlaying) return; luPlaying = true; const seq = (LU.phase || 'def') === 'def' ? ['att', 'def'] : ['def', 'att']; let k = 0;
+    const step = ()=>{ LU.phase = seq[k++]; renderLineup(); if(k < seq.length) setTimeout(step, 1500); else luPlaying = false; }; step(); };
+  const pitch = $('luTacPitch'), u = luTacUnit(d), T = edit ? luTacOf(d, u.form) : null;
+  pitch.querySelectorAll('.luTP').forEach(el=>{
+    el.onpointerdown = e=>{
+      const i = +el.dataset.ti;
+      if(!edit){ LU.tsel = i; renderLineup(); return; }
+      e.preventDefault();
+      const r = pitch.getBoundingClientRect(), ph = LU.phase || 'def'; let moved = false;
+      el.classList.add('drag'); try{ el.setPointerCapture(e.pointerId); }catch(_){}
+      el.onpointermove = ev=>{ const x = luR((ev.clientX - r.left) / r.width * 100), y = luR((ev.clientY - r.top) / r.height * 100);
+        if(!moved && Math.hypot(x - T[i][ph][0], y - T[i][ph][1]) < 2) return; moved = true;
+        el.style.left = x + '%'; el.style.top = y + '%'; T[i][ph] = [x, y]; };
+      el.onpointerup = ()=>{ el.onpointermove = null; el.onpointerup = null; LU.tsel = i; if(moved) luTouch(); renderLineup(); };
+    };
+  });
+  if(!edit) return;
+  const i = LU.tsel;
+  if($('luTacReset')) $('luTacReset').onclick = ()=>{ if(!confirm(`${u.form} 전술을 기본으로 되돌릴까요?`)) return; d.tac[u.form] = luTacPreset(u.form); luTouch(); renderLineup(); };
+  if($('luTClose')) $('luTClose').onclick = ()=>{ LU.tsel = null; renderLineup(); };
+  if($('luTMemo')) $('luTMemo').oninput = e=>{ T[i].memo = e.target.value; luTouch(); };
+  if($('luTMemo')) $('luTMemo').onchange = ()=>renderLineup();
+  box.querySelectorAll('.luChip[data-q]').forEach(b=>b.onclick = ()=>{ T[i].memo = (T[i].memo ? T[i].memo + ', ' : '') + b.dataset.q; luTouch(); renderLineup(); });
+  if($('luTzw')) $('luTzw').oninput = e=>{ T[i].zw = +e.target.value; luTouch(); luTacRedraw(); };
+  if($('luTzh')) $('luTzh').oninput = e=>{ T[i].zh = +e.target.value; luTouch(); luTacRedraw(); };
+  luBindSave(d);
+}
+// 슬라이더를 움직이는 동안은 경기장만 다시 그림 (슬라이더 포커스 유지)
+function luTacRedraw(){ const old = $('luTacPitch'); if(!old) return; old.outerHTML = luTacPitch(LU.data, true); const keep = LU.tsel; luBindTacPitchOnly(); LU.tsel = keep; }
+function luBindTacPitchOnly(){ const pitch = $('luTacPitch'); pitch.querySelectorAll('.luTP').forEach(el=>el.onpointerdown = ()=>{ LU.tsel = +el.dataset.ti; renderLineup(); }); }
+
 async function luSave(publish){
   const d = JSON.parse(JSON.stringify(LU.data)), now = new Date().toISOString();
   let error = null;
