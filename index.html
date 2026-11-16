@@ -80,6 +80,41 @@
   @media (prefers-reduced-motion: reduce){.hof .sparkles i{animation:none;opacity:.5}}
   .hofClose{position:absolute;right:10px;top:10px;width:30px;height:30px;padding:0;border-radius:50%;background:rgba(255,255,255,.45);color:#3b2a00;font-size:18px;line-height:30px}
   .hofReopen{display:block;width:100%;margin-bottom:16px;padding:10px 14px;border-radius:12px;font-weight:800;color:#3b2a00;background:linear-gradient(135deg,#ffe27d,#f5b82e);box-shadow:0 4px 14px rgba(227,148,16,.25)}
+
+  /* ---------- MVP 배너 (매치데이 포스터) ---------- */
+  .hc{position:relative;overflow:hidden;border-radius:22px;margin-bottom:18px;display:grid;grid-template-columns:42% 1fr;min-height:300px;background:#fbf7ef;color:#0b3124;box-shadow:0 6px 20px rgba(11,49,36,.12)}
+  .hc .hofClose{z-index:3;background:rgba(0,0,0,.06);color:#333}
+  .hcLeft{position:relative;display:flex;align-items:center;justify-content:center;padding:24px 40px 24px 16px;background:repeating-linear-gradient(90deg,#0b3124 0 34px,#fff 34px 37px,#5a1219 37px 55px,#fff 55px 58px)}
+  .hcLeft::after{content:'';position:absolute;right:-1px;top:0;bottom:0;width:60px;background:#fbf7ef;clip-path:polygon(100% 0,100% 100%,0 100%)}
+  .hcAvs{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .hc .avatar.xl{width:180px;height:180px;font-size:48px;color:#5a1219 !important;box-shadow:0 0 0 8px #fbf7ef,0 12px 30px rgba(0,0,0,.35)}
+  .hc.multi .avatar.xl{width:120px;height:120px;font-size:34px;box-shadow:0 0 0 6px #fbf7ef,0 10px 24px rgba(0,0,0,.35)}
+  .hcBig{position:absolute;left:14px;bottom:2px;font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:88px;line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.55);letter-spacing:-2px;pointer-events:none}
+  .hcRight{padding:28px 34px 24px 22px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+  .hcWm{font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:14px;letter-spacing:2px}
+  .hcWm b{color:#e5383b}
+  .hcDt{font-size:14px;color:#6b756f;margin-top:2px}
+  .hcTag{align-self:flex-start;margin-top:12px;background:#5a1219;color:#fff;font-weight:900;letter-spacing:3px;padding:4px 12px;font-size:13px;transform:skew(-8deg)}
+  .hcW + .hcW{margin-top:6px}
+  .hcName{font-size:clamp(38px,6vw,58px);font-weight:900;line-height:1.1;margin:8px 0 12px;word-break:keep-all}
+  .hc.multi .hcName{font-size:clamp(30px,4.5vw,42px);margin:6px 0 8px}
+  .hcStats{display:flex;border-top:3px solid #0b3124;border-bottom:1px solid #d9d2c3}
+  .hcStats div{flex:1;padding:9px 4px;text-align:center;border-left:1px solid #d9d2c3;min-width:0}
+  .hcStats div:first-child{border-left:0}
+  .hcStats b{display:block;font-family:"Arial Black","Helvetica Neue",Arial,sans-serif;font-weight:900;font-size:26px;color:#0b3124;line-height:1.2}
+  .hcStats small{font-size:12px;color:#6b756f;font-weight:700;white-space:nowrap}
+  .hcFt{margin-top:12px;font-size:13px;color:#5a1219;font-weight:700}
+  @media (max-width:700px){
+    .hc{grid-template-columns:1fr;min-height:0}
+    .hc .hofClose{background:rgba(255,255,255,.85)}
+    .hcLeft{height:210px;padding:16px}
+    .hcLeft::after{display:none}
+    .hc .avatar.xl{width:150px;height:150px}
+    .hc.multi .avatar.xl{width:110px;height:110px}
+    .hcBig{font-size:64px}
+    .hcRight{padding:18px 18px 20px}
+    .hcStats b{font-size:22px}
+  }
   .hofEyebrow{position:relative;letter-spacing:.14em;font-size:12px;font-weight:800;opacity:.75}
   .hofDate{position:relative;font-size:15px;font-weight:700;margin-top:6px}
   .hofWinners{position:relative;display:flex;justify-content:center;gap:36px;flex-wrap:wrap;margin:16px 0 10px}
@@ -2529,24 +2564,25 @@ function renderMvpBanner(){
     return;
   }
   const totalMvp = pid => stats.filter(r=>r.player_id===pid && r.mvp).length;
-  const sparkles = Array.from({length:14}, (_,i)=>`<i style="left:${(i*37)%100}%;top:${(i*53)%100}%;animation-delay:${(i%7)*0.35}s">✦</i>`).join('');
-  box.innerHTML = `<div class="hof" role="region" aria-label="이번 주 MVP">
-    <div class="sparkles" aria-hidden="true">${sparkles}</div>
+  // 매치데이 포스터: 왼쪽 유니폼 줄무늬 + 사진, 오른쪽 이름과 기록판
+  const multi = winners.length > 1;
+  box.innerHTML = `<div class="hc${multi ? ' multi' : ''}" role="region" aria-label="이번 경기 MVP">
     <button class="hofClose" title="배너 접기 (새로고침하면 다시 보여요)" aria-label="닫기">×</button>
-    <div class="hofEyebrow">🏆 HALL OF FAME · 명예의 전당</div>
-    <div class="hofDate">${fmtDay(day.played_on)} 경기 MVP</div>
-    <div class="hofWinners">${winners.map(w=>{
-      const res = dayResults(day.id, w.team);
-      const chips = [
-        w.goals ? `⚽ ${w.goals}골` : '', w.assists ? `어시 ${w.assists}` : '',
-        w.team && (res.w + res.d + res.l) ? `${w.team}팀 ${res.w}승 ${res.d}무 ${res.l}패` : '',
-        `누적 MVP ${totalMvp(w.player_id)}회`,
-      ].filter(Boolean);
-      return `<div class="hofW"><div class="crown">👑</div>${avatar(w.name,'xl')}
-        <div class="hofName">${esc(w.name)}</div>
-        <div class="hofChips">${chips.map(c=>`<span>${c}</span>`).join('')}</div></div>`;
-    }).join('')}</div>
-    <div class="hofFoot">${winners.length > 1 ? '공동 MVP 축하해요!' : '축하해요!'} 다음 경기까지 이 자리는 당신 거예요 👏</div>
+    <div class="hcLeft"><div class="hcAvs">${winners.map(w=>`<div class="hcAv">${avatar(w.name,'xl')}</div>`).join('')}</div><div class="hcBig" aria-hidden="true">MVP</div></div>
+    <div class="hcRight">
+      <div class="hcWm">JALAPE<b>Ñ</b>O FC</div>
+      <div class="hcDt">MATCHDAY · ${fmtDay(day.played_on)}</div>
+      <span class="hcTag">${multi ? 'PLAYERS' : 'PLAYER'} OF THE MATCH</span>
+      ${winners.map(w=>{
+        const res = dayResults(day.id, w.team);
+        const cells = [[w.goals || 0, '골'], [w.assists || 0, '어시']];
+        if(w.team && (res.w + res.d + res.l)) cells.push([`${res.w}-${res.d}-${res.l}`, `${w.team}팀 승무패`]);
+        cells.push([totalMvp(w.player_id), '누적 MVP']);
+        return `<div class="hcW"><div class="hcName">${esc(w.name)}</div>
+          <div class="hcStats">${cells.map(([v, l])=>`<div><b>${v}</b><small>${l}</small></div>`).join('')}</div></div>`;
+      }).join('')}
+      <div class="hcFt">${multi ? '공동 MVP 축하해요! ' : ''}다음 경기까지 이 자리는 당신 거예요 👏</div>
+    </div>
   </div>`;
   box.querySelector('.hofClose').onclick = ()=>{ hofHidden = true; renderMvpBanner(); };
 }
@@ -3118,7 +3154,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.16-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.16-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
