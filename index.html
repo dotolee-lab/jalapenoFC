@@ -299,8 +299,10 @@
   .match .mEv > div{display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center}
   .match .mEv .gEv{display:block;white-space:nowrap}
   .match .mEv .gEv b{font-weight:600}
+  .match .mEv .ogBall{width:1.05em;height:1.05em;vertical-align:-.17em}
+  .match .mEv .gEv.og i{color:#c0392b;font-weight:600}
   .match .mEv small{color:var(--muted)}
-  @media (max-width:520px){.match .mEv{grid-template-columns:1fr 40px 1fr;font-size:12px}}
+  @media (max-width:520px){.match .mEv{grid-template-columns:1fr 24px 1fr;font-size:12px}.match .mEv .gEv{white-space:normal}.match .mEv .gEv small{display:block;line-height:1.2;margin-bottom:3px}}
   table.stdg th,table.stdg td{text-align:center}
   table.stdg td.hl{color:var(--hl);font-weight:700}
   ul.roster{list-style:none;padding:0;margin:0}
@@ -2438,12 +2440,14 @@ const fmtDay = str => {
 };
 const pastDays = () => days.filter(d=>d.played_on <= todayStr());   // 미래 경기일(미리 잡아둔 구장)은 제외
 let matchesOpen = false;
+// 자책골: 빨간 공
+const OG_BALL = '<svg class="ogBall" viewBox="0 0 20 20" aria-label="자책골"><circle cx="10" cy="10" r="9" fill="#e5383b" stroke="#9b1c1f" stroke-width="1"/><path d="M10 5.6 L13.4 8 L12.1 12 L7.9 12 L6.6 8 Z" fill="#5c0d0f"/><path d="M10 5.6 V1.4 M13.4 8 L17.8 6.6 M12.1 12 L14.8 15.8 M7.9 12 L5.2 15.8 M6.6 8 L2.2 6.6" stroke="#5c0d0f" stroke-width="1.1" fill="none"/></svg>';
 // 경기별 골·어시: 기록일지로 등록한 경기만 (직접 '경기 추가'한 경기는 점수만)
 const evName = id => id == null ? null : (typeof id === 'string' && id.startsWith('g:')) ? id.slice(2) : (players.find(p=>p.id === +id)?.name || '(삭제된 선수)');
 function matchEvHtml(g){
   const ev = Array.isArray(g.events) ? g.events : [];
   if(!ev.length) return '';
-  const side = t => ev.filter(e=>e.t === t).map(e=>`<span class="gEv">⚽ ${e.s == null ? '<i>상대 자책골</i>' : `<b>${esc(evName(e.s))}</b>`}${e.a != null ? ` <small>(${esc(evName(e.a))})</small>` : ''}</span>`).join('');
+  const side = t => ev.filter(e=>e.t === t).map(e=>`<span class="gEv${e.s == null ? ' og' : ''}">${e.s == null ? OG_BALL : '⚽'} ${e.s == null ? '<i>상대 자책골</i>' : `<b>${esc(evName(e.s))}</b>`}${e.a != null ? ` <small>👟 ${esc(evName(e.a))}</small>` : ''}</span>`).join('');
   return `<div class="mEv"><div class="h">${side(g.home)}</div><div></div><div class="a">${side(g.away)}</div></div>`;
 }
 function renderHistory(){
@@ -3154,7 +3158,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.16-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.16-5';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
