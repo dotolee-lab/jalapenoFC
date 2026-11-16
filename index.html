@@ -82,6 +82,12 @@
   .hofReopen{display:block;width:100%;margin-bottom:16px;padding:10px 14px;border-radius:12px;font-weight:800;color:#3b2a00;background:linear-gradient(135deg,#ffe27d,#f5b82e);box-shadow:0 4px 14px rgba(227,148,16,.25)}
 
 
+  .histTitle{display:flex;align-items:center;gap:8px}
+  .histYear{width:auto;font-weight:800;font-size:14px;padding:4px 8px}
+  .pfYear{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:6px}
+  .pfYear th,.pfYear td{padding:8px 6px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
+  .pfYear th{font-size:12px;color:var(--muted);font-weight:700}
+  .pfYear td:first-child,.pfYear th:first-child{text-align:left}
   /* ---------- 축구 라인업 판 ---------- */
   body.soccer #publishedCard{display:none !important}
   #luCard{--luA:#d64545;--luB:#2f6fd1;--luGold:#f2c14e}
@@ -1123,7 +1129,7 @@
     <div id="leaderBox"></div>
     <div class="statHead">
       <h2>개인 기록</h2><span class="sep">|</span>
-      <select id="statPeriod"><option value="all">전체</option><option value="year">올해</option><option value="month">이번 달</option></select>
+      <select id="statPeriod"><option value="all">전체</option><option value="month">이번 달</option></select>
       <input type="text" id="statSearch" class="search" placeholder="🔍 선수 기록 검색">
     </div>
     <div id="statsBox"><p class="muted">불러오는 중…</p></div>
@@ -1189,7 +1195,7 @@
 
   <section class="card app" data-pane="history">
     <div class="histHead">
-      <h2>경기 기록</h2>
+      <h2 class="histTitle">경기 기록 <select id="histYear" class="histYear" aria-label="연도"></select></h2>
       <div class="row" style="gap:6px">
         <button class="ghost small" id="histPrev">◀ 이전</button>
         <select id="histDay"></select>
@@ -2153,7 +2159,19 @@ function withRanks(list, k){
   let prev = null, rank = 0;
   return list.map((r, i)=>{ if(r[k] !== prev){ rank = i + 1; prev = r[k]; } return {...r, rank}; });
 }
+// 기록이 있는 연도 (최신순)
+const recYears = () => [...new Set(days.filter(d=>!d.cancelled && d.played_on <= todayStr()).map(d=>d.played_on.slice(0, 4)))].sort().reverse();
+let statPeriodSet = false;
+function fillStatPeriod(){
+  const sel = $('statPeriod'), ys = recYears(), thisY = todayStr().slice(0, 4);
+  let cur = sel.value;
+  if(!statPeriodSet) cur = ys.includes(thisY) ? 'y:' + thisY : 'all';          // 처음엔 올해
+  const opts = [['all', '전체 (통산)'], ...ys.map(y=>['y:' + y, y + ' 시즌']), ['month', '이번 달']];
+  if(!opts.some(([v])=>v === cur)) cur = 'all';
+  sel.innerHTML = opts.map(([v, t])=>`<option value="${v}" ${v === cur ? 'selected' : ''}>${t}</option>`).join('');
+}
 function renderStats(){
+  fillStatPeriod();
   const period = $('statPeriod').value;
   const streaks = attendanceStreaks();
   const all = aggregate(period).map(r=>({...r, pts: r.g + r.a, wdl: r.w * 10000 + r.d * 100 - r.l, streak: streaks[r.id] || 0}));
@@ -2220,7 +2238,7 @@ function renderStats(){
     renderStats();
   });
 }
-$('statPeriod').addEventListener('change', renderStats);
+$('statPeriod').addEventListener('change', ()=>{ statPeriodSet = true; renderStats(); });
 $('statSearch').addEventListener('input', renderStats);
 
 /* ----- 관리자: 경기 기록 입력 ----- */
@@ -2539,8 +2557,17 @@ function matchEvHtml(g){
   const side = t => ev.filter(e=>e.t === t).map(e=>`<span class="gEv${e.s == null ? ' og' : ''}">${e.s == null ? OG_BALL : '⚽'} ${e.s == null ? '<i>상대 자책골</i>' : `<b>${esc(evName(e.s))}</b>`}${e.a != null ? ` <small>👟 ${esc(evName(e.a))}</small>` : ''}</span>`).join('');
   return `<div class="mEv"><div class="h">${side(g.home)}</div><div></div><div class="a">${side(g.away)}</div></div>`;
 }
+let histYear = null;
 function renderHistory(){
-  const days = pastDays();
+  const allDays = pastDays();
+  // 연도: 보고 있는 날짜의 연도 (처음엔 가장 최근 연도)
+  const ys = [...new Set(allDays.map(d=>d.played_on.slice(0, 4)))].sort().reverse();
+  const hd = allDays.find(d=>d.id === histDayId);
+  if(hd) histYear = hd.played_on.slice(0, 4);
+  if(!ys.includes(histYear)) histYear = ys[0] || null;
+  $('histYear').innerHTML = ys.map(y=>`<option value="${y}" ${y === histYear ? 'selected' : ''}>${y} 시즌</option>`).join('');
+  $('histYear').style.display = ys.length ? '' : 'none';
+  const days = allDays.filter(d=>d.played_on.slice(0, 4) === histYear);
   const sel = $('histDay');
   if(!days.length){
     sel.innerHTML = '<option>기록 없음</option>'; $('histPrev').disabled = $('histNext').disabled = true;
@@ -2548,7 +2575,8 @@ function renderHistory(){
   }
   if(!days.some(d=>d.id===histDayId)) histDayId = days[0].id;
   const idx = days.findIndex(d=>d.id===histDayId);           // days는 최신순
-  sel.innerHTML = days.map(d=>`<option value="${d.id}" ${d.id===histDayId?'selected':''}>${fmtDay(d.played_on)}</option>`).join('');
+  const mdW = str => { const d = new Date(str + 'T00:00:00'); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`; };   // 연도는 위에서 고름
+  sel.innerHTML = days.map(d=>`<option value="${d.id}" ${d.id===histDayId?'selected':''}>${mdW(d.played_on)}</option>`).join('');
   $('histPrev').disabled = idx >= days.length - 1;
   $('histNext').disabled = idx <= 0;
 
@@ -2631,8 +2659,9 @@ function renderHistory(){
   if(mm) mm.onclick = ()=>{ matchesOpen = !matchesOpen; renderHistory(); };
 }
 $('histDay').addEventListener('change', ()=>{ histDayId = +$('histDay').value; matchesOpen = false; renderHistory(); });
-$('histPrev').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; matchesOpen = false; renderHistory(); } };
-$('histNext').onclick = ()=>{ const days = pastDays(), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; matchesOpen = false; renderHistory(); } };
+$('histYear').addEventListener('change', ()=>{ histYear = $('histYear').value; histDayId = (pastDays().find(d=>d.played_on.slice(0, 4) === histYear) || {}).id ?? null; matchesOpen = false; renderHistory(); });
+$('histPrev').onclick = ()=>{ const days = pastDays().filter(d=>d.played_on.slice(0, 4) === histYear), i = days.findIndex(d=>d.id===histDayId); if(i < days.length-1){ histDayId = days[i+1].id; matchesOpen = false; renderHistory(); } };
+$('histNext').onclick = ()=>{ const days = pastDays().filter(d=>d.played_on.slice(0, 4) === histYear), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; matchesOpen = false; renderHistory(); } };
 
 
 /* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
@@ -2682,13 +2711,13 @@ function renderMvpBanner(){
 function renderYearAwards(){
   const years = [...new Set(days.map(d=>d.played_on.slice(0,4)))].sort().reverse();
   const sel = $('awardYear');
-  if(!years.length){ sel.style.display = 'none'; $('yearAwards').innerHTML = '<p class="muted">경기 기록이 쌓이면 올해의 수상자가 나와요.</p>'; return; }
+  if(!years.length){ sel.style.display = 'none'; $('yearAwards').innerHTML = '<p class="muted">경기 기록이 쌓이면 시즌 수상자가 나와요.</p>'; return; }
   const thisYear = todayStr().slice(0,4);
   awardYear = years.includes(awardYear) ? awardYear : (years.includes(thisYear) ? thisYear : years[0]);
   sel.style.display = years.length > 1 ? '' : 'none';
-  sel.innerHTML = years.map(y=>`<option value="${y}" ${y===awardYear?'selected':''}>${y}년</option>`).join('');
+  sel.innerHTML = years.map(y=>`<option value="${y}" ${y===awardYear?'selected':''}>${y} 시즌</option>`).join('');
   const rows = aggregate('y:' + awardYear);
-  const label = t => awardYear === thisYear ? `올해의 ${t}` : `${awardYear} ${t}`;
+  const label = t => `${awardYear} 시즌 ${t}`;
   // 서포터 = 그해 구장 예약을 가장 많이 한 사람
   const AWARDS = [['mvp','MVP','🏆','회 수상','gold'], ['att','출석왕','📅','회 출석','green'], ['bk','서포터','🤝','회 구장 예약','blue']];
   $('yearAwards').innerHTML = `<div class="awards">${AWARDS.map(([k, t, icon, unit, cls])=>{
@@ -2871,6 +2900,12 @@ function renderProfile(){
 
       <h3 class="sub">통산 기록</h3>
       <div class="pfTiles">${tiles.map(([k,v,rk,cls])=>`<div class="${cls||''}"><span class="muted">${k}</span><b>${cls==='ns' ? '🚫 ' : ''}${v}</b>${rk}</div>`).join('')}</div>
+
+      ${(()=>{ const ys = recYears(); if(!ys.length) return '';
+        const rows = ys.map(y=>[y, aggregate('y:' + y).find(r=>r.id === p.id)]).filter(([, r])=>r && (r.att || r.g || r.a));
+        if(!rows.length) return '';
+        return `<h3 class="sub">시즌별 기록</h3><div class="tableWrap"><table class="pfYear"><thead><tr><th>시즌</th><th>출석</th><th>승-무-패</th><th>골</th><th>어시</th><th>MVP</th></tr></thead><tbody>
+          ${rows.map(([y, r])=>`<tr><td><b>${y}</b></td><td>${r.att}</td><td>${r.w}-${r.d}-${r.l}</td><td>${r.g}</td><td>${r.a}</td><td>${r.mvp || '-'}</td></tr>`).join('')}</tbody></table></div>`; })()}
 
       <h3 class="sub">최근 경기</h3>
       ${recent.length ? `<div class="pfRecent">${recent.map(({d,r,res})=>`
@@ -3247,7 +3282,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.16-6';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.16-7';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
