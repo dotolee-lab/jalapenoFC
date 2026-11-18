@@ -3374,7 +3374,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.18-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.18-4';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -4824,7 +4824,7 @@ function luTacUnit(d){
   const gs = d.match.games; return gs[Math.min(LU.edit ? LU.cur : LU.vcur, gs.length - 1)];
 }
 // 공: 이모지는 기기마다 모양이 달라서(윈도우 등) 직접 그림
-const LT_BALL_SVG = '<svg viewBox="0 0 20 20" aria-label="공"><circle cx="10" cy="10" r="9" fill="#fff" stroke="#1d2420" stroke-width="1.2"/><path d="M10 6.2 L13.6 8.8 L12.2 13 L7.8 13 L6.4 8.8 Z" fill="#1d2420"/><path d="M10 6.2 V1.2 M13.6 8.8 L18.4 7.2 M12.2 13 L15.2 17.2 M7.8 13 L4.8 17.2 M6.4 8.8 L1.6 7.2" stroke="#1d2420" stroke-width="1.1" fill="none"/><path d="M8.2 1.4 L10 2.6 L11.8 1.4 Z M17.6 5.4 L17.3 7.6 L18.9 9 Z M16.4 16.4 L14.3 16.3 L13.8 18.5 Z M3.6 16.4 L5.7 16.3 L6.2 18.5 Z M2.4 5.4 L2.7 7.6 L1.1 9 Z" fill="#1d2420"/></svg>';
+const LT_BALL_SVG = '<svg viewBox="0 0 20 20" aria-label="공"><defs><radialGradient id="ltBg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#f4f5f7"/><stop offset="1" stop-color="#cfd4d9"/></radialGradient><clipPath id="ltBc"><circle cx="10" cy="10" r="9.1"/></clipPath></defs><circle cx="10" cy="10" r="9.1" fill="url(#ltBg)"/><g clip-path="url(#ltBc)"><path d="M12.64 5.62L14.03 2.63M14.57 9.11L17.85 9.52M11.85 12.04L12.48 15.28M8.23 10.35L5.34 11.95M8.71 6.38L6.30 4.13M17.72 1.91L20.42 6.77M19.67 12.81L15.89 16.87M9.91 18.03L4.88 15.68M1.93 10.36L2.61 4.85M6.76 0.40L12.21 -0.66" stroke="#1f2226" stroke-width="0.9" stroke-linecap="round" fill="none"/><polygon points="14.03,2.63 12.21,-0.66 14.77,-3.41 18.18,-1.82 17.72,1.91" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/><polygon points="17.85,9.52 20.42,6.77 23.82,8.36 23.37,12.09 19.67,12.81" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/><polygon points="12.48,15.28 15.89,16.87 15.43,20.60 11.74,21.32 9.91,18.03" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/><polygon points="5.34,11.95 4.88,15.68 1.19,16.40 -0.63,13.11 1.93,10.36" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/><polygon points="6.30,4.13 2.61,4.85 0.78,1.56 3.35,-1.19 6.76,0.40" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/><polygon points="12.64,5.62 14.57,9.11 11.85,12.04 8.23,10.35 8.71,6.38" fill="#4a4f55" stroke="#4a4f55" stroke-width=".8" stroke-linejoin="round"/></g><circle cx="10" cy="10" r="9.1" fill="none" stroke="#c9ced3" stroke-width=".7"/></svg>';
 const ltTagCol = (s, t) => (LT_TAGS[s].find(x=>x[0] === t) || [0, '#64748b'])[1];
 const ltPosOf = (T, ref, s) => ref.t === 'us' ? T.us.pos[s][ref.i] : ref.t === 'opp' ? T.opp[s][ref.i] : T.ball[s];
 const ltArea = y => y < 33 ? '상대 진영' : y < 66 ? '중원' : '우리 진영';
