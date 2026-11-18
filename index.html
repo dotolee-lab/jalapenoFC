@@ -1079,6 +1079,9 @@
   .nBanner .x{background:rgba(255,255,255,.22);color:#fff;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
   .nHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
   .nHead h2{margin:0}
+  .nTitleBtn{background:none;border:0;padding:0;margin:0;color:var(--text);font:inherit;font-weight:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:6px}
+  .nTitleBtn .nChev{color:var(--muted);font-size:20px;line-height:1;margin-top:-2px}
+  .nTitleBtn:hover .nChev{color:var(--accent)}
   .nHeadBtns{display:flex;gap:6px}
   .nList{display:flex;flex-direction:column;width:100%}
   .nItem{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:9px 2px;border-top:1px solid var(--line);font-size:14px;cursor:pointer;background:none;color:var(--text);text-align:left;border-radius:0;width:100%;font-weight:400}
@@ -1143,7 +1146,7 @@
   </div>
   <aside class="side app">
   <section class="card app" id="noticeCard" style="display:none">
-    <div class="nHead"><h2>📢 공지 · 업데이트</h2><span class="nHeadBtns"><button class="small" id="nWrite" style="display:none">✏️ 쓰기</button><button class="ghost small" id="nAll">전체 보기</button></span></div>
+    <div class="nHead"><h2><button class="nTitleBtn" id="nTitle" aria-label="공지 · 업데이트 목록 보기">📢 공지 · 업데이트<span class="nChev">›</span></button></h2><span class="nHeadBtns"><button class="small" id="nWrite" style="display:none">✏️ 쓰기</button><button class="ghost small" id="nAll">전체 보기</button></span></div>
     <div id="noticeBox"></div>
   </section>
   <section class="card app" id="voteCard">
@@ -3516,7 +3519,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.18-8';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.18-9';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -4547,6 +4550,7 @@ function renderNotices(){
   $('noticeBox').querySelectorAll('[data-nid]').forEach(b=>b.onclick = ()=>openNotice(+b.dataset.nid));
   $('nWrite').onclick = ()=>openNoticeForm();
   $('nAll').onclick = openNoticeList;
+  $('nTitle').onclick = openNoticeList;
   renderNoticeBanner();
 }
 const nRow = n => `<button class="nItem${nIsNew(n) ? ' new' : ''}" data-nid="${n.id}">${n.pinned ? '<span class="nTag pin">📌 고정</span>' : nKindTag(n)}<span class="tt"><span class="tx">${esc(n.title)}</span>${nIsNew(n) ? '<i class="nN">N</i>' : ''}</span><span class="d">${nDate(n.created_at)}</span></button>`;
