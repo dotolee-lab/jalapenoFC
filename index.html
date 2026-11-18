@@ -252,7 +252,7 @@
   .ltTok.me .n{background:var(--luGold);color:#3b2a00}
   .ltTok.opp{width:34px;z-index:2}
   .ltTok.opp .d{width:26px;height:26px;font-size:9px;background:#fff;color:#2b2f36;border:3px solid #2b2f36;font-family:inherit}
-  .ltTok.ball{width:22px;z-index:8}.ltTok.ball .d{width:20px;height:20px;border:0;background:none;box-shadow:none;font-size:17px}
+  .ltTok.ball{width:24px;z-index:8}.ltTok.ball .d{width:22px;height:22px;border:0;background:none;box-shadow:none;padding:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}.ltTok.ball .d svg{width:100%;height:100%;display:block}
   .ltHint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;z-index:9;pointer-events:none}
   .ltLbl{font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 5px}
   .ltArrList div{display:flex;align-items:center;gap:6px;padding:4px 0;border-top:1px solid var(--line);font-size:13px}
@@ -3374,7 +3374,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.18-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.18-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -4823,6 +4823,8 @@ function luTacUnit(d){
   if(d.mode === 'self'){ LU.tteam = LU.tteam || 'A'; return d.self[LU.tteam]; }
   const gs = d.match.games; return gs[Math.min(LU.edit ? LU.cur : LU.vcur, gs.length - 1)];
 }
+// 공: 이모지는 기기마다 모양이 달라서(윈도우 등) 직접 그림
+const LT_BALL_SVG = '<svg viewBox="0 0 20 20" aria-label="공"><circle cx="10" cy="10" r="9" fill="#fff" stroke="#1d2420" stroke-width="1.2"/><path d="M10 6.2 L13.6 8.8 L12.2 13 L7.8 13 L6.4 8.8 Z" fill="#1d2420"/><path d="M10 6.2 V1.2 M13.6 8.8 L18.4 7.2 M12.2 13 L15.2 17.2 M7.8 13 L4.8 17.2 M6.4 8.8 L1.6 7.2" stroke="#1d2420" stroke-width="1.1" fill="none"/><path d="M8.2 1.4 L10 2.6 L11.8 1.4 Z M17.6 5.4 L17.3 7.6 L18.9 9 Z M16.4 16.4 L14.3 16.3 L13.8 18.5 Z M3.6 16.4 L5.7 16.3 L6.2 18.5 Z M2.4 5.4 L2.7 7.6 L1.1 9 Z" fill="#1d2420"/></svg>';
 const ltTagCol = (s, t) => (LT_TAGS[s].find(x=>x[0] === t) || [0, '#64748b'])[1];
 const ltPosOf = (T, ref, s) => ref.t === 'us' ? T.us.pos[s][ref.i] : ref.t === 'opp' ? T.opp[s][ref.i] : T.ball[s];
 const ltArea = y => y < 33 ? '상대 진영' : y < 66 ? '중원' : '우리 진영';
@@ -4851,7 +4853,7 @@ function ltPitchHtml(d, T, u, edit){
   if(LU.tvo !== false) T.opp[s].forEach(([x, y], i)=>{ h += `<div class="ltTok opp${sel?.t === 'opp' && sel.i === i ? ' sel' : ''}" data-t="opp" data-i="${i}" style="left:${x}%;top:${y}%"><div class="d">${T.opp.roles[i]}</div></div>`; });
   T.us.pos[s].forEach(([x, y], i)=>{ const tg = T.us.tags[s][i], id = u.xi[i];
     h += `<div class="ltTok${sel?.t === 'us' && sel.i === i ? ' sel' : ''}${id != null && id === mePid ? ' me' : ''}" data-t="us" data-i="${i}" style="left:${x}%;top:${y}%"><div class="d" style="background:${luColor(roles[i])}">${id != null ? luNo(id) : roles[i]}</div><div class="n">${id != null ? esc(luName(id)) : roles[i]}</div>${tg ? `<div class="tg" style="background:${ltTagCol(s, tg)}">${tg}</div>` : ''}</div>`; });
-  h += `<div class="ltTok ball" data-t="ball" data-i="0" style="left:${T.ball[s][0]}%;top:${T.ball[s][1]}%"><div class="d">⚽</div></div><span class="luPhaseLbl" style="background:${sc.c}">${sc.n}</span>`;
+  h += `<div class="ltTok ball" data-t="ball" data-i="0" style="left:${T.ball[s][0]}%;top:${T.ball[s][1]}%"><div class="d">${LT_BALL_SVG}</div></div><span class="luPhaseLbl" style="background:${sc.c}">${sc.n}</span>`;
   const hint = !edit ? '' : LU.ttool === 'arrow' ? (LU.tpend ? `${LT_ARR[LU.tarr || 'run'][0]} — 도착 지점을 누르세요` : '화살표: 출발할 선수(우리·상대·공)를 누르세요') : zonePick ? (sel?.t === 'us' ? '책임 구역: 칸을 눌러 켜고 끄세요' : '구역: 먼저 우리 선수를 누르세요') : '';
   if(hint) h += `<div class="ltHint">${hint}</div>`;
   return h + '</div>';
