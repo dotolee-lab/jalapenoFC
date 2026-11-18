@@ -206,6 +206,27 @@
   .luFld textarea{min-height:64px;font-weight:400}
   .luFld input[type=range]{width:100%}
 
+
+  .ltPlan{background:var(--head);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+  .ltPlanHd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .ltPlanHd select{width:auto;padding:4px 8px}
+  .ltTl{display:flex;gap:3px;height:46px}
+  .ltTlSeg{border:0;border-radius:9px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 4px;min-width:0;opacity:.62;transition:opacity .15s}
+  .ltTlSeg.on{opacity:1;box-shadow:0 0 0 3px var(--card),0 0 0 5px rgba(0,0,0,.35)}
+  .ltTlSeg b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .ltTlSeg span{font-size:10px;opacity:.9}
+  .ltTicks{position:relative;height:14px;margin-top:2px}
+  .ltTicks span{position:absolute;transform:translateX(-50%);font-size:10px;color:var(--muted)}
+  .ltTicks span:first-child{transform:none}.ltTicks span:last-child{transform:translateX(-100%)}
+  .ltSegEd{margin-top:8px;background:var(--card);border:2px solid;border-radius:12px;padding:10px;font-size:13px}
+  .ltSegEd select{width:auto;padding:4px 8px}
+  .ltSegEd .luSeg button{padding:5px 9px;font-size:12px}
+  .ltSegMemo{width:100%;margin-top:8px;font-size:13px}
+  .ltPress{position:absolute;left:0;right:0;border-top:3px dashed;z-index:4;pointer-events:none;transition:top .6s ease}
+  .ltPress span{position:absolute;right:8px;top:-11px;color:#fff;font-size:11px;font-weight:900;border-radius:999px;padding:1px 8px}
+  .ltLnHi{position:absolute;top:0;height:50%;z-index:1;pointer-events:none}
+  .ltLnTag{position:absolute;left:50%;top:44%;transform:translateX(-50%);color:#fff;font-size:11px;font-weight:900;border-radius:999px;padding:2px 10px;z-index:5;white-space:nowrap;pointer-events:none}
+  @media (max-width:520px){.ltTlSeg b{font-size:11px}}
   /* 전술판 2 */
   .ltScenes{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
   .ltScenes button{background:var(--card);color:var(--muted);border:1.5px solid var(--line);padding:6px 11px;font-weight:800;font-size:13px;border-radius:10px}
@@ -3353,7 +3374,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.18-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.18-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -4703,7 +4724,7 @@ function luBindEdit(){
   box.querySelectorAll('[data-gi]').forEach(b=>b.onclick = ()=>{ LU.cur = +b.dataset.gi; LU.sel = null; renderLineup(); });
   if($('luAddG')) $('luAddG').onclick = ()=>{ d.match.games.push(luUnit0(luUnit(d, 'G', LU.cur).form)); LU.cur = d.match.games.length - 1; LU.sel = null; luTouch(); renderLineup(); };
   if($('luCopy')) $('luCopy').onclick = ()=>{ const p = d.match.games[LU.cur - 1]; d.match.games[LU.cur] = {form: p.form, xi: p.xi.slice()}; LU.sel = null; luTouch(); renderLineup(); plToast(`${LU.cur}경기 라인업을 가져왔어요`); };
-  if($('luDelG')) $('luDelG').onclick = ()=>{ if(!confirm(`${LU.cur + 1}경기를 지울까요?`)) return; d.match.games.splice(LU.cur, 1); LU.cur = Math.max(0, LU.cur - 1); LU.sel = null; luTouch(); renderLineup(); };
+  if($('luDelG')) $('luDelG').onclick = ()=>{ if(!confirm(`${LU.cur + 1}경기를 지울까요?`)) return; d.match.games.splice(LU.cur, 1); if(d.plan?.m) d.plan.m.splice(LU.cur, 1); LU.cur = Math.max(0, LU.cur - 1); LU.sel = null; luTouch(); renderLineup(); };
   box.querySelectorAll('.luFilters button').forEach(b=>b.onclick = e=>{ e.stopPropagation(); LU.filter = b.dataset.f; renderLineup(); });
   box.querySelectorAll('.luBench .luChip').forEach(el=>el.onclick = e=>{
     e.stopPropagation(); const id = +el.dataset.id;
@@ -4826,6 +4847,7 @@ function ltPitchHtml(d, T, u, edit){
       h += `<path d="${path}" fill="none" stroke="${c}" stroke-width="${on ? 2.6 : 1.8}" stroke-opacity="${sel && !on ? .45 : .95}" ${dash ? `stroke-dasharray="${dash}"` : ''} marker-end="url(#ltm_${a.type})" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; });
     h += '</svg>';
   }
+  h += ltPlanOverlay(d, edit);
   if(LU.tvo !== false) T.opp[s].forEach(([x, y], i)=>{ h += `<div class="ltTok opp${sel?.t === 'opp' && sel.i === i ? ' sel' : ''}" data-t="opp" data-i="${i}" style="left:${x}%;top:${y}%"><div class="d">${T.opp.roles[i]}</div></div>`; });
   T.us.pos[s].forEach(([x, y], i)=>{ const tg = T.us.tags[s][i], id = u.xi[i];
     h += `<div class="ltTok${sel?.t === 'us' && sel.i === i ? ' sel' : ''}${id != null && id === mePid ? ' me' : ''}" data-t="us" data-i="${i}" style="left:${x}%;top:${y}%"><div class="d" style="background:${luColor(roles[i])}">${id != null ? luNo(id) : roles[i]}</div><div class="n">${id != null ? esc(luName(id)) : roles[i]}</div>${tg ? `<div class="tg" style="background:${ltTagCol(s, tg)}">${tg}</div>` : ''}</div>`; });
@@ -4840,6 +4862,7 @@ function ltTop(d, T, u, edit){
     ? `<div class="luSeg"><button data-tt="A" class="${LU.tteam === 'A' ? 'on' : ''}">A팀</button><button data-tt="B" class="${LU.tteam === 'B' ? 'on' : ''}">B팀</button></div>`
     : `<div class="luTabs" style="margin:0">${d.match.games.map((g, i)=>`<button class="${i === (edit ? LU.cur : LU.vcur) ? 'on' : ''}${!edit && g.xi.includes(mePid) ? ' mine' : ''}" data-tg="${i}">${i + 1}경기</button>`).join('')}</div>`;
   return `<div class="luRow">${pick}<span class="muted" style="font-size:13px">우리 ${u.form}</span>${edit ? `<span class="muted" style="font-size:13px">· 상대</span><select id="ltOpp">${forms.map(f=>`<option ${f === T.opp.form ? 'selected' : ''}>${f}</option>`).join('')}</select>` : `<span class="muted" style="font-size:13px">· 상대 ${T.opp.form}</span>`}</div>
+    ${ltPlanHtml(d, edit)}
     <div class="ltScenes">${LT_SC.map(x=>`<button data-sc="${x.k}" class="${x.k === s ? 'on' : ''}" style="${x.k === s ? `background:${x.c};border-color:${x.c}` : ''}">${x.n}</button>`).join('')}</div>
     <div class="ltRule" style="background:${sc.c}">${sc.n} · <span style="font-weight:600;opacity:.9">${sc.d}</span>${edit ? `<textarea id="ltRuleT" maxlength="120" placeholder="이 장면의 팀 약속">${esc(T.rules[s] || '')}</textarea>` : `<div class="ltRuleTx">📌 ${esc(T.rules[s] || '-')}</div>`}</div>
     ${edit ? `<div class="luRow"><div class="luSeg">${[['move', '✋ 위치'], ['arrow', '➰ 화살표'], ['zone', '🟨 구역']].map(([k, n])=>`<button data-tool="${k}" class="${(LU.ttool || 'move') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
@@ -4853,6 +4876,82 @@ function ltBottom(){
 }
 const LT_LEGEND = `<details class="luRotBox"><summary>범례</summary><div class="ltLegend">${Object.entries(LT_ARR).map(([k, [n, c, dash]])=>`<svg viewBox="0 0 40 12"><path d="${k === 'drib' ? 'M2 6 L8 3 L14 9 L20 3 L26 9 L32 6' : 'M2 6 L34 6'}" stroke="${c === '#ffffff' ? '#666' : c}" stroke-width="2.5" fill="none" ${dash ? `stroke-dasharray="${dash}"` : ''}/><path d="M33 2 L39 6 L33 10z" fill="${c === '#ffffff' ? '#666' : c}"/></svg><span>${n}</span>`).join('')}
   <span class="ltHoleSw"></span><span>아무도 안 맡은 우리 진영 구역</span><span style="text-align:center;font-weight:900">○</span><span>상대 선수 (흰 동그라미)</span><span style="text-align:center;font-weight:900;color:#b8860b">하프</span><span>하프스페이스 레인</span></div></details>`;
+/* ----- 시간대 계획: 경기마다 시간 구간별 운영 방향 (압박 높이 · 공략 레인 · 한 줄 지시) ----- */
+const LT_FOCUS = [
+  {k:'press',  n:'🔥 강한 압박', c:'#dc2626', sc:'xc',  press:'high', lanes:[]},
+  {k:'poss',   n:'⚽ 점유',      c:'#16a34a', sc:'att', press:'mid',  lanes:[]},
+  {k:'wide',   n:'↔️ 측면 공략', c:'#ca8a04', sc:'att', press:'mid',  lanes:[0, 4]},
+  {k:'center', n:'🎯 중앙 침투', c:'#7c3aed', sc:'att', press:'mid',  lanes:[1, 2, 3]},
+  {k:'counter',n:'⚡ 역습 대기', c:'#0891b2', sc:'oc',  press:'low',  lanes:[]},
+  {k:'safe',   n:'🛡️ 수비 안정', c:'#2563eb', sc:'def', press:'low',  lanes:[]},
+];
+const LT_PRESS = {high:['높게', 40], mid:['중간', 52], low:['낮게', 64]};
+const LT_FMEMO = {press:'초반엔 다 같이 올라가서 압박', poss:'템포 늦추고 숨 고르기', wide:'측면 1:1 적극적으로', center:'하프스페이스로 침투', counter:'뺏으면 바로 뒷공간', safe:'라인 내리고 버티기'};
+const LT_LFULL = ['왼쪽 측면', '왼쪽 하프', '중앙', '오른쪽 하프', '오른쪽 측면'], LT_LSHORT = ['왼', '왼하', '중', '오하', '오'];
+const ltSeg = (from, to, k, memo = '') => { const f = LT_FOCUS.find(x=>x.k === k); return {from, to, focus: k, press: f.press, lanes: f.lanes.slice(), memo}; };
+const ltPlanDefault = len => [ltSeg(0, Math.round(len / 15) * 5, 'press', LT_FMEMO.press), ltSeg(Math.round(len / 15) * 5, Math.round(len / 7.5) * 5, 'poss', LT_FMEMO.poss), ltSeg(Math.round(len / 7.5) * 5, len, 'wide', LT_FMEMO.wide)];
+const ltFocus = k => LT_FOCUS.find(x=>x.k === k) || LT_FOCUS[1];
+// 지금 보는 경기의 시간대 계획 (편집: 없으면 만들어 넣음 / 보기: 없으면 기본값만 보여줌)
+function ltPlan(d, edit){
+  const P = edit ? (d.plan = d.plan || {len: 30, m: [], self: null}) : (d.plan || {len: 30, m: [], self: null});
+  const len = P.len || 30;
+  if(d.mode === 'self'){ if(!P.self){ if(!edit) return {P, segs: ltPlanDefault(len)}; P.self = ltPlanDefault(len); } return {P, segs: P.self}; }
+  const gi = Math.min(edit ? LU.cur : LU.vcur, d.match.games.length - 1);
+  if(!P.m[gi]){ if(!edit) return {P, segs: ltPlanDefault(len)}; P.m[gi] = ltPlanDefault(len); }
+  return {P, segs: P.m[gi]};
+}
+function ltPlanOverlay(d, edit){
+  if(LU.tseg == null) return '';
+  const g = ltPlan(d, edit).segs[LU.tseg]; if(!g) return '';
+  const f = ltFocus(g.focus), y = LT_PRESS[g.press][1];
+  let h = g.lanes.map(k=>`<div class="ltLnHi" style="left:${LT_LANES[k]}%;width:${LT_LANES[k + 1] - LT_LANES[k]}%;background:linear-gradient(180deg,${f.c}66,${f.c}00 60%)"></div>`).join('');
+  h += `<div class="ltPress" style="top:${y}%;border-color:${f.c}"><span style="background:${f.c}">압박 시작선 · ${LT_PRESS[g.press][0]}</span></div>`;
+  if(g.lanes.length) h += `<div class="ltLnTag" style="background:${f.c}">공략: ${g.lanes.map(k=>LT_LFULL[k]).join(' · ')}</div>`;
+  return h;
+}
+function ltPlanHtml(d, edit){
+  const {P, segs} = ltPlan(d, edit), len = P.len || 30, g = LU.tseg != null ? segs[LU.tseg] : null;
+  const gname = d.mode === 'self' ? '자체전' : `${Math.min(edit ? LU.cur : LU.vcur, d.match.games.length - 1) + 1}경기`;
+  let h = `<div class="ltPlan"><div class="ltPlanHd"><b>⏱️ ${gname} 시간대 계획</b><span style="flex:1"></span>${edit ? `<label class="muted" style="font-size:12px;font-weight:700">경기 길이 <select id="ltLen">${[20, 25, 30, 35, 40, 45].map(v=>`<option ${v === len ? 'selected' : ''}>${v}</option>`).join('')}</select>분</label>` : `<span class="muted" style="font-size:12px">경기 ${len}분</span>`}</div>
+    <div class="ltTl">${segs.map((x, i)=>{ const f = ltFocus(x.focus); return `<button class="ltTlSeg${i === LU.tseg ? ' on' : ''}" data-seg="${i}" style="flex:${x.to - x.from};background:${f.c}"><span>${x.from}–${x.to}분</span><b>${f.n}</b></button>`; }).join('')}</div>
+    <div class="ltTicks">${Array.from({length: len / 5 + 1}, (_, i)=>`<span style="left:${i * 5 / len * 100}%">${i * 5}</span>`).join('')}</div>`;
+  if(g){
+    const f = ltFocus(g.focus), last = LU.tseg === segs.length - 1;
+    if(edit){
+      const ends = []; for(let m = g.from + 5; m <= (last ? len : segs[LU.tseg + 1].to - 5); m += 5) ends.push(m);
+      h += `<div class="ltSegEd" style="border-color:${f.c}">
+        <div class="luRow" style="margin:0 0 6px"><b style="color:${f.c}">${g.from}분 ~</b><select id="ltSegTo" ${last ? 'disabled' : ''}>${ends.map(m=>`<option ${m === g.to ? 'selected' : ''}>${m}</option>`).join('')}</select><b style="color:${f.c}">분</b>
+          <span style="flex:1"></span><button class="ghost small" id="ltSplit">✂️ 구간 나누기</button>${segs.length > 1 ? '<button class="ghost small" id="ltSegDel" style="color:var(--danger)">구간 삭제</button>' : ''}</div>
+        <div class="luChips" style="margin:0">${LT_FOCUS.map(z=>`<button class="luChip" data-focus="${z.k}" style="${z.k === g.focus ? `background:${z.c};color:#fff;border-color:${z.c}` : ''}">${z.n}</button>`).join('')}</div>
+        <div class="luRow" style="margin:8px 0 0"><span class="muted" style="font-size:12px;font-weight:800">압박 높이</span><div class="luSeg">${Object.entries(LT_PRESS).map(([k, [n]])=>`<button data-press="${k}" class="${g.press === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+          <span class="muted" style="font-size:12px;font-weight:800">공략 레인</span><div class="luSeg">${LT_LSHORT.map((n, k)=>`<button data-lane="${k}" class="${g.lanes.includes(k) ? 'on' : ''}">${n}</button>`).join('')}</div></div>
+        <input id="ltSegMemo" class="ltSegMemo" maxlength="60" placeholder="이 구간 한 줄 지시" value="${esc(g.memo || '')}"></div>`;
+    }else{
+      h += `<div class="ltSegEd" style="border-color:${f.c}"><b style="color:${f.c}">${g.from}–${g.to}분 · ${f.n}</b> <span class="muted">압박 ${LT_PRESS[g.press][0]}${g.lanes.length ? ` · 공략 ${g.lanes.map(k=>LT_LFULL[k]).join('·')}` : ''}</span>${g.memo ? `<div style="margin-top:3px;font-weight:700">💬 ${esc(g.memo)}</div>` : ''}</div>`;
+    }
+  }else h += `<p class="muted" style="font-size:12px;margin:4px 0 0">구간을 누르면 경기장에 압박선과 공략 레인이 표시돼요.</p>`;
+  return h + '</div>';
+}
+function ltBindPlan(d, edit){
+  const box = $('luBox');
+  box.querySelectorAll('[data-seg]').forEach(b=>b.onclick = ()=>{ const i = +b.dataset.seg; LU.tseg = LU.tseg === i ? null : i;
+    if(LU.tseg != null){ const g = ltPlan(d, edit).segs[i]; if(g) LU.tsc = ltFocus(g.focus).sc; } renderLineup(); });
+  if(!edit) return;
+  const {P, segs} = ltPlan(d, true), g = LU.tseg != null ? segs[LU.tseg] : null;
+  if($('ltLen')) $('ltLen').onchange = e=>{ const n = +e.target.value, r = n / (P.len || 30);
+    [...P.m.filter(Boolean), ...(P.self ? [P.self] : [])].forEach(q=>q.forEach((x, i)=>{ x.from = Math.round(x.from * r / 5) * 5; x.to = i === q.length - 1 ? n : Math.round(x.to * r / 5) * 5; }));
+    P.len = n; luTouch(); renderLineup(); };
+  if(!g) return;
+  $('ltSegTo').onchange = e=>{ const v = +e.target.value; g.to = v; if(segs[LU.tseg + 1]) segs[LU.tseg + 1].from = v; luTouch(); renderLineup(); };
+  $('ltSplit').onclick = ()=>{ if(g.to - g.from < 10){ plToast('5분보다 짧게는 못 나눠요'); return; } const mid = g.from + Math.round((g.to - g.from) / 10) * 5;
+    segs.splice(LU.tseg + 1, 0, {...JSON.parse(JSON.stringify(g)), from: mid, memo: ''}); g.to = mid; luTouch(); renderLineup(); };
+  if($('ltSegDel')) $('ltSegDel').onclick = ()=>{ const i = LU.tseg; if(i > 0) segs[i - 1].to = g.to; else segs[1].from = 0; segs.splice(i, 1); LU.tseg = Math.max(0, i - 1); luTouch(); renderLineup(); };
+  box.querySelectorAll('[data-focus]').forEach(b=>b.onclick = ()=>{ const z = ltFocus(b.dataset.focus); g.focus = z.k; g.press = z.press; g.lanes = z.lanes.slice(); LU.tsc = z.sc; if(!g.memo || Object.values(LT_FMEMO).includes(g.memo)) g.memo = LT_FMEMO[z.k]; luTouch(); renderLineup(); });
+  box.querySelectorAll('[data-press]').forEach(b=>b.onclick = ()=>{ g.press = b.dataset.press; luTouch(); renderLineup(); });
+  box.querySelectorAll('[data-lane]').forEach(b=>b.onclick = ()=>{ const k = +b.dataset.lane, i = g.lanes.indexOf(k); i >= 0 ? g.lanes.splice(i, 1) : g.lanes.push(k); g.lanes.sort(); luTouch(); renderLineup(); });
+  $('ltSegMemo').oninput = e=>{ g.memo = e.target.value; luTouch(); };
+}
+
 function luTacViewHtml(){
   const d = LU.pub;
   if(!d) return `<p class="muted">라인업이 공개되면 전술도 여기에서 볼 수 있어요.</p>`;
@@ -4898,8 +4997,9 @@ function luBindTac(){
   const box = $('luBox'), edit = LU.edit, d = edit ? LU.data : LU.pub; if(!d) return;
   const u = luTacUnit(d), T = edit ? ltOf(d, u.form) : ltRead(d, u.form), s = LU.tsc || 'xc';
   box.querySelectorAll('[data-tt]').forEach(b=>b.onclick = ()=>{ LU.tteam = b.dataset.tt; LU.tsel = null; renderLineup(); });
-  box.querySelectorAll('[data-tg]').forEach(b=>b.onclick = ()=>{ if(edit) LU.cur = +b.dataset.tg; else LU.vcur = +b.dataset.tg; LU.tsel = null; renderLineup(); });
+  box.querySelectorAll('[data-tg]').forEach(b=>b.onclick = ()=>{ if(edit) LU.cur = +b.dataset.tg; else LU.vcur = +b.dataset.tg; LU.tsel = null; LU.tseg = null; renderLineup(); });
   box.querySelectorAll('[data-sc]').forEach(b=>b.onclick = ()=>{ LU.tsc = b.dataset.sc; LU.tpend = null; renderLineup(); });
+  ltBindPlan(d, edit);
   $('ltFrom').onchange = e=>{ LU.tfrom = e.target.value; }; $('ltTo').onchange = e=>{ LU.tto = e.target.value; };
   $('ltPlay').onclick = ()=>ltPlay(LU.tfrom || 'att', LU.tto || 'xc');
   $('ltVz').onchange = e=>{ LU.tvz = e.target.checked; renderLineup(); };
