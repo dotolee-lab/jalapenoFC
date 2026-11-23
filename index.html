@@ -2844,7 +2844,6 @@ function renderMvpBanner(){
         return `<div class="hcW"><div class="hcName">${esc(w.name)}</div>
           <div class="hcStats">${cells.map(([v, l])=>`<div><b>${v}</b><small>${l}</small></div>`).join('')}</div></div>`;
       }).join('')}
-      <div class="hcFt">${multi ? '공동 MOM 축하해요! ' : ''}다음 경기까지 이 자리는 당신 거예요 👏</div>
     </div>
   </div>`;
   box.querySelector('.hofClose').onclick = ()=>{ hofHidden = true; renderMvpBanner(); };
@@ -3422,7 +3421,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-13';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-14';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
