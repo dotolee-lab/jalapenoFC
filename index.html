@@ -770,16 +770,6 @@
   .badge.offBadge{font-weight:800;border:0}
   .badge.offBadge.r-pres{background:#f5b82e;color:#3b2a00}
   .badge.offBadge.r-treas{background:#8c1d2b;color:#fff}
-  .badge.offBadge.r-mom{background:linear-gradient(135deg,#f3d27a,#d9a441);color:#3b2a00;letter-spacing:.5px}
-  .pcard.mom{border-color:#e3b45a;box-shadow:0 0 0 1px #e3b45a inset,0 6px 18px rgba(217,164,65,.18)}
-  .pcard.mom .avatar,.pfCard.mom .pfAv .avatar{box-shadow:0 0 0 3px #e3b45a,0 0 0 7px rgba(227,180,90,.28)}
-  .momCnt{color:#b07d1a;font-weight:800}
-  .momWrap{position:relative;display:inline-block;line-height:0}
-  .momCrown{position:absolute;left:50%;top:0;width:46%;max-width:72px;transform:translate(-50%,-62%) rotate(-8deg);filter:drop-shadow(0 3px 4px rgba(0,0,0,.28));pointer-events:none}
-  .momWrap.big .momCrown{max-width:92px}
-  .pcard .momWrap,.pfAv .momWrap{margin-top:22px}
-  .momCnt{white-space:nowrap}
-  @media (prefers-color-scheme: dark){.momCnt{color:#e3b45a}}
   .rOff{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:var(--head)}
   .rOffT{font-weight:800;font-size:15px;margin-bottom:8px}
   .rOffGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
@@ -2822,11 +2812,6 @@ function mvpAwards(){
       .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name})).filter(r=>r.name)}))
     .filter(x=>x.winners.length);
 }
-// 지금 MOM: 가장 최근에 MOM을 뽑은 경기의 수상자 (다음 MOM이 나올 때까지 명단·프로필에 표시)
-const currentMomIds = () => new Set((mvpAwards().sort((a, b)=>b.day.played_on.localeCompare(a.day.played_on))[0]?.winners || []).map(w=>w.player_id));
-const MOM_CROWN = '<svg class="momCrown" viewBox="0 0 64 46" aria-label="MOM"><defs><linearGradient id="mcG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe39a"/><stop offset=".55" stop-color="#e3b45a"/><stop offset="1" stop-color="#b8862f"/></linearGradient></defs><path d="M6 30 L3 8 L18 19 L32 2 L46 19 L61 8 L58 30 Z" fill="url(#mcG)" stroke="#8a6116" stroke-width="1.6" stroke-linejoin="round"/><circle cx="3" cy="8" r="3" fill="#fbe39a" stroke="#8a6116" stroke-width="1.2"/><circle cx="32" cy="3" r="3.2" fill="#e5383b" stroke="#8a6116" stroke-width="1.2"/><circle cx="61" cy="8" r="3" fill="#fbe39a" stroke="#8a6116" stroke-width="1.2"/><rect x="5" y="28" width="54" height="16" rx="3" fill="#0b3124" stroke="#e3b45a" stroke-width="1.6"/><text x="32" y="40.5" text-anchor="middle" font-family="Arial Black,Helvetica Neue,Arial,sans-serif" font-weight="900" font-size="11.5" fill="#f3d27a" letter-spacing="1.5">MOM</text></svg>';
-// 지금 MOM이면 사진 위에 왕관
-const momAvatar = (p, size) => currentMomIds().has(p.id) ? `<span class="momWrap ${size}" title="지난 경기 Man of the Match">${avatar(p.name, size)}${MOM_CROWN}</span>` : avatar(p.name, size);
 function renderMvpBanner(){
   const box = $('mvpBanner');
   const latest = mvpAwards()[0];
@@ -2967,16 +2952,14 @@ function renderProfilePicker(){
   const posFn = POS_F.find(([k])=>k === rosterPos)[2];
   const list = members.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).filter(p=>(!qText || p.name.includes(qText)) && posFn(p));
   $('rosterCount').textContent = `${members.length}명`;
-  const momNow = currentMomIds();
   $('pfPicker').innerHTML = list.map(p=>{
-    const st = agg[p.id] || {att:0, g:0, a:0, mvp:0};
-    const isMom = momNow.has(p.id);
-    return `<button class="pcard${isMom ? ' mom' : ''}" data-pick="${p.id}">
+    const st = agg[p.id] || {att:0, g:0, a:0};
+    return `<button class="pcard" data-pick="${p.id}">
       <span class="pcNo${p.number != null ? '' : ' empty'}">${p.number != null ? `No. ${noLabel(p.number)}` : '&nbsp;'}</span>
-      ${isMom ? momAvatar(p, 'md') : avatar(p.name, 'md')}
+      ${avatar(p.name, 'md')}
       <span class="pcName">${titleBadges(p.id)}${esc(p.name)}${gearIcons(p.id)}${isBirthday(p.birth) ? ' 🎂' : ''}</span>
       <span class="pcMeta">${p.pos.map(x=>`<span class="badge b-${x}">${x}</span>`).join('')}</span>
-      <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}${st.mvp ? ` · <span class="momCnt" title="MOM ${st.mvp}회">🏆${st.mvp}</span>` : ''}</span>
+      <span class="pcStat">출석 ${st.att} · 골 ${st.g} · 어시 ${st.a}</span>
     </button>`;
   }).join('') || `<p class="muted">${qText ? '검색 결과가 없어요.' : '등록된 선수가 없어요.'}</p>`;
   $('pfPicker').insertAdjacentHTML('beforeend', guestsP.length ? `<p class="muted guestLine">${guestBadge} ${guestsP.map(p=>esc(p.name)).join(', ')} — 투표·팀 구성에만 들어가고 기록은 남지 않아요</p>` : '');
@@ -3019,9 +3002,9 @@ function renderProfile(){
 
   box.innerHTML = `
     <button class="ghost small pfBack">← 선수 명단</button>
-    <div class="pfCard${currentMomIds().has(p.id) ? ' mom' : ''}">
+    <div class="pfCard">
       <div class="pfTop">
-        <div class="pfAv">${p.number != null ? `<span class="pcNo">No. ${noLabel(p.number)}</span>` : ''}${momAvatar(p, 'big')}</div>
+        <div class="pfAv">${p.number != null ? `<span class="pcNo">No. ${noLabel(p.number)}</span>` : ''}${avatar(p.name, 'big')}</div>
         <div class="pfId">
           <div class="pfName">${titleBadges(p.id)}${esc(p.name)}${isBirthday(p.birth)?' <span title="오늘 생일!">🎂</span>':''}</div>
           <div class="pfMeta">${meta}</div>
@@ -3438,7 +3421,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-9';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-10';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
