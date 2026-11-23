@@ -2832,7 +2832,7 @@ function renderMvpBanner(){
     <div class="hcRight">
       <div class="hcWm">JALAPE<b>Ñ</b>O FC</div>
       <div class="hcDt">MATCHDAY · ${fmtDay(day.played_on)}</div>
-      <span class="hcTag">${multi ? 'PLAYERS' : 'PLAYER'} OF THE MATCH</span>
+      <span class="hcTag">${multi ? 'MEN' : 'MAN'} OF THE MATCH</span>
       ${winners.map(w=>{
         const res = dayResults(day.id, w.team);
         const cells = [[w.goals || 0, '골'], [w.assists || 0, '어시']];
@@ -3420,7 +3420,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-4';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-6';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
