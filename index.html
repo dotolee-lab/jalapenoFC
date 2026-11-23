@@ -3276,7 +3276,7 @@ const sinceText = iso => {
 };
 const holdingOf = pid => gear.filter(g=>g.holders.includes(pid)).map(g=>g.label);
 // 선수 이름 옆에 붙는 보관 장비 아이콘 (장비 보관 칸과 같은 이모지)
-const gearIcons = pid => { const g = gear.filter(x=>x.holders.includes(pid)); return g.length ? `<span class="nameGear" title="${esc(g.map(x=>x.label).join(', '))} 보관 중">${g.map(x=>GEAR_ICON[x.id] || '🎒').join('')}</span>` : ''; };
+const gearIcons = pid => '';   // 이름 옆 장비·조끼 아이콘은 표시 안 함 (보관 현황은 장비 카드에서 확인)
 function renderGear(){
   const card = $('gearCard'), box = $('gearBox');
   card.classList.toggle('admin-only', gearMissing);
@@ -3421,7 +3421,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-10';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-11';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
