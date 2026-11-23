@@ -62,29 +62,6 @@
   .teamBody{display:flex;gap:10px;align-items:flex-start}
   .pitch{width:128px;flex:none;text-align:center}
   .pName{font-size:5px;font-weight:800;fill:var(--text);paint-order:stroke;stroke:var(--pitch);stroke-width:1.6px}
-  .team.myTeam{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-  .meTag{font-size:11px;background:var(--accent);color:#fff;border-radius:999px;padding:1px 7px;font-weight:700;margin-left:6px;vertical-align:1px}
-  .tcToggle{width:100%;margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:6px;background:var(--accent2);color:var(--accent);font-weight:700;font-size:14px;padding:9px 12px}
-  .tcCnt{background:var(--danger);color:#fff;border-radius:999px;font-size:11px;padding:0 7px;min-width:20px;text-align:center}
-  .tcChat{margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .tcMsgs{height:280px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
-  .tcM{max-width:84%;display:flex;flex-direction:column;align-items:flex-start}
-  .tcM.me{align-self:flex-end;align-items:flex-end}
-  .tcWho{font-size:11px;color:var(--muted);margin:0 4px 1px}
-  .tcBub{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:14px;word-break:break-word;white-space:pre-wrap}
-  .tcM.me .tcBub{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .tcMeta{display:flex;gap:6px;align-items:center;font-size:10.5px;color:var(--muted);margin:1px 4px 0}
-  .tcLike{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;font-size:11px;padding:0 7px;line-height:18px}
-  .tcLike.on{border-color:var(--accent);color:var(--accent);font-weight:700}
-  .tcSys{align-self:center;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 10px;text-align:center}
-  .tcSys b{color:var(--text)}
-  .tcChips{display:flex;gap:6px;overflow-x:auto;padding:8px 10px 0;background:var(--card);scrollbar-width:none}
-  .tcChips::-webkit-scrollbar{display:none}
-  .tcChips button{flex:none;padding:4px 10px;border-radius:999px;background:var(--head);color:var(--text);font-size:12px;border:1px solid var(--line)}
-  .tcInp{display:flex;gap:6px;padding:8px 10px 10px;background:var(--card);margin:0}
-  .tcInp input{flex:1;min-width:0}
-  .tcFoot{font-size:11px;color:var(--muted);padding:0 10px 8px;background:var(--card)}
-  .tcLock{margin-top:12px;border:1px dashed var(--line);border-radius:10px;padding:10px;text-align:center;color:var(--muted);font-size:12.5px}
   .pitch svg{width:100%;height:auto;display:block}
   .tacLabel{font-size:12px;color:var(--muted);margin-top:2px;font-weight:600}
   .tacEmpty{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:28px 4px}
@@ -1791,9 +1768,6 @@ const ORDER = {공격:0, 미드:1, 수비:2};
 // 풋살: 골키퍼 제외 필드 선수 기준. 기본 6:6 → 필드 5명 (골키퍼는 그림 맨 아래에 따로)
 const FUTSAL_TACTICS = {
   5: ['2-1-2','2-2-1','1-2-2','3-1-1','1-3-1','2-3','3-2','1-1-2-1'],
-  4: ['1-2-1','2-2','2-1-1','3-1','1-1-2'],
-  6: ['2-2-2','2-1-3','3-1-2','2-3-1','3-2-1','2-1-2-1'],
-  3: ['1-1-1','2-1','1-2'],
 };
 const FUTSAL_ONFIELD = 6;          // 한 팀이 경기장에 서는 인원 (골키퍼 포함)
 // 축구: 골키퍼 제외 필드 선수 기준 (11명 → 필드 10명)
@@ -1851,7 +1825,7 @@ function pitchSvg(tactic, team){
 }
 function tacticSelect(i, current){
   const groups = Object.entries(TACTIC_PRESETS_OF()).map(([n,list])=>
-    `<optgroup label="${SPORT === 'soccer' ? `${n}명 (GK 포함)` : `필드 ${n}명 (${+n + 1}:${+n + 1}${+n === FUTSAL_ONFIELD - 1 ? ' · 기본' : ''})`}">${list.map(t=>`<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('');
+    `<optgroup label="${SPORT === 'soccer' ? `${n}명 (GK 포함)` : `필드 ${n}명 + GK (${+n + 1}:${+n + 1})`}">${list.map(t=>`<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('')}</optgroup>`).join('');
   const isCustom = current && !Object.values(TACTIC_PRESETS_OF()).flat().includes(current);
   return `<select class="tacSel" data-team="${i}">
     <option value="" ${!current?'selected':''}>전술 없음</option>${groups}
@@ -1913,7 +1887,10 @@ $('again').onclick = make;
 const publicData = teams => teams.map(t=>t.map(p=>[p.name, p.pos.join(','), p.gk?1:0]));
 const fromPublic = data => data.map(t=>t.map(([name,pos,gk,g])=>({name:String(name), pos:normPos(pos), gk:!!gk, guest:!!g || !!players.find(p=>p.name === String(name))?.isGuest, tmpGuest:!!g})));
 // 예전 형식(팀 배열만)과 새 형식({teams, tactics}) 둘 다 읽음
-const unpack = obj => Array.isArray(obj) ? {teams: obj, tactics: []} : {teams: obj.teams || obj.t || [], tactics: obj.tactics || obj.f || []};
+const unpack = obj => { const u = Array.isArray(obj) ? {teams: obj, tactics: []} : {teams: obj.teams || obj.t || [], tactics: obj.tactics || obj.f || []};
+  if(SPORT !== 'soccer') u.tactics = u.teams.map((t, i)=>{ const v = u.tactics[i] || '';     // 풋살은 6:6 → 필드 5명이 아닌 전술은 기본(2-1-2)으로
+    return v && v.split('-').reduce((a, x)=>a + (+x || 0), 0) !== FUTSAL_ONFIELD - 1 ? DEFAULT_TACTIC_OF(t.length) : v; });
+  return u; };
 let publishedRow = null;
 function renderPublished(row){
   try{
@@ -1921,24 +1898,18 @@ function renderPublished(row){
     if(isAdmin()) setTimeout(renderPubScores, 0);
     const {teams, tactics} = unpack(row.teams);
     const pubDate = new Date(row.created_at).toLocaleDateString('sv-SE');
-    const chatOn = !!sb && SPORT !== 'soccer' && !TC.missing && pubDate === todayStr();     // 팀 작전회의: 오늘 공개된 팀만
-    const myT = chatOn ? myPubTeam(teams) : -1;
-    const editable = !sb ? false : isAdmin() ? true : TC.missing ? ALLOW_PUBLIC_TACTIC : (i => i === myT);
+    const editable = !!sb && (ALLOW_PUBLIC_TACTIC || isAdmin());
     const pubVenue = (typeof days !== 'undefined' ? days : []).find(d=>d.played_on === pubDate)?.venue;
     $('published').innerHTML = (pubVenue ? `<div class="todayVenue">📍 ${pubDate === todayStr() ? '오늘' : fmtDay(pubDate)} 구장 · ${mapLink(pubVenue)}</div>` : '')
-      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 경기 시작 1시간 전에 공개돼요'}${isAdmin() || TC.missing ? ' · 팀마다 전술을 골라 주세요' : myT >= 0 ? ' · 우리 팀 포메이션은 팀원 누구나 바꿀 수 있어요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable)
+      + `<p class="muted" style="margin-top:0">${SPORT === 'soccer' ? '⚽ 축구 팀 구성' : '팀 구성은 경기 시작 1시간 전에 공개돼요'}${editable ? ' · 팀마다 전술을 골라 주세요' : ''}</p>` + teamsHtml(fromPublic(teams), false, tactics, editable)
       + (isAdmin() ? guestFormHtml(teams.length) : '');
     bindGuestForm($('published'));
-    tcMount(chatOn, myT, row.created_at);
     $('published').querySelectorAll('.tacSel').forEach(sel=>sel.onchange = async ()=>{
       const i = +sel.dataset.team;
       const v = pickTactic(sel, tactics[i]);
       if(v === null){ renderPublished(publishedRow); return; }
       sel.disabled = true;
-      const viaChat = !isAdmin() && i === myT;                     // 팀원: 작전회의에 "○○님이 포메이션을 바꿨어요"가 남음
-      if(await q(viaChat ? sb.rpc('team_chat_tactic', {p_token: plToken, p_result: RESULT_ID(), p_tactic: v})
-                 : sb.rpc('set_tactic', SPORT === 'soccer' ? {p_team:i, p_tactic:v, p_result_id:2} : {p_team:i, p_tactic:v}), '전술을 저장하지 못했어요')){
-        if(viaChat) setTimeout(tcPoll, 0);
+      if(await q(sb.rpc('set_tactic', SPORT === 'soccer' ? {p_team:i, p_tactic:v, p_result_id:2} : {p_team:i, p_tactic:v}), '전술을 저장하지 못했어요')){
         const next = tactics.slice(); while(next.length < teams.length) next.push(''); next[i] = v;
         renderPublished({...publishedRow, teams: {teams, tactics: next}});
       }
@@ -1951,100 +1922,6 @@ $('publishBtn').onclick = async ()=>{
   const row = {id: RESULT_ID(), teams: {teams: publicData(lastTeams), tactics: lastTactics}, created_at: new Date().toISOString()};
   if(await q(sb.from('team_results').upsert(row), '공개하지 못했어요')){ renderPublished(row); const d = await recordAttendance(lastTeams); alert(`공개했어요. ${d ? d + ' 경기' : '경기일'} 출석과 팀도 자동으로 기록했어요.`); }
 };
-
-/* ---------- 팀 작전회의 (오늘 공개된 팀의 팀원끼리만 · 다음 날 자동 삭제) ---------- */
-const TC = {team: -1, round: null, msgs: [], open: store.get('jfc-tc-open') !== '0', timer: null, missing: false, draft: '', lastId: 0, busy: false};
-const TC_QUICK = ['🧤 키퍼 먼저 볼게요', '🏃 조금 늦어요', '🔥 초반 압박!', '🛡️ 내려앉아서 역습', '👍 좋아요'];
-function myPubTeam(teams){
-  const nm = mePid ? players.find(p=>p.id === mePid)?.name : null;
-  return nm ? teams.findIndex(t=>t.some(x=>String(x[0]) === nm && !x[3])) : -1;
-}
-const tcTime = at => { const d = new Date(at); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
-const tcSeen = () => { try{ const o = JSON.parse(store.get('jfc-tc-seen') || '{}'); return o.round === TC.round ? +o.id || 0 : 0; }catch(e){ return 0; } };
-function tcMount(chatOn, myT, round){
-  const cards = [...$('published').querySelectorAll('.teams > .team')];
-  if(!chatOn){ tcStop(); return; }
-  if(TC.round !== round || TC.team !== myT){ TC.msgs = []; TC.lastId = 0; }
-  TC.round = round; TC.team = myT;
-  cards.forEach((el, i)=>{
-    if(i === myT){
-      el.classList.add('myTeam');
-      el.querySelector('h3 span')?.insertAdjacentHTML('beforeend', '<span class="meTag">내 팀</span>');
-      el.insertAdjacentHTML('beforeend', `<button class="tcToggle" id="tcToggle"></button>
-        <div class="tcChat" id="tcChat" ${TC.open ? '' : 'hidden'}>
-          <div class="tcMsgs" id="tcMsgs"></div>
-          <div class="tcChips">${TC_QUICK.map(x=>`<button type="button" data-tcq="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-          <form class="tcInp" id="tcForm"><input type="text" id="tcIn" maxlength="300" placeholder="${TEAM_NAMES[i]}에게 메시지" autocomplete="off" enterkeyhint="send"><button>보내기</button></form>
-          <div class="tcFoot">🔒 ${TEAM_NAMES[i]} 선수만 볼 수 있어요 · 다음 날 자동으로 사라져요</div>
-        </div>`);
-    } else {
-      el.insertAdjacentHTML('beforeend', `<div class="tcLock">🔒 ${TEAM_NAMES[i]} 작전회의는 ${TEAM_NAMES[i]} 선수만 볼 수 있어요${!mePid && i === 0 ? '<br>로그인하면 우리 팀 작전회의가 열려요' : ''}</div>`);
-    }
-  });
-  if(myT < 0){ tcStop(); return; }
-  $('tcIn').value = TC.draft;
-  $('tcIn').oninput = e=>{ TC.draft = e.target.value; };
-  $('tcToggle').onclick = ()=>{ TC.open = !TC.open; store.set('jfc-tc-open', TC.open ? '1' : '0'); $('tcChat').hidden = !TC.open; tcRender(true); };
-  $('tcForm').onsubmit = e=>{ e.preventDefault(); if(e.isComposing) return; tcSend($('tcIn').value); };
-  $('tcChat').querySelectorAll('[data-tcq]').forEach(b=>b.onclick = ()=>tcSend(b.dataset.tcq, true));
-  $('tcMsgs').onclick = async e=>{
-    const b = e.target.closest('[data-tclike]'); if(!b) return;
-    const m = TC.msgs.find(x=>x.id === +b.dataset.tclike); if(!m) return;
-    m.liked = !m.liked; m.likes += m.liked ? 1 : -1; tcRender();       // 먼저 바꿔 보여주고 저장
-    const {error} = await sb.rpc('team_chat_like', {p_token: plToken, p_id: m.id});
-    if(error) plToast(rpcMsg(error));
-    tcPoll();
-  };
-  tcRender(true);
-  tcStart();
-}
-function tcRender(toBottom = false){
-  const box = $('tcMsgs'); if(!box) return;
-  const seen = tcSeen(), last = TC.msgs.length ? TC.msgs[TC.msgs.length - 1].id : 0;
-  const unread = TC.open ? 0 : TC.msgs.filter(m=>m.id > seen && !m.mine).length;
-  const talk = TC.msgs.filter(m=>m.kind !== 'sys').length;
-  $('tcToggle').innerHTML = `<span>💬 ${TEAM_NAMES[TC.team]} 작전회의${talk ? ` (${talk})` : ''}</span>${unread ? `<span class="tcCnt">${unread}</span>` : `<span>${TC.open ? '접기 ▲' : '열기 ▼'}</span>`}`;
-  if(!TC.open) return;
-  store.set('jfc-tc-seen', JSON.stringify({round: TC.round, id: last}));
-  const near = toBottom || box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-  box.innerHTML = `<div class="tcSys">⚽ ${TEAM_NAMES[TC.team]} 작전회의 · 팀원만 볼 수 있어요</div>` + (TC.msgs.length ? '' : '<div class="tcSys">아직 대화가 없어요. 먼저 한마디 남겨 보세요!</div>')
-    + TC.msgs.map(m=> m.kind === 'sys'
-      ? `<div class="tcSys"><b>${esc(m.name)}</b>님이 ${esc(m.body)} · ${tcTime(m.at)}</div>`
-      : `<div class="tcM${m.mine ? ' me' : ''}">${m.mine ? '' : `<div class="tcWho">${esc(m.name)}</div>`}<div class="tcBub">${esc(m.body)}</div>
-          <div class="tcMeta">${tcTime(m.at)}<button type="button" class="tcLike${m.liked ? ' on' : ''}" data-tclike="${m.id}">👍${m.likes ? ' ' + m.likes : ''}</button></div></div>`).join('');
-  if(near) box.scrollTop = box.scrollHeight;
-}
-async function tcPoll(){
-  if(TC.team < 0 || !plToken || TC.busy) return;
-  TC.busy = true;
-  try{
-    const {data, error} = await sb.rpc('team_chat_get', {p_token: plToken, p_result: RESULT_ID()});
-    if(error){
-      if(error.code === 'PGRST202' || /team_chat_get/.test(error.message || '')){ TC.missing = true; tcStop(); if(publishedRow) renderPublished(publishedRow); }
-      return;
-    }
-    if(!data || data.team === null || data.team !== TC.team){ tcStop(); return; }
-    const msgs = data.msgs || [], newSys = msgs.some(m=>m.kind === 'sys' && m.id > TC.lastId && TC.lastId > 0);
-    const changed = JSON.stringify(msgs) !== JSON.stringify(TC.msgs);
-    TC.msgs = msgs; TC.lastId = msgs.length ? msgs[msgs.length - 1].id : 0;
-    if(newSys){                                                    // 팀원이 포메이션을 바꿨으면 그림도 새로
-      const t = await sb.from('team_results').select('teams,created_at').eq('id', RESULT_ID()).maybeSingle();
-      if(!t.error && t.data){ renderPublished(t.data); return; }
-    }
-    if(changed) tcRender();
-  } finally { TC.busy = false; }
-}
-async function tcSend(text, quick = false){
-  const body = String(text || '').trim(); if(!body) return;
-  const {error} = await sb.rpc('team_chat_send', {p_token: plToken, p_result: RESULT_ID(), p_body: body});
-  if(error){ plToast(rpcMsg(error)); return; }
-  if(!quick){ TC.draft = ''; if($('tcIn')) $('tcIn').value = ''; }
-  await tcPoll(); tcRender(true);
-}
-function tcStart(){ tcStop(); tcPoll(); TC.timer = setInterval(()=>{ if(!document.hidden) tcPoll(); }, 5000); }
-function tcStop(){ if(TC.timer){ clearInterval(TC.timer); TC.timer = null; } if(TC.team >= 0 && !$('tcMsgs')) TC.team = -1; }
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && TC.timer) tcPoll(); });
-const tcRefresh = () => { if(publishedRow) renderPublished(publishedRow); };
 
 /* ---------- 게스트 (공개된 팀 구성에 이름만 추가, 개인 기록에는 안 남음) ---------- */
 // 공개 데이터 한 줄: [이름, 포지션, 키퍼, 1] ← 4번째 칸이 1이면 게스트
@@ -3519,7 +3396,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.18-9';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -3727,7 +3604,7 @@ function renderPlBtn(){
   b.innerHTML = me ? `${avatar(me.name, 'sm')}${esc(me.name)}` : '🙋 선수 로그인';
   b.onclick = me ? openMyMenu : openPicker;
 }
-function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess(); tcRefresh(); if(gate) regate(); }
+function plSignedOut(gate = true){ store.del(PL_TOKEN_KEY); plToken = null; mePid = null; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess(); if(gate) regate(); }
 // 관리자 로그아웃 등으로 일반 상태가 되면 로그인 화면
 function regate(){ if(typeof maybeGate === 'function' && sb && players.length) maybeGate(); }
 // 첫 화면 로그인: 로그인 안 된 채로 들어오면 선수 고르기를 먼저 보여줌
@@ -3746,7 +3623,7 @@ async function initPlayer(authChecked){
   const {data, error} = await sb.rpc('player_me', {p_token: plToken});
   if(error) return;                                   // 함수가 아직 없거나 연결 문제: 저장된 로그인은 그대로 둠
   if(!data || !players.some(p=>p.id === data.player_id)){ plSignedOut(false); maybeGate(authChecked); return; }
-  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess(); tcRefresh();
+  mePid = data.player_id; renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess();
   if(data.must_change) openPin(myPlayer(), 'new1');
 }
 
@@ -3816,7 +3693,7 @@ async function pinPress(k){
       if(error){ pinShake(rpcMsg(error)); return; }
       if(!data.ok){ pinShake(data.left > 0 ? `비밀번호가 달라요 (남은 기회 ${data.left}번)` : '5번 틀려서 10분 동안 잠겼어요'); return; }
       plToken = data.token; store.set(PL_TOKEN_KEY, plToken); mePid = pinPlayer.id; plGate = false;
-      renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess(); tcRefresh();
+      renderPlBtn(); renderVote(); renderGear(); renderProfile(); updateLogAccess();
       if(data.must_change){ openPin(pinPlayer, 'new1'); return; }
       closeSheet(); plToast(`${pinPlayer.name}님, 반가워요!`);
     } else if(pinMode === 'new1'){
