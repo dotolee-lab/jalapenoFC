@@ -58,7 +58,13 @@
   .team{border:1px solid var(--line);border-radius:10px;padding:12px}
   .team h3{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between}
   .team .pos{font-size:12px;color:var(--muted);margin-bottom:6px}
-  .team ul{margin:0;padding-left:18px;font-size:14px;flex:1;min-width:0}
+  .team{container-type:inline-size}
+  .team ul{margin:0;padding-left:0;list-style:none;font-size:14px;flex:1;min-width:0}
+  .team li{display:flex;align-items:center;gap:0 2px;min-width:0;margin:3px 0}
+  .team li::before{content:'';flex:none;width:5px;height:5px;border-radius:50%;background:var(--muted);margin-right:6px;opacity:.7}
+  .team li .mName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+  .team li .badge, .team li .del{flex:none;white-space:nowrap}
+  @container (max-width:330px){ .team .pitch{width:92px} .team li .badge{padding:1px 4px;margin-left:3px} }
   .teamBody{display:flex;gap:10px;align-items:flex-start}
   .pitch{width:128px;flex:none;text-align:center}
   .pName{font-size:5px;font-weight:800;fill:var(--text);paint-order:stroke;stroke:var(--pitch);stroke-width:1.6px}
@@ -1855,7 +1861,7 @@ function teamsHtml(teams, withScores, tactics = [], editable = false){
     return `<div class="team"><h3><span>${TEAM_NAMES[i]} (${t.length}명)</span>${withScores ? `<span class="tScore gradeOnly">평균 <b>${avg(t).toFixed(2)}</b> <small>· 총 ${fmt(+sum(t).toFixed(1))}</small></span>` : ''}</h3>
       <div class="pos">${posLine}</div>
       <div class="teamBody">
-        <ul>${members.map(p=>`<li>${esc(p.name)} ${posBadges(p)}${p.isGuest && showGuestTag(p.name) ? guestBadge : ''}${p.guest ? `${showGuestTag(p.name) ? '<span class="badge guestB">게스트</span>' : ''}${isAdmin() && !withScores && p.tmpGuest ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
+        <ul>${members.map(p=>`<li><span class="mName" title="${esc(p.name)}">${esc(p.name)}</span>${posBadges(p)}${p.isGuest && showGuestTag(p.name) ? guestBadge : ''}${p.guest ? `${showGuestTag(p.name) ? '<span class="badge guestB">게스트</span>' : ''}${isAdmin() && !withScores && p.tmpGuest ? `<button class="del guestDel" data-guest-del="${esc(p.name)}" title="게스트 빼기" aria-label="게스트 빼기">×</button>` : ''}` : ''}${withScores ? `<span class="badge gradeOnly">${GRADES[p.grade]}</span><span class="badge gradeOnly">활동 ${p.act}</span>` : ''}</li>`).join('')}</ul>
         ${pitch}
       </div></div>`;
   }).join('')}</div>`;
@@ -3396,7 +3402,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
