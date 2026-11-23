@@ -268,7 +268,7 @@
   .ltSceneGrid small{display:block;color:var(--muted);font-size:11px}
   .ltSceneGrid em{display:inline-block;margin-top:3px;font-size:11px;font-weight:900;font-style:normal;color:#fff;border-radius:5px;padding:0 6px}
   @media (max-width:520px){.ltTok{width:58px}.ltTok .d{width:30px;height:30px;font-size:11px}.ltTok .n{font-size:10px;max-width:60px}.ltTok.opp .d{width:22px;height:22px;font-size:8px}.ltLane{font-size:9px;letter-spacing:0}}
-  /* ---------- MVP 배너 (매치데이 포스터) ---------- */
+  /* ---------- MOM 배너 (매치데이 포스터) ---------- */
   .hc{position:relative;overflow:hidden;border-radius:22px;margin-bottom:18px;display:grid;grid-template-columns:42% 1fr;min-height:300px;background:#fbf7ef;color:#0b3124;box-shadow:0 6px 20px rgba(11,49,36,.12)}
   .hc .hofClose{z-index:3;background:rgba(0,0,0,.06);color:#333}
   .hcLeft{position:relative;display:flex;align-items:center;justify-content:center;padding:24px 40px 24px 16px;background:repeating-linear-gradient(90deg,#0b3124 0 34px,#fff 34px 37px,#5a1219 37px 55px,#fff 55px 58px)}
@@ -642,7 +642,7 @@
     nav.tabs .full{display:none}
     nav.tabs .short{display:inline}
     .toTop{bottom:calc(80px + env(safe-area-inset-bottom))}
-    /* 홈 탭에서만 MVP·일정·장비·팀 구성 */
+    /* 홈 탭에서만 MOM·일정·장비·팀 구성 */
     body:not(.tab-home) #mvpBanner, body:not(.tab-home) .side, body:not(.tab-home) #publishedCard, body:not(.tab-home) #luCard{display:none !important}
     body.tab-home .homeSub{display:flex;gap:4px;background:var(--head);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
     .homeSub button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px 4px;border-radius:9px}
@@ -1311,7 +1311,7 @@
         <button class="ghost" id="addDay">경기일 추가</button>
       </span>
     </div>
-    <p class="muted">다가오는 경기도 날짜를 미리 추가하고 구장을 넣어두면, 메인 화면 일정에 구장이 자동으로 표시돼요. 팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MVP를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
+    <p class="muted">다가오는 경기도 날짜를 미리 추가하고 구장을 넣어두면, 메인 화면 일정에 구장이 자동으로 표시돼요. 팀 구성을 공개하면 오늘 날짜에 출석과 소속 팀이 자동으로 들어가요. 경기가 끝나면 경기 결과와 골·어시·MOM를 넣고 저장하세요. 승무패는 경기 결과로 자동 계산돼요.</p>
     <div id="dayEditor"></div>
   </section>
 
@@ -1341,7 +1341,7 @@
     <h2>🗳️ 참석 투표 · 선수 로그인</h2>
     <p class="muted" style="margin-top:-6px"><b>투표 제외</b> — 체크한 선수는 참석 투표 인원·"아직 투표 안 함"·마감 후 자동 불참에서 빠져요. 휴면 회원 등을 체크해 두세요.</p>
     <div id="exemptBox" class="exemptGrid"><p class="muted">불러오는 중…</p></div>
-    <p class="muted" style="margin:14px 0 6px"><b>👤 게스트 선수</b> — 체크한 선수는 투표·팀 구성·밸런스 계산에는 들어가지만, 출석·골·어시·MVP·순위·투표 안 한 기록에는 남지 않아요. 선수 명단에서도 아래쪽에 따로 표시돼요.</p>
+    <p class="muted" style="margin:14px 0 6px"><b>👤 게스트 선수</b> — 체크한 선수는 투표·팀 구성·밸런스 계산에는 들어가지만, 출석·골·어시·MOM·순위·투표 안 한 기록에는 남지 않아요. 선수 명단에서도 아래쪽에 따로 표시돼요.</p>
     <div id="guestBox" class="exemptGrid"></div>
     <div class="pinRow">
       <b style="font-size:14px">🔑 비밀번호 초기화</b>
@@ -2192,14 +2192,14 @@ function aggregate(period){
 // 기록 표를 그룹으로 나눠서 한 번에 5~6칸만 보여줌 (옆 스크롤 줄이기)
 const STAT_GROUPS = {
   game:   {label:'⚽ 경기',      def:'g',   cols:()=>[['g','득점'], ['a','도움'], ['pts','공격P'], ['gp','경기'], ['wdl','전적'], ['rate','승률']]},
-  part:   {label:'📅 출석·매너', def:'att', cols:()=>[['att','출석'], ['mvp','MVP'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼']]},
+  part:   {label:'📅 출석·매너', def:'att', cols:()=>[['att','출석'], ['mvp','MOM'], ['bk','구장예약'], ['late','지각'], ['ns','노쇼']]},
   coffee: {label:'☕ 커피',      def:'cf',  cols:()=>[['cf','커피'], ...(showAmounts() ? [['cfAmt','커피 금액']] : [])]},
 };
 let statGroup = (()=>{ const g = store.get('futsal-statgroup-v1'); return STAT_GROUPS[g] ? g : 'game'; })();
 const statCols = () => STAT_GROUPS[statGroup].cols();
 // 그룹별 순위 카드 [기록, 제목, 단위, 더보기 누르면 정렬할 표 칸]
 const LEADER_CARDS = {
-  game:   ()=>[['g','득점','골'], ['a','도움','개'], ['mvp','MVP','회'], ['w','🔥 승리 요정','승','wdl']],
+  game:   ()=>[['g','득점','골'], ['a','도움','개'], ['mvp','MOM','회'], ['w','🔥 승리 요정','승','wdl']],
   part:   ()=>[['att','출석','회'], ['late','지각','회'], ['bk','구장 예약','회'], ['streak','🔥 연속 출석','연속','att']],
   coffee: ()=>[['cf','커피 기부왕','회'], ...(showAmounts() ? [['cfAmt','커피 금액','원']] : [])],
 };
@@ -2446,7 +2446,7 @@ function renderRecordEditor(){
 
     <h3 class="sub">선수 기록 <span class="muted">(출석 ${rows.length}명)</span></h3>
     <div class="tablewrap"><table>
-      <thead><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th><th>MVP</th><th></th></tr></thead>
+      <thead><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th><th>MOM</th><th></th></tr></thead>
       <tbody>${rows.map(r=>`<tr data-pid="${r.player_id}">
         <td>${esc(r.name)}</td>
         <td><select data-f="team"><option value="">-</option>${TEAM_LETTERS.map(t=>`<option ${t===r.team?'selected':''}>${t}</option>`).join('')}</select></td>
@@ -2742,7 +2742,7 @@ function renderHistory(){
       const members = list.slice().sort((a,b)=>b.goals-a.goals || b.assists-a.assists || a.name.localeCompare(b.name,'ko'));
       return `<div class="team"><h3><span>${t ? t+'팀' : '팀 미정'} (${list.length}명)</span>${st && st.gp ? `<span class="muted" style="font-weight:500">${st.w}승 ${st.d}무 ${st.l}패</span>` : ''}</h3>
         <ul class="roster">${members.map(r=>`<li>${avatar(r.name,'sm')}<span class="nm">${nameLink(r.player_id, r.name)}<small>${esc(r.pos.join('·'))}</small></span>
-          <span class="tags">${r.goals ? `<span class="tag g">⚽ ${r.goals}</span>` : ''}${r.assists ? `<span class="tag a" title="어시스트">👟 ${r.assists}</span>` : ''}${r.mvp ? '<span class="tag m">MVP</span>' : ''}</span></li>`).join('')}</ul></div>`;
+          <span class="tags">${r.goals ? `<span class="tag g">⚽ ${r.goals}</span>` : ''}${r.assists ? `<span class="tag a" title="어시스트">👟 ${r.assists}</span>` : ''}${r.mvp ? '<span class="tag m">MOM</span>' : ''}</span></li>`).join('')}</ul></div>`;
     }).join('')}</div>` : '<p class="muted">출석 기록이 없어요.</p>';
 
   $('histBox').innerHTML = `
@@ -2751,7 +2751,7 @@ function renderHistory(){
       <div><span class="muted">경기</span><b>${dayGames.length}</b></div>
       <div><span class="muted">출석</span><b>${rows.length}명</b></div>
       <div><span class="muted">총 골</span><b>${totalGoals}</b></div>
-      <div><span class="muted">MVP</span><b>${mvps.join(', ') || '-'}</b></div>
+      <div><span class="muted">MOM</span><b>${mvps.join(', ') || '-'}</b></div>
       ${(()=>{ const day = days.find(x=>x.id===histDayId) || {}; const nm = ids => (ids || []).map(pid=>players.find(x=>x.id===pid)).filter(Boolean).map(x=>nameLink(x.id, x.name)).join(', ');
         return `<div><span class="muted">⏰ 지각</span><b>${nm(day.lates) || '-'}</b></div>
         <div class="${(day.noshows || []).length ? 'nsTile' : ''}"><span class="muted">🚫 노쇼</span><b>${nm(day.noshows) || '-'}</b></div>`; })()}
@@ -2778,11 +2778,11 @@ $('histPrev').onclick = ()=>{ const days = pastDays().filter(d=>d.played_on.slic
 $('histNext').onclick = ()=>{ const days = pastDays().filter(d=>d.played_on.slice(0, 4) === histYear), i = days.findIndex(d=>d.id===histDayId); if(i > 0){ histDayId = days[i-1].id; matchesOpen = false; renderHistory(); } };
 
 
-/* ---------- 명예의 전당 (MVP 샤라웃) ---------- */
+/* ---------- 명예의 전당 (MOM 샤라웃) ---------- */
 const HOF_DAYS = 7;
-let hofHidden = false;   // × 누르면 이번 화면에서만 숨김 (새로고침하면 다시 보임)   // MVP 배너를 경기일로부터 며칠 동안 보여줄지
+let hofHidden = false;   // × 누르면 이번 화면에서만 숨김 (새로고침하면 다시 보임)   // MOM 배너를 경기일로부터 며칠 동안 보여줄지
 function mvpAwards(){
-  // 최신 경기일부터, MVP가 있는 날만
+  // 최신 경기일부터, MOM가 있는 날만
   return days.map(d=>({day:d, winners: stats.filter(r=>r.day_id===d.id && r.mvp)
       .map(r=>({...r, name: players.find(p=>p.id===r.player_id)?.name})).filter(r=>r.name)}))
     .filter(x=>x.winners.length);
@@ -2795,16 +2795,16 @@ function renderMvpBanner(){
   const diff = Math.round((new Date(todayStr()+'T00:00:00') - new Date(day.played_on+'T00:00:00')) / 86400000);
   if(diff < 0 || diff > HOF_DAYS){ box.innerHTML = ''; return; }
   if(hofHidden){
-    box.innerHTML = `<button class="hofReopen">🏆 이번 주 MVP 다시 보기</button>`;
+    box.innerHTML = `<button class="hofReopen">🏆 이번 주 MOM 다시 보기</button>`;
     box.querySelector('.hofReopen').onclick = ()=>{ hofHidden = false; renderMvpBanner(); };
     return;
   }
   const totalMvp = pid => stats.filter(r=>r.player_id===pid && r.mvp).length;
   // 매치데이 포스터: 왼쪽 유니폼 줄무늬 + 사진, 오른쪽 이름과 기록판
   const multi = winners.length > 1;
-  box.innerHTML = `<div class="hc${multi ? ' multi' : ''}" role="region" aria-label="이번 경기 MVP">
+  box.innerHTML = `<div class="hc${multi ? ' multi' : ''}" role="region" aria-label="이번 경기 MOM">
     <button class="hofClose" title="배너 접기 (새로고침하면 다시 보여요)" aria-label="닫기">×</button>
-    <div class="hcLeft"><div class="hcAvs">${winners.map(w=>`<div class="hcAv">${avatar(w.name,'xl')}</div>`).join('')}</div><div class="hcBig" aria-hidden="true">MVP</div></div>
+    <div class="hcLeft"><div class="hcAvs">${winners.map(w=>`<div class="hcAv">${avatar(w.name,'xl')}</div>`).join('')}</div><div class="hcBig" aria-hidden="true">MOM</div></div>
     <div class="hcRight">
       <div class="hcWm">JALAPE<b>Ñ</b>O FC</div>
       <div class="hcDt">MATCHDAY · ${fmtDay(day.played_on)}</div>
@@ -2813,11 +2813,11 @@ function renderMvpBanner(){
         const res = dayResults(day.id, w.team);
         const cells = [[w.goals || 0, '골'], [w.assists || 0, '어시']];
         if(w.team && (res.w + res.d + res.l)) cells.push([`${res.w}-${res.d}-${res.l}`, `${w.team}팀 승무패`]);
-        cells.push([totalMvp(w.player_id), '누적 MVP']);
+        cells.push([totalMvp(w.player_id), '누적 MOM']);
         return `<div class="hcW"><div class="hcName">${esc(w.name)}</div>
           <div class="hcStats">${cells.map(([v, l])=>`<div><b>${v}</b><small>${l}</small></div>`).join('')}</div></div>`;
       }).join('')}
-      <div class="hcFt">${multi ? '공동 MVP 축하해요! ' : ''}다음 경기까지 이 자리는 당신 거예요 👏</div>
+      <div class="hcFt">${multi ? '공동 MOM 축하해요! ' : ''}다음 경기까지 이 자리는 당신 거예요 👏</div>
     </div>
   </div>`;
   box.querySelector('.hofClose').onclick = ()=>{ hofHidden = true; renderMvpBanner(); };
@@ -2833,7 +2833,7 @@ function renderYearAwards(){
   const rows = aggregate('y:' + awardYear);
   const label = t => `${awardYear} 시즌 ${t}`;
   // 서포터 = 그해 구장 예약을 가장 많이 한 사람
-  const AWARDS = [['mvp','MVP','🏆','회 수상','gold'], ['att','출석왕','📅','회 출석','green'], ['bk','서포터','🤝','회 구장 예약','blue']];
+  const AWARDS = [['mvp','MOM','🏆','회 수상','gold'], ['att','출석왕','📅','회 출석','green'], ['bk','서포터','🤝','회 구장 예약','blue']];
   $('yearAwards').innerHTML = `<div class="awards">${AWARDS.map(([k, t, icon, unit, cls])=>{
     const best = Math.max(0, ...rows.map(r=>r[k]));
     const win = best ? rows.filter(r=>r[k]===best).sort((a,b)=>a.name.localeCompare(b.name,'ko')) : [];
@@ -2956,7 +2956,7 @@ function renderProfile(){
   const tiles = [
     ['출석', `${me.att}회`, rankOf('att')], ['경기', me.gp, ''],
     ['승 · 무 · 패', `${me.w} · ${me.d} · ${me.l}`, ''], ['승률', me.rate < 0 ? '-' : Math.round(me.rate*100)+'%', ''],
-    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MVP', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ...(hasCoffee() ? [['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : '']] : []),
+    ['골', me.g, rankOf('g')], ['어시', me.a, rankOf('a')], ['공격포인트', me.pts, rankOf('pts')], ['MOM', `${me.mvp}회`, rankOf('mvp')], ['구장 예약', `${me.bk}회`, rankOf('bk')], ['지각', `${me.late}회`, '', me.late ? 'late' : ''], ['노쇼', `${me.ns}회`, '', me.ns ? 'ns' : ''], ...(hasCoffee() ? [['☕ 커피', `${me.cf}회${showAmounts() && me.cfAmt ? ` · ${won(me.cfAmt)}` : ''}`, rankOf('cf'), me.cf ? 'cf' : '']] : []),
   ];
   // 최근 출석한 경기일 5개 (days는 최신순)
   const myRows = stats.filter(r=>r.player_id===p.id);
@@ -3018,7 +3018,7 @@ function renderProfile(){
       ${(()=>{ const ys = recYears(); if(!ys.length) return '';
         const rows = ys.map(y=>[y, aggregate('y:' + y).find(r=>r.id === p.id)]).filter(([, r])=>r && (r.att || r.g || r.a));
         if(!rows.length) return '';
-        return `<h3 class="sub">시즌별 기록</h3><div class="tableWrap"><table class="pfYear"><thead><tr><th>시즌</th><th>출석</th><th>승-무-패</th><th>골</th><th>어시</th><th>MVP</th></tr></thead><tbody>
+        return `<h3 class="sub">시즌별 기록</h3><div class="tableWrap"><table class="pfYear"><thead><tr><th>시즌</th><th>출석</th><th>승-무-패</th><th>골</th><th>어시</th><th>MOM</th></tr></thead><tbody>
           ${rows.map(([y, r])=>`<tr><td><b>${y}</b></td><td>${r.att}</td><td>${r.w}-${r.d}-${r.l}</td><td>${r.g}</td><td>${r.a}</td><td>${r.mvp || '-'}</td></tr>`).join('')}</tbody></table></div>`; })()}
 
       <h3 class="sub">최근 경기</h3>
@@ -3026,11 +3026,11 @@ function renderProfile(){
         <a href="#" class="pfGame" data-day="${d.id}">
           <span class="dt">${fmtDay(d.played_on)}</span>
           <span class="tm">${r.team ? r.team+'팀' : '-'}${(res.w+res.d+res.l) ? ` · ${res.w}승 ${res.d}무 ${res.l}패` : ''}</span>
-          <span class="tags">${r.goals?`<span class="tag g">⚽ ${r.goals}</span>`:''}${r.assists?`<span class="tag a" title="어시스트">👟 ${r.assists}</span>`:''}${r.mvp?'<span class="tag m">MVP</span>':''}</span>
+          <span class="tags">${r.goals?`<span class="tag g">⚽ ${r.goals}</span>`:''}${r.assists?`<span class="tag a" title="어시스트">👟 ${r.assists}</span>`:''}${r.mvp?'<span class="tag m">MOM</span>':''}</span>
         </a>`).join('')}</div>` : '<p class="muted">아직 출석 기록이 없어요.</p>'}
 
-      <h3 class="sub">🏆 MVP 수상</h3>
-      ${mvpDays.length ? `<div class="pfMvp">${mvpDays.map(d=>`<span class="tag m">${fmtDay(d.played_on)}</span>`).join('')}</div>` : '<p class="muted">아직 MVP 수상 기록이 없어요.</p>'}
+      <h3 class="sub">🏆 MOM 수상</h3>
+      ${mvpDays.length ? `<div class="pfMvp">${mvpDays.map(d=>`<span class="tag m">${fmtDay(d.played_on)}</span>`).join('')}</div>` : '<p class="muted">아직 MOM 수상 기록이 없어요.</p>'}
     </div>`;
 
   box.querySelector('.pfBack').onclick = ()=>{ profileId = null; renderProfile(); };
@@ -3396,7 +3396,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-1';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-2';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -3818,7 +3818,7 @@ function renderLog(){
   const pts = {}; LOG.games.forEach(x=>x.goals.forEach(e=>{ if(e.s){ (pts[e.s] ||= {g:0, a:0}).g++; } if(e.a){ (pts[e.a] ||= {g:0, a:0}).a++; } }));
   const teamOf = pid => letters.find(t=>T[t].some(p=>p.id === pid)) || '';
   const scorers = Object.entries(pts).map(([id, v])=>({id: lgId(id), ...v})).sort((a,b)=>(b.g + b.a) - (a.g + a.a) || b.g - a.g || lgName(a.id).localeCompare(lgName(b.id),'ko'));
-  const everyone = letters.flatMap(t=>T[t]).filter(p=>!p.guest);   // MVP는 게스트 빼고
+  const everyone = letters.flatMap(t=>T[t]).filter(p=>!p.guest);   // MOM는 게스트 빼고
 
   box.innerHTML = `
     <div class="lgTop"><span>${fmtDay(logDate)} · ${from === 'day' ? '출석한 팀' : '공개한 팀 구성'} 기준 · ${letters.map(t=>`${t}팀 ${T[t].length}명`).join(' · ')}${letters.some(t=>T[t].some(p=>p.guest)) ? ' (게스트 포함)' : ''}</span></div>
@@ -3852,11 +3852,11 @@ function renderLog(){
         return `<tr><td><span class="lgT t-${t}" style="display:inline-block;width:24px">${t}</span></td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${gd > 0 ? '+' : ''}${gd}</td></tr>`; }).join('')}</table>
       <div class="lgSub">개인 기록 (골·어시가 있는 사람)</div>
       ${scorers.length ? `<table class="lgTbl"><tr><th>이름</th><th>팀</th><th>골</th><th>어시</th></tr>${scorers.map(x=>`<tr class="${isGuestId(x.id) ? 'lgGuest' : ''}"><td>${esc(lgName(x.id))}${isGuestId(x.id) ? ' <span class="badge guestB">게스트 · 기록 안 남음</span>' : ''}</td><td>${teamOf(x.id)}</td><td>${x.g}</td><td>${x.a}</td></tr>`).join('')}</table>` : '<p class="muted" style="margin:0;font-size:13px">아직 없어요.</p>'}
-      <div class="lgSub">🏅 MVP (직접 골라 주세요)</div>
+      <div class="lgSub">🏅 MOM (직접 골라 주세요)</div>
       <div class="lgChips"><button class="lgChip muted ${!LOG.mvp ? 'on' : ''}" data-lg-mvp="">없음</button>${everyone.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(p=>`<button class="lgChip ${LOG.mvp === p.id ? 'on' : ''}" data-lg-mvp="${p.id}">${esc(p.name)}</button>`).join('')}</div>
       <button class="lgBig" id="lgSave">✅ 경기 기록에 등록</button>
       ${LOG.last ? `<p class="lgLast ${LOG.last.ok ? 'ok' : 'bad'}">${LOG.last.ok ? '✅ 마지막 등록' : '⚠️ 마지막 등록 실패'} (${new Date(LOG.last.at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}) · ${esc(LOG.last.msg)}</p>` : ''}
-      <div class="lgFoot"><span class="muted" style="font-size:12px">등록하면 경기 결과·골·어시·MVP가 저장되고 출석은 팀 그대로 들어가요. 나중에 ${isAdmin() ? '아래 "경기 기록 입력"에서' : '관리자가'} 고칠 수 있어요.</span><button class="del small" id="lgClear">기록일지 비우기</button></div>
+      <div class="lgFoot"><span class="muted" style="font-size:12px">등록하면 경기 결과·골·어시·MOM가 저장되고 출석은 팀 그대로 들어가요. 나중에 ${isAdmin() ? '아래 "경기 기록 입력"에서' : '관리자가'} 고칠 수 있어요.</span><button class="del small" id="lgClear">기록일지 비우기</button></div>
     </div>`;
 
   const redraw = ()=>{ logSave(); renderLog(); };
@@ -3891,7 +3891,7 @@ async function logRegister(T, letters, pts){
   if(cancelledOn(logDate)){ alert('취소된 경기일이에요. 아래 "경기 기록 입력"에서 취소를 푼 뒤 등록해 주세요.'); return; }
   const list = LOG.games.filter(x=>x.home !== x.away);
   if(!list.length){ alert('등록할 경기가 없어요'); return; }
-  if(!LOG.mvp && !confirm('MVP를 고르지 않았어요. 그대로 등록할까요?')) return;
+  if(!LOG.mvp && !confirm('MOM를 고르지 않았어요. 그대로 등록할까요?')) return;
   let day = days.find(d=>d.played_on === logDate);
   if(!day && !isAdmin()) day = {id: -1};            // 운영진은 함수가 경기일을 만들어 줌
   if(!day){
@@ -3901,8 +3901,8 @@ async function logRegister(T, letters, pts){
   const old = games.filter(x=>x.day_id === day.id);
   const oldPts = statsAll.filter(r=>r.day_id === day.id && (r.goals || r.assists || r.mvp));
   const notToday = logDate !== todayStr();
-  const msg = (notToday ? `⚠️ 오늘(${fmtDay(todayStr())})이 아닌 날짜예요!\n` : '') + `${fmtDay(logDate)} 경기 기록에 등록할까요?\n· 경기 ${list.length}개 · 골 ${list.reduce((n, x)=>n + x.goals.length, 0)}개${LOG.mvp ? ` · MVP ${lgName(LOG.mvp)}` : ''}`
-    + (old.length || oldPts.length ? `\n\n⚠️ 이 날 이미 입력된 경기 결과·골·어시·MVP는 기록일지 내용으로 바뀌어요.` : '');
+  const msg = (notToday ? `⚠️ 오늘(${fmtDay(todayStr())})이 아닌 날짜예요!\n` : '') + `${fmtDay(logDate)} 경기 기록에 등록할까요?\n· 경기 ${list.length}개 · 골 ${list.reduce((n, x)=>n + x.goals.length, 0)}개${LOG.mvp ? ` · MOM ${lgName(LOG.mvp)}` : ''}`
+    + (old.length || oldPts.length ? `\n\n⚠️ 이 날 이미 입력된 경기 결과·골·어시·MOM는 기록일지 내용으로 바뀌어요.` : '');
   if(!confirm(msg)) return;
   $('lgSave').disabled = true;
   const gamesJ = list.map(x=>({home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away),
