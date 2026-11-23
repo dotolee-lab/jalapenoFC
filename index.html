@@ -973,6 +973,24 @@
   .lgTbl th{font-size:12px;color:var(--muted);font-weight:700}
   .lgTbl td:first-child,.lgTbl th:first-child{text-align:left}
   .lgSum{margin-top:18px;padding-top:14px;border-top:2px solid var(--line)}
+  .lgTimer{margin-top:10px;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+  .lgTimer .set{display:flex;flex-direction:column;gap:8px;text-align:left}
+  .lgTimer .set b{font-size:12px;color:var(--muted)}
+  .lgTimer .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .lgTimer .seg button{background:var(--head);color:var(--text);border:1px solid var(--line);font-weight:600;padding:6px 12px;border-radius:999px;font-size:14px}
+  .lgTimer .seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .lgClock{font-variant-numeric:tabular-nums;font-size:56px;font-weight:900;line-height:1.05;letter-spacing:1px}
+  .lgClock.low{color:#e67e22}.lgClock.over{color:var(--danger)}
+  .lgClock .inj{display:block;font-size:20px;letter-spacing:0;color:var(--danger)}
+  .lgBar{height:6px;background:var(--head);border-radius:99px;overflow:hidden;margin:6px 0 8px}.lgBar i{display:block;height:100%;background:var(--accent)}
+  .lgRule{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+  .lgRule span{font-size:12px;font-weight:700;border-radius:999px;padding:1px 10px;background:var(--head);color:var(--muted)}
+  .lgRule span.hot{background:var(--accent2);color:var(--accent)}
+  .lgCtrl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+  .lgCtrl button{font-size:13px;padding:9px 4px}
+  .lgCtrl .whistle.over{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .lgDone{font-size:13px;color:var(--muted);font-weight:600}
+  .lgMin{font-variant-numeric:tabular-nums;font-weight:800;color:var(--muted);font-size:12px;margin-right:4px}
   .lgFoot{display:flex;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap}
   /* ---------- 등급 잠금 ---------- */
   body.gradeLocked .rc, body.gradeLocked .gradeOnly{display:none !important}
@@ -2674,7 +2692,7 @@ const evName = id => id == null ? null : (typeof id === 'string' && id.startsWit
 function matchEvHtml(g){
   const ev = Array.isArray(g.events) ? g.events : [];
   if(!ev.length) return '';
-  const side = t => ev.filter(e=>e.t === t).map(e=>`<span class="gEv${e.s == null ? ' og' : ''}">${e.s == null ? OG_BALL : '⚽'} ${e.s == null ? '<i>상대 자책골</i>' : `<b>${esc(evName(e.s))}</b>`}${e.a != null ? ` <small>👟 ${esc(evName(e.a))}</small>` : ''}</span>`).join('');
+  const side = t => ev.filter(e=>e.t === t).map(e=>`<span class="gEv${e.s == null ? ' og' : ''}">${e.m ? `<span class="lgMin">${esc(e.m)}</span>` : ''}${e.s == null ? OG_BALL : '⚽'} ${e.s == null ? '<i>상대 자책골</i>' : `<b>${esc(evName(e.s))}</b>`}${e.a != null ? ` <small>👟 ${esc(evName(e.a))}</small>` : ''}</span>`).join('');
   return `<div class="mEv"><div class="h">${side(g.home)}</div><div></div><div class="a">${side(g.away)}</div></div>`;
 }
 let histYear = null;
@@ -3402,7 +3420,7 @@ startApp();
 
 /* ===================== 선수 로그인 (비밀번호 4자리) · 참석 투표 ===================== */
 const PL_TOKEN_KEY = 'jfc-player-token';
-const APP_VERSION = '2026.11.23-3';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
+const APP_VERSION = '2026.11.23-4';   // 화면이 최신인지 확인용 (내 이름 → 메뉴 맨 아래)
 let plToken = store.get(PL_TOKEN_KEY), mePid = null;
 let bonds = [], bondsMissing = false;
 let vChanges = [], lateMissing = false;   // 이번 경기 '마감 후 변경' 내역   // 이번 경기 '같은 팀 묶기' [{a, b}]
@@ -3787,15 +3805,69 @@ function logTeams(){
   Object.values(out).forEach(a=>a.sort((x,y)=>(!!x.guest - !!y.guest) || x.name.localeCompare(y.name,'ko')));
   return {teams: out, from};
 }
-function nextPair(letters, last){
-  if(letters.length < 3 || !last) return [letters[0], letters[1]];
-  // 3팀: 방금 쉰 팀이 들어가고, 이긴 팀(비기면 먼저 뛴 팀)이 남음
-  const rest = letters.find(x=>x !== last.home && x !== last.away);
-  const h = lgCount(last, last.home), a = lgCount(last, last.away);
-  const stay = h > a ? last.home : a > h ? last.away : last.away;
-  return [stay, rest];
+// 다음 경기 팀: 처음 한 바퀴(3팀이면 3경기)는 아직 안 붙은 팀끼리, 그다음부터는 처음 경기 순서를 그대로 반복 (AB → BC → CA → AB …)
+function nextPair(letters, games){
+  if(letters.length < 3) return [letters[0], letters[1]];
+  const played = games.filter(g=>g.home !== g.away && letters.includes(g.home) && letters.includes(g.away));
+  const cycle = letters.length * (letters.length - 1) / 2;
+  if(played.length >= cycle){ const p = played[played.length % cycle]; return [p.home, p.away]; }
+  const last = played[played.length - 1];
+  if(!last) return [letters[0], letters[1]];
+  const key = (a, b) => [a, b].sort().join();
+  const seen = new Set(played.map(g=>key(g.home, g.away)));
+  const pairs = []; letters.forEach((a, i)=>letters.slice(i + 1).forEach(b=>{ if(!seen.has(key(a, b))) pairs.push([a, b]); }));
+  if(!pairs.length) return [last.home, last.away];
+  const rested = letters.filter(x=>x !== last.home && x !== last.away);
+  const rank = p => (p.some(x=>rested.includes(x)) ? 2 : 0) + (p.includes(last.away) ? 1 : 0);
+  const best = pairs.sort((x, y)=>rank(y) - rank(x))[0];
+  return best.includes(last.away) || best.includes(last.home) ? (rested.includes(best[0]) ? [best[1], best[0]] : best) : best;   // 방금 뛴 팀이 앞, 쉬던 팀이 뒤
 }
 
+/* 경기 타이머: 시작 시각으로 계산해서 화면이 꺼지거나 새로고침해도 이어져요.
+   '끝까지'는 시간이 다 돼도 안 끝나고 추가시간이 흘러요 (종료 휘슬로 끝냄). 'n골'은 n골 먼저 넣는 순간 끝나요. */
+const LG_CFG_KEY = 'jfc-log-cfg';
+const lgCfg = () => { try{ return {mins: 12, cap: 0, ...JSON.parse(store.get(LG_CFG_KEY) || '{}')}; }catch(e){ return {mins: 12, cap: 0}; } };
+const lgStarted = g => !!(g.t0 || g.acc || g.end);
+const lgElapsed = g => (g.acc || 0) + (g.t0 ? Date.now() - g.t0 : 0);
+const lgFmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const lgMinLabel = (g, ms) => { const reg = g.mins * 60000; return ms < reg ? `${Math.floor(ms / 60000) + 1}'` : `${g.mins}+${Math.floor((ms - reg) / 60000) + 1}'`; };
+const lgClockHtml = g => { const left = g.mins * 60000 - lgElapsed(g); return left > 0 ? lgFmt(left) : `00:00<span class="inj">추가시간 +${lgFmt(-left)}</span>`; };
+let lgWake = null;
+async function lgWakeLock(on){ try{ if(on && !lgWake && 'wakeLock' in navigator){ lgWake = await navigator.wakeLock.request('screen'); lgWake.addEventListener?.('release', ()=>{ lgWake = null; }); } else if(!on && lgWake){ lgWake.release(); lgWake = null; } }catch(e){} }
+function lgBuzz(){
+  try{ navigator.vibrate && navigator.vibrate([300, 120, 300]); }catch(e){}
+  try{ const ac = new (window.AudioContext || window.webkitAudioContext)(); [0, .35].forEach(t=>{ const o = ac.createOscillator(), v = ac.createGain(); o.frequency.value = 880; o.connect(v); v.connect(ac.destination); v.gain.setValueAtTime(.25, ac.currentTime + t); v.gain.exponentialRampToValueAtTime(.001, ac.currentTime + t + .3); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .3); }); }catch(e){}
+}
+setInterval(()=>{                                   // 시계만 갱신 (화면 전체는 안 그림)
+  if(!LOG || !$('lgClock')) { if(lgWake && !(LOG && LOG.games.some(x=>x.t0))) lgWakeLock(false); return; }
+  const g = LOG.games[LOG.cur]; if(!g || !g.t0) return;
+  const left = g.mins * 60000 - lgElapsed(g);
+  if(left <= 0 && !g.buzzed){ g.buzzed = true; logSave(); lgBuzz(); renderLog(); return; }   // 정규 시간 끝: 알림만 (추가시간 계속)
+  $('lgClock').innerHTML = lgClockHtml(g); $('lgClock').className = 'lgClock' + (left <= 0 ? ' over' : left < 60000 ? ' low' : '');
+  const bar = $('lgBarI'); if(bar) bar.style.width = Math.min(100, lgElapsed(g) / (g.mins * 60000) * 100) + '%';
+}, 250);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible' && LOG?.games.some(x=>x.t0)) lgWakeLock(true); });
+
+function lgTimerHtml(g){
+  if(!lgStarted(g)){
+    const c = lgCfg();
+    return `<div class="lgTimer"><div class="set">
+      <b>⏱️ 경기 시간</b><div class="seg">${[8, 10, 12, 15].map(m=>`<button data-lg-mins="${m}" class="${c.mins === m ? 'on' : ''}">${m}분</button>`).join('')}</div>
+      <b>먼저 넣으면 끝 <span style="font-weight:500">(끝까지: 시간이 다 돼도 추가시간이 흘러요)</span></b><div class="seg">${[[0, '끝까지'], [2, '2골'], [3, '3골']].map(([v, t])=>`<button data-lg-cap="${v}" class="${c.cap === v ? 'on' : ''}">${t}</button>`).join('')}</div>
+      <button class="lgBig" id="lgStart" style="margin-top:4px">▶ ${g.home}팀 vs ${g.away}팀 경기 시작</button></div></div>`;
+  }
+  if(g.end){
+    const len = g.acc || 0, extra = len - g.mins * 60000;
+    return `<div class="lgTimer"><span class="lgDone">${g.end === 'cap' ? `⚽ ${g.cap}골 선착 · ${lgFmt(len)}에 종료` : g.end === 'time' ? `⏱️ ${g.mins}분${extra > 999 ? ` + 추가 ${lgFmt(extra)}` : ''} · 종료` : `⏱️ ${lgFmt(len)}에 종료`}</span></div>`;
+  }
+  const left = g.mins * 60000 - lgElapsed(g);
+  return `<div class="lgTimer">
+    <div class="lgRule"><span>${g.mins}분</span><span class="${g.cap ? 'hot' : ''}">${g.cap ? `${g.cap}골 먼저 넣으면 끝` : '끝까지 · 추가시간 있음'}</span>${g.t0 ? '' : '<span class="hot">일시정지</span>'}</div>
+    <div class="lgClock${left <= 0 ? ' over' : left < 60000 ? ' low' : ''}" id="lgClock">${lgClockHtml(g)}</div>
+    <div class="lgBar"><i id="lgBarI" style="width:${Math.min(100, lgElapsed(g) / (g.mins * 60000) * 100)}%"></i></div>
+    <div class="lgCtrl"><button class="ghost" id="lgPause">${g.t0 ? '⏸ 일시정지' : '▶ 다시 시작'}</button><button class="ghost" id="lgPlus">+1분</button><button class="ghost whistle${left <= 0 ? ' over' : ''}" id="lgWhistle">${left <= 0 ? '종료 휘슬' : '경기 종료'}</button></div>
+  </div>`;
+}
 function renderLog(){
   const box = $('logBox'); if(!box || !canLog()) return;
   // 앱을 켜 둔 채 날짜가 바뀌어도(예: 토요일에 열어 두고 일요일에 기록) 오늘 날짜로 맞춤
@@ -3828,16 +3900,16 @@ function renderLog(){
 
   box.innerHTML = `
     <div class="lgTop"><span>${fmtDay(logDate)} · ${from === 'day' ? '출석한 팀' : '공개한 팀 구성'} 기준 · ${letters.map(t=>`${t}팀 ${T[t].length}명`).join(' · ')}${letters.some(t=>T[t].some(p=>p.guest)) ? ' (게스트 포함)' : ''}</span></div>
-    <div class="lgTabs">${LOG.games.map((x, i)=>`<button data-lg-tab="${i}" class="${i === LOG.cur ? 'on' : ''}">${i + 1}경기 ${x.home}:${x.away}${x.goals.length ? ` (${lgCount(x, x.home)}-${lgCount(x, x.away)})` : ''}</button>`).join('')}<button class="add" id="lgAddGame">＋ 다음 경기</button></div>
+    <div class="lgTabs">${LOG.games.map((x, i)=>`<button data-lg-tab="${i}" class="${i === LOG.cur ? 'on' : ''}">${x.t0 ? '⏱️ ' : ''}${i + 1}경기 ${x.home}:${x.away}${x.goals.length ? ` (${lgCount(x, x.home)}-${lgCount(x, x.away)})` : ''}</button>`).join('')}<button class="add" id="lgAddGame">＋ 다음 경기</button></div>
     <div class="lgBoard">
       <div>${teamSel('home', g.home)}</div>
       <div class="lgSc">${lgCount(g, g.home)} : ${lgCount(g, g.away)}</div>
       <div>${teamSel('away', g.away)}</div>
     </div>
-    ${g.home === g.away ? '<p class="muted" style="color:var(--danger)">같은 팀끼리는 경기할 수 없어요. 팀을 바꿔 주세요.</p>' : ''}
+    ${g.home === g.away ? '<p class="muted" style="color:var(--danger)">같은 팀끼리는 경기할 수 없어요. 팀을 바꿔 주세요.</p>' : lgTimerHtml(g)}
     ${badGames.length ? `<p class="muted" style="color:var(--danger)">⚠️ ${badGames.join(', ')}경기에 지금 팀 구성에 없는 팀이 있어요 (팀 구성이 바뀐 것 같아요). 위 칸에서 팀을 다시 골라 주세요. 그 경기는 점수 계산에서 빠져 있어요.</p>` : ''}
     <div class="lgSub">⚽ ${LOG.cur + 1}경기 골 기록</div>
-    <div>${g.goals.map((e, i)=>`<div class="lgEv"><span class="lgT t-${e.t}">${e.t}</span><span>${e.s ? `<b>${esc(lgName(e.s))}</b>` : '<b style="color:var(--danger)">상대 자책골</b>'} <small>· ${e.a ? '어시 ' + esc(lgName(e.a)) : '어시 없음'}</small></span><button class="del" data-lg-del="${i}" aria-label="지우기">×</button></div>`).join('') || '<p class="muted" style="margin:0;font-size:13px">아직 골이 없어요.</p>'}</div>
+    <div>${g.goals.map((e, i)=>`<div class="lgEv"><span class="lgT t-${e.t}">${e.t}</span><span>${e.m ? `<span class="lgMin">${e.m}</span>` : ''}${e.s ? `<b>${esc(lgName(e.s))}</b>` : '<b style="color:var(--danger)">상대 자책골</b>'} <small>· ${e.a ? '어시 ' + esc(lgName(e.a)) : '어시 없음'}</small></span><button class="del" data-lg-del="${i}" aria-label="지우기">×</button></div>`).join('') || '<p class="muted" style="margin:0;font-size:13px">아직 골이 없어요.</p>'}</div>
 
     <div class="lgSub">＋ 골 추가 — 어느 팀?</div>
     <div class="lgSeg">${[g.home, g.away].map(t=>`<button class="t-${t} ${logPick.t === t ? 'on' : ''}" data-lg-team="${t}">${t}팀 골</button>`).join('')}</div>
@@ -3867,19 +3939,44 @@ function renderLog(){
 
   const redraw = ()=>{ logSave(); renderLog(); };
   box.querySelectorAll('[data-lg-tab]').forEach(b=>b.onclick = ()=>{ LOG.cur = +b.dataset.lgTab; logPick.t = null; redraw(); });
-  const addGame = ()=>{ const [h, a] = nextPair(letters, LOG.games[LOG.games.length - 1]); LOG.games.push({home: h, away: a, goals: []}); LOG.cur = LOG.games.length - 1; logPick.t = null; redraw(); };
+  const addGame = ()=>{ const [h, a] = nextPair(letters, LOG.games); LOG.games.push({home: h, away: a, goals: []}); LOG.cur = LOG.games.length - 1; logPick.t = null; redraw(); };
+  // 경기 끝 → 다음 경기(로테이션)로 바로 넘어감
+  const endGame = why=>{
+    if(g.t0){ g.acc = lgElapsed(g); g.t0 = null; }
+    g.end = why; lgBuzz();
+    const n = LOG.cur + 1, h = lgCount(g, g.home), a = lgCount(g, g.away);
+    plToast(`${why === 'cap' ? `⚽ ${g.cap}골 선착! ` : ''}${n}경기 끝 · ${g.home} ${h} : ${a} ${g.away}`);
+    if(LOG.cur === LOG.games.length - 1) addGame(); else { LOG.cur++; logPick.t = null; redraw(); }
+    if(!LOG.games.some(x=>x.t0)) lgWakeLock(false);
+  };
+  box.querySelectorAll('[data-lg-mins]').forEach(b=>b.onclick = ()=>{ const c = lgCfg(); c.mins = +b.dataset.lgMins; store.set(LG_CFG_KEY, JSON.stringify(c)); renderLog(); });
+  box.querySelectorAll('[data-lg-cap]').forEach(b=>b.onclick = ()=>{ const c = lgCfg(); c.cap = +b.dataset.lgCap; store.set(LG_CFG_KEY, JSON.stringify(c)); renderLog(); });
+  if($('lgStart')) $('lgStart').onclick = ()=>{
+    if(LOG.games.some(x=>x !== g && x.t0)){ alert('다른 경기 타이머가 돌아가고 있어요. 그 경기를 먼저 끝내 주세요.'); return; }
+    const c = lgCfg(); Object.assign(g, {mins: c.mins, cap: c.cap, acc: 0, t0: Date.now(), end: null, buzzed: false}); lgWakeLock(true); redraw();
+  };
+  if($('lgPause')) $('lgPause').onclick = ()=>{ if(g.t0){ g.acc = lgElapsed(g); g.t0 = null; } else g.t0 = Date.now(); redraw(); };
+  if($('lgPlus')) $('lgPlus').onclick = ()=>{ g.mins += 1; g.buzzed = lgElapsed(g) >= g.mins * 60000; redraw(); };
+  if($('lgWhistle')) $('lgWhistle').onclick = ()=>{
+    const over = lgElapsed(g) >= g.mins * 60000;
+    if(!over && !confirm('아직 시간이 남았어요. 지금 경기를 끝낼까요?')) return;
+    endGame(over ? 'time' : 'manual');
+  };
   $('lgAddGame').onclick = addGame; $('lgNext').onclick = addGame;
   box.querySelectorAll('[data-lg-side]').forEach(sel=>sel.onchange = ()=>{
     if(g.goals.length && !confirm('팀을 바꾸면 이 경기 골 기록이 지워져요. 바꿀까요?')){ renderLog(); return; }
     g[sel.dataset.lgSide] = sel.value; g.goals = []; logPick.t = null; redraw();
   });
   box.querySelectorAll('[data-lg-team]').forEach(b=>b.onclick = ()=>{ logPick = {t: b.dataset.lgTeam, s: null, a: null}; renderLog(); });
-  box.querySelectorAll('[data-lg-s]').forEach(b=>b.onclick = ()=>{ logPick.s = lgId(b.dataset.lgS); if(logPick.a === logPick.s) logPick.a = null; renderLog(); });
+  box.querySelectorAll('[data-lg-s]').forEach(b=>b.onclick = ()=>{ if(logPick.s === null && g.t0) logPick.ms = lgElapsed(g); logPick.s = lgId(b.dataset.lgS); if(logPick.a === logPick.s) logPick.a = null; renderLog(); });
   box.querySelectorAll('[data-lg-a]').forEach(b=>b.onclick = ()=>{ logPick.a = b.dataset.lgA ? lgId(b.dataset.lgA) : null; renderLog(); });
   $('lgGoal').onclick = ()=>{
     if(logPick.s === null) return;
-    g.goals.push({t: logPick.t, s: logPick.s || null, a: logPick.s ? logPick.a : null});
-    logPick = {t: logPick.t, s: null, a: null}; redraw(); plToast(`${logPick.t}팀 골!`);
+    const ms = g.t0 ? (logPick.ms ?? lgElapsed(g)) : null;   // 넣은 사람을 고른 순간의 시간
+    g.goals.push({t: logPick.t, s: logPick.s || null, a: logPick.s ? logPick.a : null, ...(ms !== null ? {m: lgMinLabel(g, ms)} : {})});
+    const team = logPick.t; logPick = {t: team, s: null, a: null};
+    if(g.t0 && g.cap && lgCount(g, team) >= g.cap){ logSave(); endGame('cap'); return; }   // n골 선착 → 자동 종료
+    redraw(); plToast(`${team}팀 골!`);
   };
   box.querySelectorAll('[data-lg-del]').forEach(b=>b.onclick = ()=>{ if(!confirm('이 골 기록을 지울까요?')) return; g.goals.splice(+b.dataset.lgDel, 1); redraw(); });
   $('lgDelGame').onclick = ()=>{
@@ -3912,7 +4009,7 @@ async function logRegister(T, letters, pts){
   if(!confirm(msg)) return;
   $('lgSave').disabled = true;
   const gamesJ = list.map(x=>({home: x.home, away: x.away, home_score: lgCount(x, x.home), away_score: lgCount(x, x.away),
-    goals: x.goals.map(e=>({t: e.t, s: e.s ?? null, a: e.a ?? null}))}));   // 경기별 골·어시 (누가 넣었는지)
+    goals: x.goals.map(e=>({t: e.t, s: e.s ?? null, a: e.a ?? null, ...(e.m ? {m: e.m} : {})}))}));   // 경기별 골·어시 (누가 넣었는지)
   const rowsJ = letters.flatMap(t=>T[t].filter(p=>!p.guest).map(p=>({player_id: p.id, team: t, goals: pts[p.id]?.g || 0, assists: pts[p.id]?.a || 0, mvp: LOG.mvp === p.id})));
   const fail = (step, e)=>{                           // 실패 이유를 기록일지에 남김 (알림 창을 놓쳐도 다시 볼 수 있게)
     const m = `${step}: ${rpcMsg(e) || e?.message || e}`;
